@@ -31,7 +31,7 @@ login_manager.needs_refresh_message = "Votre session a expiré, veuillez vous re
 login_manager.needs_refresh_message_category = "info"
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
-ASSETS_DIR = os.path.join(PROJECT_ROOT, "assets")
+ASSETS_DIR = os.path.join(PROJECT_ROOT, '..', 'www.resellnotion.stats.com', 'assets')
 
 # --- Décorateur personnalisé pour vérifier le statut de la clé ---
 def key_active_required(f):
@@ -164,7 +164,10 @@ def load_user(user_id):
 # --- NOUVEAU : Chargement des données SKU au démarrage de l'application ---
 SKU_DATA = []
 # Utilisez le chemin absolu fourni par l'utilisateur
-SKU_FILE_PATH = r'C:\Users\bidar\PycharmProjects\resell notion stat\sku_img_with_name.json' # Utilisez r'' pour les chemins Windows
+
+
+# Chemin complet vers le fichier JSON
+SKU_FILE_PATH = os.path.join(ASSETS_DIR, 'sku_img_with_name.json')
 
 try:
     if os.path.exists(SKU_FILE_PATH):
