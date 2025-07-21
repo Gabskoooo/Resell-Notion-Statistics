@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+
+{% block title %}Ajouter Produit{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Ajouter un nouveau produit</h1>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flashes">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<form method="post">
+    <div class="mb-3">
+        <label for="sku" class="form-label">SKU (Référence Unique):</label>
+        <input type="text" class="form-control" id="sku" name="sku" value="{{ sku if sku else '' }}" required autocomplete="off">
+        <div id="sku-suggestions" class="list-group position-absolute w-100" style="max-height: 200px; overflow-y: auto; display: none; z-index: 1000; border-radius: 0.25rem;">
+            <div id="no-sku-found-message" class="list-group-item text-center" style="display: none; background-color: rgba(0, 0, 0, 0.8); color: #f8f9fa;">
+                Aucun SKU trouvé. Veuillez le renseigner manuellement.
+            </div>
+        </div>
+    </div>
+
+    {# Champ image_url maintenant caché #}
+    <input type="hidden" id="image_url" name="image_url" value="{{ image_url if image_url else '' }}">
+
+    {# Conteneur de l'aperçu de l'image, toujours visible pour l'image par défaut ou suggérée #}
+    <div class="mb-3" id="sku-image-preview-container" style="display: {{ 'block' if image_url else 'none' }}; margin-top: 10px;">
+        <label class="form-label">Image suggérée:</label> {# Petite étiquette pour clarifier #}
+        <img id="sku-image-preview" src="{{ image_url if image_url else '' }}" alt="Image SKU" class="img-thumbnail" style="max-width: 150px; height: auto;">
+    </div>
+
+    <div class="mb-3">
+        <label for="name" class="form-label">Nom du produit:</label>
+        <input type="text" class="form-control" id="name" name="name" value="{{ name if name else '' }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="size" class="form-label">Taille (ex: 42 EU / US 8.5):</label>
+        <input type="text" class="form-control" id="size" name="size" value="{{ size if size else '' }}">
+    </div>
+    <div class="mb-3">
+        <label for="purchase_price" class="form-label">Prix d'achat (€):</label>
+        <input type="number" step="0.01" class="form-control" id="purchase_price" name="purchase_price" value="{{ '%.2f'|format(purchase_price) if purchase_price != '' else '' }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="quantity" class="form-label">Quantité en stock:</label>
+        <input type="number" class="form-control" id="quantity" name="quantity" value="{{ quantity if quantity else '' }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="description" class="form-label">Description (optionnel):</label>
+        <textarea class="form-control" id="description" name="description" rows="3">{{ description if description else '' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Ajouter le produit</button>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const skuInput = document.getElementById('sku');
+        const skuSuggestions = document.getElementById('sku-suggestions');
+        const skuImagePreviewContainer = document.getElementById('sku-image-preview-container');
+        const skuImagePreview = document.getElementById('sku-image-preview');
+        const imageUrlInput = document.getElementById('image_url'); // C'est maintenant un input caché
+        const productNameInput = document.getElementById('name'); // Récupération du champ du nom
+        const noSkuFoundMessage = document.getElementById('no-sku-found-message');
+
+        // URL de l'image par défaut pour les SKU non trouvés
+        const defaultImageUrl = "{{ url_for('static', filename='sku_not_found.png') }}";
+
+        let debounceTimeout;
+
+        skuInput.addEventListener('input', function() {
+            clearTimeout(debounceTimeout);
+            const query = this.value.trim();
+
+            skuSuggestions.innerHTML = '';
+            noSkuFoundMessage.style.display = 'none';
+            skuSuggestions.style.display = 'none';
+
+            if (query.length < 2) {
+                imageUrlInput.value = '';
+                skuImagePreview.src = defaultImageUrl;
+                skuImagePreviewContainer.style.display = 'block';
+                productNameInput.value = ''; // Vider le champ nom si la requête est trop courte
+                return;
+            }
+
+            debounceTimeout = setTimeout(function() {
+                fetch(`/get_sku_suggestions?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        skuSuggestions.innerHTML = '';
+                        if (data.length > 0) {
+                            data.forEach(item => {
+                                const div = document.createElement('div');
+                                div.classList.add('list-group-item', 'list-group-item-action', 'd-flex', 'align-items-center');
+                                div.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                                div.style.color = '#f8f9fa';
+                                div.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                div.style.cursor = 'pointer';
+
+                                const img = document.createElement('img');
+                                img.src = item.image_url;
+                                img.alt = item.sku;
+                                img.style.width = '50px';
+                                img.style.height = '50px';
+                                img.style.marginRight = '10px';
+                                img.style.objectFit = 'contain';
+
+                                const textContentDiv = document.createElement('div'); // Conteneur pour le SKU et le nom
+                                const skuSpan = document.createElement('span');
+                                skuSpan.textContent = item.sku;
+                                const nameSpan = document.createElement('small'); // Plus petite taille pour le nom
+                                nameSpan.textContent = ` (${item.product_name})`; // Ajout du nom entre parenthèses
+                                nameSpan.style.marginLeft = '5px'; // Petit espacement
+
+                                textContentDiv.appendChild(skuSpan);
+                                textContentDiv.appendChild(nameSpan);
+
+                                div.appendChild(img);
+                                div.appendChild(textContentDiv); // Ajout du conteneur de texte
+
+                                div.addEventListener('click', function() {
+                                    skuInput.value = item.sku;
+                                    imageUrlInput.value = item.image_url;
+                                    skuImagePreview.src = item.image_url;
+                                    skuImagePreviewContainer.style.display = 'block';
+                                    productNameInput.value = item.product_name; // Remplir le champ du nom
+                                    skuSuggestions.style.display = 'none';
+                                    skuSuggestions.innerHTML = '';
+                                });
+                                skuSuggestions.appendChild(div);
+                            });
+                            skuSuggestions.style.display = 'block';
+                        } else {
+                            noSkuFoundMessage.style.display = 'block';
+                            skuSuggestions.appendChild(noSkuFoundMessage);
+                            skuSuggestions.style.display = 'block';
+
+                            imageUrlInput.value = '';
+                            skuImagePreview.src = defaultImageUrl;
+                            skuImagePreviewContainer.style.display = 'block';
+                            productNameInput.value = ''; // Vider le champ nom si aucun SKU trouvé
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur lors de la récupération des suggestions SKU :', error);
+                        skuSuggestions.innerHTML = '';
+                        noSkuFoundMessage.style.display = 'block';
+                        skuSuggestions.appendChild(noSkuFoundMessage);
+                        skuSuggestions.style.display = 'block';
+                        imageUrlInput.value = '';
+                        skuImagePreview.src = defaultImageUrl;
+                        skuImagePreviewContainer.style.display = 'block';
+                        productNameInput.value = ''; // Vider le champ nom en cas d'erreur
+                    });
+            }, 300);
+        });
+
+        document.addEventListener('click', function(event) {
+            if (!skuSuggestions.contains(event.target) && event.target !== skuInput) {
+                skuSuggestions.style.display = 'none';
+                noSkuFoundMessage.style.display = 'none';
+            }
+        });
+
+        if (!imageUrlInput.value) {
+            skuImagePreview.src = defaultImageUrl;
+            skuImagePreviewContainer.style.display = 'block';
+        } else {
+             skuImagePreviewContainer.style.display = 'block';
+        }
+    });
+</script>
+{% endblock %}

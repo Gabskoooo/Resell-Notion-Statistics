@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Inscription{% endblock %}
+
+{% block content %}
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <h1 class="mb-4 text-center">Créer un compte</h1>
+            <div class="card p-4 shadow-sm">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Adresse Email</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ request.form['email'] or '' }}" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Nom d'utilisateur</label>
+                        <input type="text" class="form-control" id="username" name="username" value="{{ request.form['username'] or '' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Mot de passe</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Confirmer le mot de passe</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="discord_id" class="form-label">Votre ID Discord</label>
+                        <input type="text" class="form-control" id="discord_id" name="discord_id" value="{{ request.form['discord_id'] or '' }}" placeholder="Ex: 123456789012345678" required>
+                        <div class="form-text">Vous pouvez trouver votre ID Discord en activant le mode développeur dans Discord et en faisant un clic droit sur votre nom d'utilisateur > Copier l'ID.</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 mb-3">S'inscrire</button>
+                </form>
+
+                <p class="text-center mt-3">
+                    Vous avez déjà un compte ? <a href="{{ url_for('login') }}">Connectez-vous ici</a>.
+                </p>
+            </div>
+        </div>
+    </div>
+{% endblock %}

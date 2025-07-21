@@ -1,0 +1,5 @@
+.idea/
+.env
+*.db
+key_generate.py
+sku_img.py

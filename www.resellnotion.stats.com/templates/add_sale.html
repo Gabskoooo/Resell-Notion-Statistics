@@ -1,0 +1,137 @@
+{# templates/add_sale.html #}
+{% extends 'base.html' %}
+
+{% block title %}Enregistrer Vente{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Enregistrer une nouvelle Vente</h1>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flashes">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<form method="post">
+    <div class="mb-3">
+        <label for="product_id" class="form-label">Produit Vendu (Optionnel - pour les produits en stock):</label>
+        <select class="form-select" id="product_id" name="product_id">
+            <option value="">Sélectionnez un produit existant</option>
+            {% for product in products %}
+            {# Format d'affichage modifié à SKU (Taille) - Nom du Produit #}
+            <option value="{{ product.id }}"
+                    data-product-name="{{ product.name }}"
+                    data-product-sku="{{ product.sku }}"
+                    data-product-size="{{ product.size }}"
+                    data-product-quantity="{{ product.quantity }}"
+                    data-product-purchase-price="{{ product.purchase_price if product.purchase_price else 0 }}"
+                    {% if product.id == sale.product_id|int %}selected{% endif %}>
+                {{ product.sku }} ({{ product.size }}) - {{ product.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label for="item_name" class="form-label">Nom de l'article vendu (pour les produits non en stock ou personnalisés):</label>
+        <input type="text" class="form-control" id="item_name" name="item_name" value="{{ sale.item_name if sale.item_name else '' }}">
+    </div>
+    <div class="mb-3">
+        <label for="quantity" class="form-label">Quantité vendue:</label>
+        <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="{{ sale.quantity if sale.quantity else 1 }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="sale_price" class="form-label">Prix de vente (€):</label>
+        {# Utilisation de sale.sale_price et filtre float pour le formatage #}
+        <input type="number" step="0.01" class="form-control" id="sale_price" name="sale_price" value="{{ '%.2f'|format(sale.sale_price|float) if sale.sale_price and (sale.sale_price|float is not none) else '' }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="sale_date" class="form-label">Date de vente:</label>
+        {# Utilisation de sale.sale_date #}
+        <input type="date" class="form-control" id="sale_date" name="sale_date" value="{{ sale.sale_date if sale.sale_date else '' }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="platform" class="form-label">Plateforme de vente (ex: Vinted, StockX):</label>
+        {# Utilisation de sale.platform (anciennement sale_channel) #}
+        <input type="text" class="form-control" id="platform" name="platform" value="{{ sale.platform if sale.platform else '' }}">
+    </div>
+    <div class="mb-3">
+        <label for="shipping_cost" class="form-label">Frais de port (€ - Optionnel):</label>
+        {# Utilisation de sale.shipping_cost #}
+        <input type="number" step="0.01" class="form-control" id="shipping_cost" name="shipping_cost" value="{{ '%.2f'|format(sale.shipping_cost|float) if sale.shipping_cost and (sale.shipping_cost|float is not none) else '' }}">
+    </div>
+    <div class="mb-3">
+        <label for="fees" class="form-label">Frais de plateforme/commission (€ - Optionnel):</label>
+        {# Utilisation de sale.fees #}
+        <input type="number" step="0.01" class="form-control" id="fees" name="fees" value="{{ '%.2f'|format(sale.fees|float) if sale.fees and (sale.fees|float is not none) else '' }}">
+    </div>
+    <div class="mb-3">
+        <label for="notes" class="form-label">Notes (Optionnel):</label>
+        {# Utilisation de sale.notes #}
+        <textarea class="form-control" id="notes" name="notes" rows="3">{{ sale.notes if sale.notes else '' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Enregistrer la Vente</button>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const productIdSelect = document.getElementById('product_id');
+        const itemNameInput = document.getElementById('item_name');
+        const quantityInput = document.getElementById('quantity');
+        const salePriceInput = document.getElementById('sale_price');
+        const shippingCostInput = document.getElementById('shipping_cost'); // Ajouté
+        const feesInput = document.getElementById('fees'); // Ajouté
+
+
+        function updateItemDetails() {
+            const selectedOption = productIdSelect.options[productIdSelect.selectedIndex];
+            const productName = selectedOption.dataset.productName;
+            const productSku = selectedOption.dataset.productSku;
+            const productSize = selectedOption.dataset.productSize;
+            const productQuantity = selectedOption.dataset.productQuantity;
+            const productPurchasePrice = selectedOption.dataset.productPurchasePrice;
+
+            if (productName) {
+                itemNameInput.value = productName;
+                if (parseInt(quantityInput.value) === 1 || !quantityInput.value) {
+                     quantityInput.value = 1;
+                }
+                quantityInput.setAttribute('max', productQuantity);
+                // Si vous voulez pré-remplir le prix de vente basé sur le prix d'achat
+                // if (productPurchasePrice && !salePriceInput.value) { // Seulement si salePrice est vide
+                //      salePriceInput.value = (parseFloat(productPurchasePrice) * 1.2).toFixed(2); // Exemple: 20% de marge
+                // }
+            } else {
+                // Réinitialiser les champs si "Sélectionnez un produit existant" est choisi
+                itemNameInput.value = '';
+                quantityInput.value = 1;
+                quantityInput.removeAttribute('max');
+                // salePriceInput.value = ''; // Optionnel: réinitialiser le prix de vente
+                // shippingCostInput.value = ''; // Optionnel
+                // feesInput.value = ''; // Optionnel
+            }
+        }
+
+        productIdSelect.addEventListener('change', updateItemDetails);
+        // Appeler au chargement pour initialiser les champs si une option est déjà sélectionnée
+        // (utile après une soumission de formulaire avec des erreurs de validation)
+        if (productIdSelect.value) {
+            updateItemDetails();
+        }
+
+        const saleDateInput = document.getElementById('sale_date');
+        // Définir la date du jour si le champ est vide (ex: au premier chargement de la page)
+        if (!saleDateInput.value) {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            saleDateInput.value = `${year}-${month}-${day}`;
+        }
+    });
+</script>
+{% endblock %}

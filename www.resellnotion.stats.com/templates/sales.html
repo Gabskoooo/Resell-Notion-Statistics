@@ -1,0 +1,141 @@
+{# templates/sales.html #}
+{% extends 'base.html' %}
+
+{% block title %}Historique des Ventes{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Historique des Ventes</h1>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flashes">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+{% if sales %}
+<div class="table-responsive">
+    <table class="table table-striped table-hover" id="salesTable"> {# Ajout d'un ID pour le JavaScript #}
+        <thead>
+            <tr>
+                <th>Produit</th>
+                <th>SKU</th>
+                <th>Taille</th>
+                <th>Quantité</th>
+                <th>Prix Vente (€)</th>
+                <th>Prix Achat (€)</th>
+                <th>Frais Port (€)</th>
+                <th>Frais Platf. (€)</th>
+                <th>Profit (€)</th>
+                <th>Date Vente</th>
+                <th>Canal</th>
+                <th>Notes</th>
+                <th>Options</th> {# Nouveau : Remplace la colonne "Actions" pour le bouton "..." #}
+            </tr>
+        </thead>
+        <tbody>
+            {% for sale in sales %}
+            {# Ajout d'un data-sale-id et d'une classe pour identifier la ligne avec JavaScript #}
+            <tr data-sale-id="{{ sale.id }}" class="sale-row">
+                <td>{{ sale.item_name }}</td>
+                <td>{{ sale.sku }}</td>
+                <td>{{ sale.size }}</td>
+                <td>{{ sale.quantity }}</td>
+                <td>{{ sale.sale_price_formatted }}</td>
+                <td>{{ sale.purchase_price_at_sale_formatted }}</td>
+                <td>{{ sale.shipping_cost_formatted }}</td>
+                <td>{{ sale.fees_formatted }}</td>
+                <td>
+                    <span class="badge {% if sale.profit > 0 %}bg-success{% elif sale.profit < 0 %}bg-danger{% else %}bg-secondary{% endif %}">
+                        {{ sale.profit_formatted }}
+                    </span>
+                </td>
+                <td>{{ sale.sale_date }}</td>
+                <td>{{ sale.sale_channel if sale.sale_channel else 'N/A' }}</td>
+                <td>{{ sale.notes if sale.notes else '-' }}</td>
+                <td>
+                    {# Bouton pour afficher les actions associées à cette ligne #}
+                    <button type="button" class="btn btn-sm btn-secondary show-actions-btn" data-bs-toggle="tooltip" title="Afficher les actions">
+                        <i class="fas fa-ellipsis-h"></i> {# Icône "..." de Font Awesome #}
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# Panneau d'actions situé en dehors du tableau #}
+{# Passer le préfixe d'URL direct que le JavaScript peut compléter #}
+<div id="actionPanel" class="card mt-4 p-3" style="display: none;"
+     data-base-url="/sales/"> {# URL de base pour les actions de vente, sans utiliser url_for directement ici #}
+    <div class="card-body text-center">
+        <h5 class="card-title">Actions pour la Vente Sélectionnée (ID: <span id="selectedSaleIdDisplay"></span>)</h5>
+        <p class="card-text" id="selectedSaleNameDisplay"></p>
+        <a id="editSaleLink" href="#" class="btn btn-info me-2">Modifier</a>
+        <form id="deleteSaleForm" action="#" method="post" class="d-inline">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette vente ?');">Supprimer</button>
+        </form>
+        <button type="button" class="btn btn-secondary ms-2" id="hideActionPanel">Masquer les actions</button>
+    </div>
+</div>
+
+{% else %}
+    <p>Aucune vente enregistrée pour le moment.</p>
+{% endif %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const salesTable = document.getElementById('salesTable');
+        const actionPanel = document.getElementById('actionPanel');
+        const editSaleLink = document.getElementById('editSaleLink');
+        const deleteSaleForm = document.getElementById('deleteSaleForm');
+        const selectedSaleIdDisplay = document.getElementById('selectedSaleIdDisplay');
+        const selectedSaleNameDisplay = document.getElementById('selectedSaleNameDisplay');
+        const hideActionPanelBtn = document.getElementById('hideActionPanel');
+
+        // Récupère l'URL de base depuis l'attribut 'data-' du panneau
+        const baseUrl = actionPanel.dataset.baseUrl;
+
+        // Gère le clic sur le bouton "..."
+        salesTable.addEventListener('click', function(event) {
+            const target = event.target;
+            const showActionsBtn = target.closest('.show-actions-btn'); // Trouve le bouton cliqué
+
+            if (showActionsBtn) {
+                const row = showActionsBtn.closest('.sale-row'); // Trouve la ligne parente
+                const saleId = row.dataset.saleId; // Récupère l'ID de la vente de la ligne
+                const saleName = row.querySelector('td:first-child').innerText; // Récupère le nom de l'article
+
+                selectedSaleIdDisplay.innerText = saleId; // Affiche l'ID de la vente sélectionnée
+                selectedSaleNameDisplay.innerText = `Article: ${saleName}`; // Affiche le nom de l'article
+
+                // Construit les URLs complètes en JavaScript
+                editSaleLink.href = `${baseUrl}${saleId}/edit`; // Ex: /sales/123/edit
+                deleteSaleForm.action = `${baseUrl}${saleId}/delete`; // Ex: /sales/123/delete
+
+                actionPanel.style.display = 'block'; // Affiche le panneau d'actions
+
+                // Gère la mise en surbrillance de la ligne sélectionnée
+                document.querySelectorAll('.sale-row').forEach(r => r.classList.remove('table-primary'));
+                row.classList.add('table-primary'); // Ajoute la classe Bootstrap pour surligner
+            }
+        });
+
+        // Gère le clic sur le bouton "Masquer les actions"
+        hideActionPanelBtn.addEventListener('click', function() {
+            actionPanel.style.display = 'none'; // Masque le panneau
+            document.querySelectorAll('.sale-row').forEach(r => r.classList.remove('table-primary')); // Retire la mise en surbrillance
+        });
+
+        // Initialisation des tooltips Bootstrap (nécessite l'inclusion du bundle JS de Bootstrap)
+        // var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        // var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        //     return new bootstrap.Tooltip(tooltipTriggerEl)
+        // })
+    });
+</script>
+{% endblock %}

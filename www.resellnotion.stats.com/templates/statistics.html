@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<title>Statistiques</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    /* Style pour le graphique flouté */
+    .blurred-chart-container {
+        position: relative;
+        text-align: center;
+        padding: 50px 0;
+        background-color: #f8f9fa;
+        border: 1px solid #e2e3e5;
+        border-radius: 0.25rem;
+        min-height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    }
+    .blurred-chart {
+        filter: blur(5px);
+        opacity: 0.7;
+        pointer-events: none;
+        width: 100%;
+        height: 250px;
+        background: linear-gradient(to right, #ccc 10%, #ddd 20%, #ccc 30%, #eee 40%, #ccc 50%, #ddd 60%, #ccc 70%, #eee 80%, #ddd 90%);
+        animation: loading-gradient 2s infinite linear;
+    }
+
+    @keyframes loading-gradient {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+
+    .blurred-message {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #6c757d;
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 15px 30px;
+        border-radius: 10px;
+        z-index: 10;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+    /* Styles pour le texte des taux d'évolution (positif, négatif, neutre) */
+    .evolution-positive {
+        color: green;
+        font-weight: bold;
+    }
+    .evolution-negative {
+        color: red;
+        font-weight: bold;
+    }
+    .evolution-neutral {
+        color: gray;
+    }
+
+    /* NOUVEAUX STYLES pour la section du tableau des taux d'évolution */
+    /* Ces styles peuvent être supprimés si la section n'est plus un tableau */
+    .evolution-section-header {
+        background-color: rgba(33, 37, 41, 0.9) !important; /* Gris très foncé pour l'en-tête de la carte */
+        color: #f8f9fa !important; /* Texte clair */
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important; /* Bordure légère */
+    }
+
+    .evolution-section-body {
+        background-color: rgba(52, 58, 64, 0.7) !important; /* Gris foncé semi-transparent pour le corps de la carte */
+        color: #f8f9fa !important; /* Texte clair */
+    }
+
+    /* Styles pour le tableau à l'intérieur de la section d'évolution */
+    /* Ces règles ne seront plus nécessaires une fois la table retirée */
+    .evolution-section-body .table {
+        background-color: rgba(33, 37, 41, 0.8);
+        color: inherit !important; /* Hérite la couleur du texte du parent */
+        margin-bottom: 0 !important; /* Supprime la marge par défaut du tableau */
+    }
+
+    .evolution-section-body .table thead th {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important; /* Bordure sous les en-têtes de colonne */
+        color: #fff !important; /* Texte blanc pour les en-têtes du tableau */
+    }
+    .evolution-section-body .table tbody tr {
+        border-color: rgba(255, 255, 255, 0.1) !important; /* Bordure entre les lignes */
+    }
+    .evolution-section-body .table tbody td {
+        border-color: rgba(255, 255, 255, 0.1) !important; /* Bordure entre les cellules */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Statistiques Détaillées</h1>
+
+    <div class="mb-4 d-flex flex-wrap justify-content-center">
+        <a href="{{ url_for('statistics', period='this_week') }}"
+           class="btn {% if selected_period == 'this_week' %}btn-primary{% else %}btn-outline-primary{% endif %} m-1">Cette Semaine</a>
+        <a href="{{ url_for('statistics', period='last_week') }}"
+           class="btn {% if selected_period == 'last_week' %}btn-primary{% else %}btn-outline-primary{% endif %} m-1">Semaine Dernière</a>
+        <a href="{{ url_for('statistics', period='this_month') }}"
+           class="btn {% if selected_period == 'this_month' %}btn-primary{% else %}btn-outline-primary{% endif %} m-1">Ce Mois-ci</a>
+        <a href="{{ url_for('statistics', period='last_month') }}"
+           class="btn {% if selected_period == 'last_month' %}btn-primary{% else %}btn-outline-primary{% endif %} m-1">Mois Dernier</a>
+        <a href="{{ url_for('statistics', period='this_year') }}"
+           class="btn {% if selected_period == 'this_year' %}btn-primary{% else %}btn-outline-primary{% endif %} m-1">Cette Année</a>
+        <a href="{{ url_for('statistics', period='last_year') }}"
+           class="btn {% if selected_period == 'last_year' %}btn-primary{% else %}btn-outline-primary{% endif %} m-1">Année Dernière</a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Résumé des Performances de la Période
+        </div>
+        <div class="card-body">
+            <div class="row row-cols-md-auto g-4 justify-content-around">
+                <div class="col text-center">
+                    <h5>Nb Ventes</h5>
+                    <p class="display-6">{{ total_sales_count }}</p>
+                </div>
+                <div class="col text-center">
+                    <h5>Prix Vente Total</h5>
+                    <p class="display-6">{{ "%.2f"|format(total_sales_revenue) }}€</p>
+                </div>
+                <div class="col text-center">
+                    <h5>Bénéfice Total</h5>
+                    <p class="display-6">{{ "%.2f"|format(total_sales_profit) }}€</p>
+                </div>
+                <div class="col text-center">
+                    <h5>Taux Marge (%)</h5>
+                    <p class="display-6">{{ "%.2f"|format(margin_rate) }}%</p>
+                </div>
+                <div class="col text-center">
+                    <h5>Jours Moy. Vente</h5>
+                    <p class="display-6">{{ "%.2f"|format(average_days_to_sell) }} jours</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Évolution des Ventes et Bénéfices (Période Actuelle)
+        </div>
+        <div class="card-body">
+            {# Affiche le graphique réel si au moins 5 ventes ont été enregistrées #}
+            {% if total_sales_count >= 5 %}
+                <canvas id="dynamicSalesChart"></canvas>
+            {% else %}
+                <div class="blurred-chart-container">
+                    <div class="blurred-chart"></div>
+                    <div class="blurred-message">
+                        Veuillez enregistrer au moins 5 ventes pour obtenir ce graphique.
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# NOUVELLE SECTION: Taux d'Évolution vs. Période Précédente en cartes #}
+    <h2 class="mt-5 mb-3">Taux d'Évolution vs. Période Précédente</h2>
+    <div class="row">
+        {# Évolution du Coût d'achat (COGS) #}
+        <div class="col-md-6 col-lg-4 mb-4">
+            {# Retrait des classes bg-success/danger/secondary pour hériter du style .card par défaut (noir semi-transparent) #}
+            <div class="card text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Évolution Coût d'achat (PA)</h5>
+                    <p class="card-text fs-3">
+                        {% if evolution_rate_cogs is string and evolution_rate_cogs == 'infinity' %}
+                            N/A (croissance infinie)
+                        {% elif evolution_rate_cogs is not string and evolution_rate_cogs == 0.0 %}
+                            0.00%
+                        {% elif evolution_rate_cogs is not string and evolution_rate_cogs is defined %}
+                            {{ "%.2f"|format(evolution_rate_cogs) }}%
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {# Évolution du Prix de Vente (Revenue) #}
+        <div class="col-md-6 col-lg-4 mb-4">
+            {# Retrait des classes bg-success/danger/secondary pour hériter du style .card par défaut (noir semi-transparent) #}
+            <div class="card text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Évolution Prix de Vente (PV)</h5>
+                    <p class="card-text fs-3">
+                        {% if evolution_rate_revenue is string and evolution_rate_revenue == 'infinity' %}
+                            N/A (croissance infinie)
+                        {% elif evolution_rate_revenue is not string and evolution_rate_revenue == 0.0 %}
+                            0.00%
+                        {% elif evolution_rate_revenue is not string and evolution_rate_revenue is defined %}
+                            {{ "%.2f"|format(evolution_rate_revenue) }}%
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {# Évolution du Bénéfice (Profit) #}
+        <div class="col-md-6 col-lg-4 mb-4">
+            {# Retrait des classes bg-success/danger/secondary pour hériter du style .card par défaut (noir semi-transparent) #}
+            <div class="card text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Évolution Bénéfice</h5>
+                    <p class="card-text fs-3">
+                        {% if evolution_rate_profit is string and evolution_rate_profit == 'infinity' %}
+                            N/A (croissance infinie)
+                        {% elif evolution_rate_profit is not string and evolution_rate_profit == 0.0 %}
+                            0.00%
+                        {% elif evolution_rate_profit is not string and evolution_rate_profit is defined %}
+                            {{ "%.2f"|format(evolution_rate_profit) }}%
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div> {# Fin du container principal #}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if total_sales_count >= 5 %}
+            const dynamicCtx = document.getElementById('dynamicSalesChart').getContext('2d');
+            const dynamicSalesChart = new Chart(dynamicCtx, {
+                type: 'line',
+                data: {
+                    labels: {{ graph_labels | tojson }},
+                    datasets: [
+                        {
+                            label: 'Coût d\'achat',
+                            data: {{ graph_cogs_values | tojson }},
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: 'Prix de Vente',
+                            data: {{ graph_revenue_values | tojson }},
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: 'Bénéfice Net',
+                            data: {{ graph_profit_values | tojson }},
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.1,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Montant (€)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '{{ "Jour" if graph_granularity == "day" else "Mois" }}'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        {% endif %}
+    });
+</script>
+{% endblock %}

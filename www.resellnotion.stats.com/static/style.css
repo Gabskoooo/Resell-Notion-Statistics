@@ -1,0 +1,77 @@
+/* static/style.css */
+
+@font-face {
+    font-family: 'Police de base'; /* Donnez un nom à votre police */
+    src: url('fonts/SpecialGothicExpandedOne-Regular.ttf') format('truetype'); /* Chemin relatif depuis style.css */
+       font-weight: normal; /* ou 700 pour bold, etc. */
+    font-style: normal;
+    /* Vous pouvez ajouter d'autres formats si vous avez (woff, woff2) pour une meilleure compatibilité */
+    /* src: url('fonts/MaSuperPolice.woff2') format('woff2'),
+            url('fonts/MaSuperPolice.woff') format('woff'); */
+}
+
+body {
+    /* L'URL utilise url_for('static', filename='fond.png') dans Jinja2 pour Flask,
+       mais en CSS pur, c'est un chemin relatif au fichier CSS.
+       Si style.css est dans /static/, et fond.png est aussi dans /static/,
+       alors le chemin est juste 'fond.png'. */
+    background-image: url('fond.png');
+    background-size: cover; /* Couvre toute la surface sans déformer l'image */
+    background-repeat: no-repeat; /* Empêche l'image de se répéter */
+    background-attachment: fixed; /* L'image de fond reste fixe quand on scroll */
+    background-position: center center; /* Centre l'image de fond */
+
+    /* Gardez vos couleurs de texte claires pour qu'elles ressortent sur un fond sombre */
+    color: #f8f9fa; /* Texte clair */
+    min-height: 100vh; /* Assure que le fond couvre au moins toute la hauteur de la vue */
+}
+
+/* Le reste de votre CSS pour les cartes, tableaux, etc. */
+.card {
+    background-color: rgba(0, 0, 0, 0.7); /* Fond semi-transparent pour les cartes */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f8f9fa;
+}
+
+.table {
+    background-color: rgba(0, 0, 0, 0.6); /* Fond semi-transparent pour les tableaux */
+    color: #f8f9fa;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.table-striped tbody tr:nth-of-type(even) {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.table-bordered {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.table-dark {
+    --bs-table-bg: rgba(0, 0, 0, 0.8);
+    --bs-table-color: #f8f9fa;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.navbar {
+    background-color: rgba(0, 0, 0, 0.8) !important; /* Fond semi-transparent pour la barre de navigation */
+}
+
+.form-control, .form-select {
+    background-color: rgba(0, 0, 0, 0.5); /* Fond semi-transparent pour les champs de formulaire */
+    color: #f8f9fa;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+.form-control:focus, .form-select:focus {
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #f8f9fa;
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25);
+}
+.form-select option {
+    background-color: #3a3f45; /* Couleur de fond pour les options */
+    color: #f8f9fa; /* Couleur du texte pour les options */
+}
