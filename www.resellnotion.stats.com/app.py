@@ -676,9 +676,11 @@ def add_sale():
 
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        products_for_dropdown = cur.execute(
+        # CORRECTION APPLIQUÉE ICI : Séparer execute() et fetchall()
+        cur.execute(
             'SELECT id, name, sku, size, quantity, purchase_price FROM products WHERE user_id = %s AND quantity > 0 ORDER BY name',
-            (current_user.id,)).fetchall()
+            (current_user.id,))
+        products_for_dropdown = cur.fetchall()
         cur.close()  # Ferme le curseur après la sélection du dropdown
     except Exception as e:
         flash(f"Erreur lors du chargement des produits pour la vente : {e}", "danger")
@@ -822,7 +824,6 @@ def add_sale():
                                'fees': display_fees,
                                'notes': form_data['notes']
                            })
-
 @app.route('/sales')
 @login_required
 @key_active_required
