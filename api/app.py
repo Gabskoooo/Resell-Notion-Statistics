@@ -1278,9 +1278,9 @@ def init_db():
     cur = conn.cursor()
     try:
         # Suppression des tables existantes (avec CASCADE pour gérer les dépendances)
-        cur.execute("DROP TABLE IF EXISTS sales CASCADE;")
-        cur.execute("DROP TABLE IF EXISTS products CASCADE;")
-        cur.execute("DROP TABLE IF EXISTS users CASCADE;")
+        #cur.execute("DROP TABLE IF EXISTS sales CASCADE;")
+        #cur.execute("DROP TABLE IF EXISTS products CASCADE;")
+        #cur.execute("DROP TABLE IF EXISTS users CASCADE;")
 
         # Table pour les utilisateurs
         cur.execute('''
