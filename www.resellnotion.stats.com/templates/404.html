@@ -1,0 +1,13 @@
+{# templates/404.html #}
+{% extends 'base.html' %}
+
+{% block title %}Page Non Trouvée{% endblock %}
+
+{% block content %}
+<div class="container text-center text-white mt-5">
+    <h1 class="display-1">404</h1>
+    <h2 class="mb-4">Page Non Trouvée</h2>
+    <p class="lead">Désolé, la page que vous recherchez n'existe pas ou a été déplacée.</p>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-primary mt-3">Retour au tableau de bord</a>
+</div>
+{% endblock %}

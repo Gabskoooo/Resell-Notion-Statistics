@@ -889,14 +889,13 @@ def leaderboard():
 
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        # Jointure avec la table users pour récupérer le nom d'utilisateur
-        # Assure-toi que ta table utilisateur s'appelle 'users' et qu'elle a une colonne 'username'
         cur.execute(
             """
             SELECT
+                cu.user_id,  -- AJOUTÉ : Pour que l'ID utilisateur soit disponible pour la comparaison
                 cu.total_ca,
                 cu.total_benefice,
-                u.username, -- Supposons que ta table users a une colonne 'username'
+                u.username,
                 ROW_NUMBER() OVER (ORDER BY cu.total_ca DESC) as rank_ca,
                 ROW_NUMBER() OVER (ORDER BY cu.total_benefice DESC) as rank_benefice
             FROM
@@ -916,8 +915,6 @@ def leaderboard():
             cur.close()
 
     return render_template('leaderboard.html', leaderboard=leaderboard_data)
-
-
 @app.route('/sale_success/<int:sale_id>')
 @login_required
 @key_active_required

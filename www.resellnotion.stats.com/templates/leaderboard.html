@@ -5,8 +5,17 @@
 {% block content %}
 <h1 class="mb-4 text-white">Classement des Utilisateurs</h1>
 
-{# NOUVEAU MESSAGE COMMERCIAL ET PROFESSIONNEL #}
-<p class="text-white mb-4">Pour booster vos performances, à la fin de chaque mois le 1er du classement se verra récompensé par des Free Days sur notre serveur Discord. 🎉</p>
+<p class="text-white mb-4">Afin de reconnaître l'excellence et la performance, le participant se classant premier chaque mois sera gratifié de journées d'accès offertes sur le serveur Discord de Resell Notion.</p>
+
+{# Trouver l'entrée de l'utilisateur actuel dans le classement #}
+{% set current_user_entry = none %}
+{% if current_user.is_authenticated %}
+    {% for user_data in leaderboard %}
+        {% if user_data.user_id == current_user.id %}
+            {% set current_user_entry = user_data %}
+        {% endif %}
+    {% endfor %}
+{% endif %}
 
 <ul class="nav nav-tabs mb-3" id="leaderboardTabs" role="tablist">
     <li class="nav-item" role="presentation">
@@ -31,17 +40,30 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% if leaderboard %}
-                                {% for user in leaderboard %}
-                                    <tr style="background-color: transparent;">
-                                        <td style="background-color: transparent; color: white;">{{ user.rank_ca }}</td>
-                                        <td style="background-color: transparent; color: white;">User #{{ user.rank_ca }}</td>
-                                        <td style="background-color: transparent; color: white;">{{ "{:,.2f} €".format(user.total_ca) }}</td>
-                                    </tr>
-                                {% endfor %}
-                            {% else %}
+                            {% set user_in_top_3_ca_displayed = false %}
+                            {% for user in leaderboard %}
+                                {% if current_user.is_authenticated and user.user_id == current_user.id and user.rank_ca <= 3 %}
+                                    {% set user_in_top_3_ca_displayed = true %}
+                                {% endif %}
+                                <tr style="background-color: transparent; {% if current_user.is_authenticated and user.user_id == current_user.id %}background-color: rgba(60, 179, 113, 0.7);{% endif %}">
+                                    <td style="background-color: transparent; color: white;">{{ user.rank_ca }}</td>
+                                    <td style="background-color: transparent; color: white;">
+                                        {# MODIFIÉ ICI : Affiche "Vous (Rang #X)" #}
+                                        {% if current_user.is_authenticated and user.user_id == current_user.id %}Vous (Rang {{ user.rank_ca }}){% else %}User #{{ user.rank_ca }}{% endif %}
+                                    </td>
+                                    <td style="background-color: transparent; color: white;">{{ "{:,.2f} €".format(user.total_ca) }}</td>
+                                </tr>
+                            {% endfor %}
+                            {% if not leaderboard %}
                                 <tr style="background-color: transparent;">
                                     <td colspan="3" style="background-color: transparent; color: white;">Aucune donnée de classement disponible pour le moment.</td>
+                                </tr>
+                            {% elif current_user.is_authenticated and current_user_entry and current_user_entry.rank_ca > 3 and not user_in_top_3_ca_displayed %}
+                                <tr style="background-color: rgba(60, 179, 113, 0.7);">
+                                    <td style="background-color: transparent; color: white;">{{ current_user_entry.rank_ca }}</td>
+                                    {# MODIFIÉ ICI : Affiche "Vous (Rang #X)" pour la ligne séparée #}
+                                    <td style="background-color: transparent; color: white;">Vous (Rang {{ current_user_entry.rank_ca }})</td>
+                                    <td style="background-color: transparent; color: white;">{{ "{:,.2f} €".format(current_user_entry.total_ca) }}</td>
                                 </tr>
                             {% endif %}
                         </tbody>
@@ -64,17 +86,26 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% if leaderboard %}
-                                {% for user in leaderboard | sort(attribute='rank_benefice') %}
-                                    <tr style="background-color: transparent;">
-                                        <td style="background-color: transparent; color: white;">{{ user.rank_benefice }}</td>
-                                        <td style="background-color: transparent; color: white;">User #{{ user.rank_benefice }}</td>
-                                        <td style="background-color: transparent; color: white;">{{ "{:,.2f} €".format(user.total_benefice) }}</td>
-                                    </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr style="background-color: transparent;">
-                                    <td colspan="3" style="background-color: transparent; color: white;">Aucune donnée de classement disponible pour le moment.</td>
+                            {% set user_in_top_3_benefice_displayed = false %}
+                            {% for user in leaderboard | sort(attribute='rank_benefice') %}
+                                {% if current_user.is_authenticated and user.user_id == current_user.id and user.rank_benefice <= 3 %}
+                                    {% set user_in_top_3_benefice_displayed = true %}
+                                {% endif %}
+                                <tr style="background-color: transparent; {% if current_user.is_authenticated and user.user_id == current_user.id %}background-color: rgba(60, 179, 113, 0.7);{% endif %}">
+                                    <td style="background-color: transparent; color: white;">{{ user.rank_benefice }}</td>
+                                    <td style="background-color: transparent; color: white;">
+                                        {# MODIFIÉ ICI : Affiche "Vous (Rang #X)" #}
+                                        {% if current_user.is_authenticated and user.user_id == current_user.id %}Vous (Rang {{ user.rank_benefice }}){% else %}User #{{ user.rank_benefice }}{% endif %}
+                                    </td>
+                                    <td style="background-color: transparent; color: white;">{{ "{:,.2f} €".format(user.total_benefice) }}</td>
+                                </tr>
+                            {% endfor %}
+                            {% if current_user.is_authenticated and current_user_entry and current_user_entry.rank_benefice > 3 and not user_in_top_3_benefice_displayed %}
+                                <tr style="background-color: rgba(60, 179, 113, 0.7);">
+                                    <td style="background-color: transparent; color: white;">{{ current_user_entry.rank_benefice }}</td>
+                                    {# MODIFIÉ ICI : Affiche "Vous (Rang #X)" pour la ligne séparée #}
+                                    <td style="background-color: transparent; color: white;">Vous (Rang {{ current_user_entry.rank_benefice }})</td>
+                                    <td style="background-color: transparent; color: white;">{{ "{:,.2f} €".format(current_user_entry.total_benefice) }}</td>
                                 </tr>
                             {% endif %}
                         </tbody>

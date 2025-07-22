@@ -63,9 +63,9 @@
             width: auto; /* Laisse la largeur s'ajuster proportionnellement à la hauteur */
             height: auto; /* La hauteur s'ajuste pour maintenir les proportions */
             object-fit: contain; /* Assure que l'image est contenue dans ses dimensions sans être coupée, gardant son ratio */
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            margin-bottom: 40px;
+            /* border-radius: 10px; -- SUPPRIMÉ */
+            /* box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); -- SUPPRIMÉ */
+            /* margin-bottom: 40px; -- SUPPRIMÉ */
             opacity: 0;
             transform: translateY(50px);
             animation: slideInFade 0.7s forwards ease-out;
@@ -188,7 +188,7 @@
         <div class="got-em-text">SOLD'EM !</div>
 
         {% if sale.item_name %}
-            <p style="font-size: 1.5em; margin-top: -20px; margin-bottom: 30px; color: #eee;">{{ sale.item_name }}</p> {# MODIFICATION ICI : font-size de 1.8em à 1.5em #}
+            <p style="font-size: 1.5em; margin-top: -20px; margin-bottom: 30px; color: #eee;">{{ sale.item_name }}</p>
         {% endif %}
 
         {% if product_image_url %}

@@ -13,7 +13,7 @@ import calendar
 import json
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, g # Importez jsonify ici
 from functools import wraps # Importez wraps pour le décorateur
-
+from decimal import Decimal
 
 load_dotenv()
 # Render définit automatiquement DATABASE_URL pour votre base de données liée.
@@ -318,12 +318,14 @@ def key_activation_required():
         return redirect(url_for('dashboard'))
     return render_template('key_activation_required.html') # Ce template est à créer
 
+import psycopg2.extras # Assurez-vous que cet import est présent en haut de votre fichier
+
 @app.route('/')
 @login_required
-@key_active_required # AJOUTEZ CETTE LIGNE
+@key_active_required
 def dashboard():
     conn = g.db
-    cur = None # Initialize cur outside try block for finally to access it
+    cur = None
 
     try:
         # Calcul du nombre de produits en stock
@@ -339,7 +341,8 @@ def dashboard():
         cur.execute("SELECT SUM(purchase_price * quantity) FROM products WHERE user_id = %s",
                                       (current_user.id,))
         total_stock_value_query = cur.fetchone()
-        total_stock_value = total_stock_value_query['sum'] if total_stock_value_query and total_stock_value_query['sum'] is not None else 0.0
+        # MODIFICATION ICI : Utiliser Decimal('0.00') au lieu de 0.0
+        total_stock_value = total_stock_value_query['sum'] if total_stock_value_query and total_stock_value_query['sum'] is not None else Decimal('0.00')
         cur.close()
 
         # Calcul du bénéfice total des ventes
@@ -348,7 +351,8 @@ def dashboard():
             "SELECT SUM(profit) FROM sales WHERE user_id = %s",
             (current_user.id,))
         total_sales_profit_query = cur.fetchone()
-        total_sales_profit = total_sales_profit_query['sum'] if total_sales_profit_query and total_sales_profit_query['sum'] is not None else 0.0
+        # MODIFICATION ICI : Utiliser Decimal('0.00') au lieu de 0.0
+        total_sales_profit = total_sales_profit_query['sum'] if total_sales_profit_query and total_sales_profit_query['sum'] is not None else Decimal('0.00')
         cur.close()
 
         # Calcul du chiffre d'affaires total (Somme de tous les prix de vente)
@@ -356,8 +360,35 @@ def dashboard():
         cur.execute("SELECT SUM(sale_price) FROM sales WHERE user_id = %s",
                                    (current_user.id,))
         total_revenue_query = cur.fetchone()
-        total_revenue = total_revenue_query['sum'] if total_revenue_query and total_revenue_query['sum'] is not None else 0.0
+        # MODIFICATION ICI : Utiliser Decimal('0.00') au lieu de 0.0
+        total_revenue = total_revenue_query['sum'] if total_revenue_query and total_revenue_query['sum'] is not None else Decimal('0.00')
         cur.close()
+
+        # --- Calcul des 'charges' et 'bonus' depuis supplementary_operations ---
+        # Total des bonus
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            "SELECT SUM(amount) FROM supplementary_operations WHERE user_id = %s AND type = 'bonus'",
+            (current_user.id,)
+        )
+        total_bonus_operations_query = cur.fetchone()
+        # MODIFICATION ICI : Utiliser Decimal('0.00') au lieu de 0.0
+        total_bonus_operations = total_bonus_operations_query['sum'] if total_bonus_operations_query and total_bonus_operations_query['sum'] is not None else Decimal('0.00')
+        cur.close()
+
+        # Total des charges
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            "SELECT SUM(amount) FROM supplementary_operations WHERE user_id = %s AND type = 'charge'",
+            (current_user.id,)
+        )
+        total_charge_operations_query = cur.fetchone()
+        # MODIFICATION ICI : Utiliser Decimal('0.00') au lieu de 0.0
+        total_charge_operations = total_charge_operations_query['sum'] if total_charge_operations_query and total_charge_operations_query['sum'] is not None else Decimal('0.00')
+        cur.close()
+
+        # --- Calcul du Résultat Net ---
+        net_result = total_sales_profit + total_bonus_operations - total_charge_operations
 
 
         # Récupération des 5 dernières ventes avec toutes les données nécessaires
@@ -390,11 +421,13 @@ def dashboard():
             sale_dict['sku'] = sale['sku'] if sale['sku'] else 'N/A'
             sale_dict['size'] = sale['size'] if sale['size'] else 'N/A'
 
-            sale_dict['sale_price_formatted'] = '{:.2f} €'.format(sale_dict['sale_price'] or 0.0)
-            sale_dict['purchase_price_at_sale_formatted'] = '{:.2f} €'.format(sale_dict['purchase_price_at_sale'] or 0.0)
-            sale_dict['shipping_cost_formatted'] = '{:.2f} €'.format(sale_dict['shipping_cost'] or 0.0)
-            sale_dict['fees_formatted'] = '{:.2f} €'.format(sale_dict['fees'] or 0.0)
-            sale_dict['profit_formatted'] = '{:.2f} €'.format(sale_dict['profit'] or 0.0)
+            # Assurez-vous que les valeurs sont des Decimals avant de les formater, ou qu'elles peuvent être converties en float pour le formatage
+            # Si 'sale.profit' est déjà un Decimal, pas besoin de le modifier ici, juste s'assurer que c'est bien formatable
+            sale_dict['sale_price_formatted'] = '{:.2f} €'.format(float(sale_dict['sale_price'] or 0.0))
+            sale_dict['purchase_price_at_sale_formatted'] = '{:.2f} €'.format(float(sale_dict['purchase_price_at_sale'] or 0.0))
+            sale_dict['shipping_cost_formatted'] = '{:.2f} €'.format(float(sale_dict['shipping_cost'] or 0.0))
+            sale_dict['fees_formatted'] = '{:.2f} €'.format(float(sale_dict['fees'] or 0.0))
+            sale_dict['profit_formatted'] = '{:.2f} €'.format(float(sale_dict['profit'] or 0.0))
 
             latest_sales_for_template.append(sale_dict)
 
@@ -403,18 +436,15 @@ def dashboard():
                                total_stock_value=total_stock_value,
                                total_sales_profit=total_sales_profit,
                                total_revenue=total_revenue,
+                               net_result=net_result,
                                latest_sales=latest_sales_for_template)
     except Exception as e:
         flash(f"Une erreur est survenue lors du chargement du tableau de bord: {e}", 'danger')
         print(f"Erreur tableau de bord: {e}")
-        # Rediriger vers une page d'erreur ou le login si nécessaire
         return redirect(url_for('login'))
     finally:
-        # cur.close() is called inside the try block for each cursor instance,
-        # but in case of an error before a cursor is defined, this check handles it.
         if cur is not None and not cur.closed:
             cur.close()
-
 @app.route('/profile', methods=('GET', 'POST'))
 @login_required  # L'utilisateur doit être connecté pour accéder à cette page
 def profile():
@@ -672,7 +702,7 @@ def delete_product(id):
 @key_active_required
 def add_sale():
     conn = g.db
-    cur = None  # Initialisation du curseur
+    cur = None
 
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -680,11 +710,11 @@ def add_sale():
             'SELECT id, name, sku, size, quantity, purchase_price FROM products WHERE user_id = %s AND quantity > 0 ORDER BY name',
             (current_user.id,))
         products_for_dropdown = cur.fetchall()
-        cur.close()  # Ferme le curseur après la sélection du dropdown
+        cur.close()
     except Exception as e:
         flash(f"Erreur lors du chargement des produits pour la vente : {e}", "danger")
         print(f"DEBUG: Erreur de chargement produits_for_dropdown : {e}")
-        products_for_dropdown = []  # Assurez-vous que la variable est définie même en cas d'erreur
+        products_for_dropdown = []
 
     form_data = {
         'product_id': request.form.get('product_id', ''),
@@ -741,18 +771,26 @@ def add_sale():
                     product_data_for_sale = cur.fetchone()
                     cur.close()
                     if product_data_for_sale:
-                        # CORRECTION APPLIQUÉE ICI : Convertir le Decimal en float
                         purchase_price_at_sale = float(product_data_for_sale['purchase_price'])
 
+                # Calcul du bénéfice par vente (profit) et du chiffre d'affaires (CA) de cette vente
+                # Le profit est déjà calculé
                 profit = sale_price_float - purchase_price_at_sale - shipping_cost_float - fees_float
 
-                cur = conn.cursor()  # Nouveau curseur pour l'insertion de vente
+                # Le CA pour cette vente est simplement le prix de vente
+                # Si tu veux inclure les frais de port dans le CA, tu peux faire:
+                # sale_ca = sale_price_float + shipping_cost_float
+                # Pour l'instant, je considère le CA comme le prix de vente du produit
+                sale_ca = sale_price_float
+
+                cur = conn.cursor()
+                # MODIFICATION ESSENTIELLE ICI : Ajout de RETURNING id pour récupérer l'ID de la nouvelle vente
                 cur.execute(
-                    'INSERT INTO sales (user_id, product_id, item_name, quantity, sale_price, purchase_price_at_sale, sale_date, notes, sale_channel, shipping_cost, fees, profit) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
-                    # Placeholders %s
+                    'INSERT INTO sales (user_id, product_id, item_name, quantity, sale_price, purchase_price_at_sale, sale_date, notes, sale_channel, shipping_cost, fees, profit) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id',
                     (current_user.id, product_id, item_name, quantity_sold, sale_price_float, purchase_price_at_sale,
                      sale_date, notes, platform, shipping_cost_float, fees_float, profit)
                 )
+                new_sale_id = cur.fetchone()[0]  # Récupère l'ID de la vente nouvellement insérée
                 cur.close()
 
                 if product_id:
@@ -766,7 +804,7 @@ def add_sale():
                         current_product_quantity = product_data['quantity']
                         new_quantity = current_product_quantity - quantity_sold
 
-                        cur = conn.cursor()  # Nouveau curseur pour l'update de produit
+                        cur = conn.cursor()
                         cur.execute('UPDATE products SET quantity = %s WHERE id = %s', (new_quantity, product_id))
                         cur.close()
 
@@ -784,9 +822,26 @@ def add_sale():
                             'Avertissement: Le produit lié à la vente n\'a pas été trouvé pour la mise à jour du stock.',
                             'warning')
 
+                # --- DÉBUT DE LA LOGIQUE D'INTÉGRATION DU CLASSEMENT ---
+                cur = conn.cursor()
+                cur.execute(
+                    """
+                    INSERT INTO classement_utilisateurs (user_id, total_ca, total_benefice, last_updated)
+                    VALUES (%s, %s, %s, NOW())
+                    ON CONFLICT (user_id) DO UPDATE SET
+                        total_ca = classement_utilisateurs.total_ca + EXCLUDED.total_ca,
+                        total_benefice = classement_utilisateurs.total_benefice + EXCLUDED.total_benefice,
+                        last_updated = NOW();
+                    """,
+                    (current_user.id, sale_ca, profit)
+                    # Utilise current_user.id, le CA de la vente et le profit de la vente
+                )
+                cur.close()
+                # --- FIN DE LA LOGIQUE D'INTÉGRATION DU CLASSEMENT ---
+
                 conn.commit()
-                flash('Vente enregistrée avec succès !', 'success')
-                return redirect(url_for('sales'))
+                # MODIFICATION ESSENTIELLE ICI : Redirection vers la nouvelle page de succès
+                return redirect(url_for('sale_success', sale_id=new_sale_id))
 
             except ValueError:
                 conn.rollback()
@@ -798,7 +853,7 @@ def add_sale():
                 print(f"DEBUG: Erreur détaillée lors de l'enregistrement de la vente : {e}")
                 flash(error, 'danger')
             finally:
-                if cur and not cur.closed:  # S'assurer que le curseur est fermé si non null
+                if cur and not cur.closed:
                     cur.close()
         else:
             flash(error, 'danger')
@@ -824,6 +879,101 @@ def add_sale():
                                'fees': display_fees,
                                'notes': form_data['notes']
                            })
+
+@app.route('/leaderboard')
+@login_required # Pour que seuls les utilisateurs connectés puissent voir le classement
+def leaderboard():
+    conn = g.db
+    cur = None
+    leaderboard_data = []
+
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            """
+            SELECT
+                cu.user_id,  -- AJOUTÉ : Pour que l'ID utilisateur soit disponible pour la comparaison
+                cu.total_ca,
+                cu.total_benefice,
+                u.username,
+                ROW_NUMBER() OVER (ORDER BY cu.total_ca DESC) as rank_ca,
+                ROW_NUMBER() OVER (ORDER BY cu.total_benefice DESC) as rank_benefice
+            FROM
+                classement_utilisateurs cu
+            JOIN
+                users u ON cu.user_id = u.id
+            ORDER BY
+                cu.total_ca DESC; -- Tri principal par chiffre d'affaires
+            """
+        )
+        leaderboard_data = cur.fetchall()
+    except Exception as e:
+        flash(f"Erreur lors du chargement du classement : {e}", "danger")
+        print(f"DEBUG: Erreur de chargement leaderboard : {e}")
+    finally:
+        if cur and not cur.closed:
+            cur.close()
+
+    return render_template('leaderboard.html', leaderboard=leaderboard_data)
+@app.route('/sale_success/<int:sale_id>')
+@login_required
+@key_active_required
+def sale_success(sale_id):
+    conn = g.db
+    cur = None
+    sale_details = None
+    product_image_url = None # Initialise à None
+
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        # Récupérer les détails de la vente et l'URL de l'image du produit si disponible
+        cur.execute('''
+            SELECT
+                s.item_name,
+                s.sale_price,
+                s.purchase_price_at_sale,
+                s.shipping_cost,
+                s.fees,
+                s.profit,
+                p.image_url,
+                p.sku,
+                p.size
+            FROM sales s
+            LEFT JOIN products p ON s.product_id = p.id
+            WHERE s.id = %s AND s.user_id = %s
+        ''', (sale_id, current_user.id))
+        sale_details = cur.fetchone()
+        cur.close()
+
+        if sale_details:
+            # Assurer que les valeurs sont au bon format pour l'affichage (float pour le formatage)
+            sale_details['sale_price_formatted'] = '{:.2f}€'.format(float(sale_details['sale_price'] or 0.0))
+            sale_details['purchase_price_formatted'] = '{:.2f}€'.format(float(sale_details['purchase_price_at_sale'] or 0.0))
+            sale_details['profit_formatted'] = '{:+.2f}€'.format(float(sale_details['profit'] or 0.0)) # Pour afficher + ou -
+
+            # Gérer l'URL de l'image du produit
+            if sale_details['image_url']:
+                product_image_url = sale_details['image_url']
+            else:
+                # Si pas d'image spécifique pour le produit, utiliser une image par défaut ou gérer l'absence
+                product_image_url = url_for('static', filename='placeholder_product.png') # Assurez-vous d'avoir cette image par défaut
+
+        else:
+            flash("Détails de la vente introuvables.", "danger")
+            return redirect(url_for('dashboard')) # Redirige si la vente n'est pas trouvée
+
+    except Exception as e:
+        flash(f"Erreur lors du chargement des détails de la vente : {e}", 'danger')
+        print(f"DEBUG: Erreur de chargement sale_success : {e}")
+        return redirect(url_for('dashboard'))
+    finally:
+        if cur is not None and not cur.closed:
+            cur.close()
+
+    return render_template('sale_success.html',
+                           sale=sale_details,
+                           product_image_url=product_image_url,
+                           success_checkmark_url=url_for('static', filename='success_checkmark.png')) # Assurez-vous que le chemin est correct
 @app.route('/sales')
 @login_required
 @key_active_required
@@ -1235,29 +1385,55 @@ def delete_sale(id):
     cur = None # Initialisation du curseur
 
     try:
-        # Récupérer les détails de la vente pour remettre à jour le stock
+        # 1. Récupérer TOUS les détails de la vente à supprimer (y compris user_id, sale_price, et profit)
+        # C'est crucial de le faire AVANT de la supprimer.
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute('SELECT product_id, quantity FROM sales WHERE id = %s AND user_id = %s',
-                            (id, current_user.id))
-        sale = cur.fetchone()
+        cur.execute(
+            'SELECT user_id, product_id, quantity, sale_price, profit FROM sales WHERE id = %s AND user_id = %s',
+            (id, current_user.id)
+        )
+        sale_details = cur.fetchone()
         cur.close()
 
-        if sale is None:
+        if sale_details is None:
+            # Si la vente n'existe pas ou n'appartient pas à l'utilisateur actuel, on arrête ici.
             abort(404)
 
+        # Stocker les valeurs nécessaires pour les mises à jour futures
+        sale_user_id = sale_details['user_id']
+        sale_product_id = sale_details['product_id']
+        sale_quantity = sale_details['quantity']
+        sale_price_to_deduct = sale_details['sale_price'] # CA de la vente à déduire
+        profit_to_deduct = sale_details['profit']       # Bénéfice de la vente à déduire
+
         # Remettre la quantité en stock si la vente était liée à un produit
-        if sale['product_id']:
-            cur = conn.cursor() # Nouveau curseur pour l'UPDATE
-            cur.execute('UPDATE products SET quantity = quantity + %s WHERE id = %s', (sale['quantity'], sale['product_id']))
+        if sale_product_id:
+            cur = conn.cursor() # Nouveau curseur pour l'UPDATE product
+            cur.execute('UPDATE products SET quantity = quantity + %s WHERE id = %s', (sale_quantity, sale_product_id))
             cur.close()
 
-        # Supprimer la vente
-        cur = conn.cursor() # Nouveau curseur pour le DELETE
+        # Supprimer la vente de la table 'sales'
+        cur = conn.cursor() # Nouveau curseur pour le DELETE sale
         cur.execute('DELETE FROM sales WHERE id = %s AND user_id = %s', (id, current_user.id))
         cur.close()
 
-        conn.commit()
-        flash('Vente supprimée avec succès !', 'success')
+        # 2. Mettre à jour (décrémenter) les totaux dans la table classement_utilisateurs
+        cur = conn.cursor() # Nouveau curseur pour l'UPDATE classement_utilisateurs
+        cur.execute(
+            """
+            UPDATE classement_utilisateurs
+            SET
+                total_ca = total_ca - %s,
+                total_benefice = total_benefice - %s,
+                last_updated = NOW()
+            WHERE user_id = %s;
+            """,
+            (sale_price_to_deduct, profit_to_deduct, sale_user_id)
+        )
+        cur.close() # Ferme le curseur après l'opération
+
+        conn.commit() # Valide toutes les modifications dans la base de données
+        flash('Vente supprimée avec succès et classement mis à jour !', 'success')
         return redirect(url_for('sales'))
 
     except Exception as e:
@@ -1266,10 +1442,82 @@ def delete_sale(id):
         print(f"Erreur suppression vente: {e}")
         return redirect(url_for('sales'))
     finally:
-        if cur and not cur.closed: # S'assurer que le curseur est fermé
-            cur.close()
+        # Le finally n'a plus besoin de fermer le curseur si chaque curseur est fermé juste après son usage,
+        # comme c'est le cas dans cette révision.
+        pass
+@app.route('/supplementary_operations', methods=('GET',))
+@login_required
+@key_active_required
+def supplementary_operations():
+    conn = g.db
+    operations = []
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            'SELECT id, type, amount, description, operation_date FROM supplementary_operations WHERE user_id = %s ORDER BY operation_date DESC, created_at DESC LIMIT 10',
+            (current_user.id,)
+        )
+        operations = cur.fetchall()
+        cur.close()
+    except Exception as e:
+        flash(f"Erreur lors du chargement des opérations supplémentaires : {e}", "danger")
+        print(f"DEBUG: Erreur de chargement opérations supplémentaires : {e}")
 
-# --- Route d'erreur 404 ---
+    return render_template('supplementary_operations.html', operations=operations)
+
+@app.route('/add_supplementary_operation', methods=('GET', 'POST'))
+@login_required
+@key_active_required
+def add_supplementary_operation():
+    operation_type = request.args.get('type') # Récupère le type ('charge' ou 'bonus') de l'URL
+    if operation_type not in ['charge', 'bonus']:
+        flash("Type d'opération non valide.", "danger")
+        return redirect(url_for('supplementary_operations'))
+
+    amount = request.form.get('amount', '').replace(',', '.')
+    description = request.form.get('description', '').strip()
+    operation_date = request.form.get('operation_date', datetime.now().strftime('%Y-%m-%d'))
+
+    if request.method == 'POST':
+        error = None
+
+        if not amount or not amount.replace('.', '', 1).isdigit() or float(amount) <= 0:
+            error = 'Le montant est obligatoire et doit être un nombre positif !'
+        elif not operation_date:
+            error = 'La date de l\'opération est obligatoire !'
+
+        if error is None:
+            conn = g.db
+            try:
+                amount_float = float(amount) # Convertir en float pour l'insertion si la colonne est numeric/decimal
+
+                cur = conn.cursor()
+                cur.execute(
+                    'INSERT INTO supplementary_operations (user_id, type, amount, description, operation_date) VALUES (%s, %s, %s, %s, %s)',
+                    (current_user.id, operation_type, amount_float, description, operation_date)
+                )
+                conn.commit()
+                flash(f'Opération ({operation_type}) enregistrée avec succès !', 'success')
+                return redirect(url_for('supplementary_operations'))
+
+            except Exception as e:
+                conn.rollback()
+                flash(f'Une erreur est survenue lors de l\'enregistrement de l\'opération : {e}', "danger")
+                print(f"DEBUG: Erreur d'enregistrement opération supplémentaire : {e}")
+            finally:
+                if cur and not cur.closed:
+                    cur.close()
+        else:
+            flash(error, 'danger')
+
+    # Si c'est un GET ou qu'il y a une erreur POST, afficher le formulaire
+    return render_template('add_supplementary_operation.html',
+                           operation_type=operation_type,
+                           amount=amount,
+                           description=description,
+                           operation_date=operation_date)
+
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
