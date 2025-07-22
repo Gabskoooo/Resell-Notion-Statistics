@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Classement des Utilisateurs{% endblock %}
+
+{% block content %}
+<h1 class="mb-4 text-white">Classement des Utilisateurs</h1>
+
+{# NOUVEAU MESSAGE COMMERCIAL ET PROFESSIONNEL #}
+<p class="text-white mb-4">Pour booster vos performances, à la fin de chaque mois le 1er du classement se verra récompensé par des Free Days sur notre serveur Discord. 🎉</p>
+
+<ul class="nav nav-tabs mb-3" id="leaderboardTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="ca-tab" data-bs-toggle="tab" data-bs-target="#ca-ranking" type="button" role="tab" aria-controls="ca-ranking" aria-selected="true">Par Chiffre d'Affaires</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="profit-tab" data-bs-toggle="tab" data-bs-target="#profit-ranking" type="button" role="tab" aria-controls="profit-ranking" aria-selected="false">Par Bénéfice</button>
+    </li>
+</ul>
+<div class="tab-content" id="leaderboardTabsContent">
+    {# Contenu de l'onglet "Par Chiffre d'Affaires" #}
+    <div class="tab-pane fade show active" id="ca-ranking" role="tabpanel" aria-labelledby="ca-tab">
+        <div class="card mb-3" style="background-color: rgba(0, 0, 0, 0.5); color: white; border: none;">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table text-white" style="background-color: transparent;">
+                        <thead>
+                            <tr>
+                                <th class="text-white" style="background-color: transparent;">Rang</th>
+                                <th class="text-white" style="background-color: transparent;">Utilisateur</th>
+                                <th class="text-white" style="background-color: transparent;">Chiffre d'Affaires Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if leaderboard %}
+                                {% for user in leaderboard %}
+                                    <tr style="background-color: transparent;">
+                                        <td style="background-color: transparent; color: white;">{{ user.rank_ca }}</td>
+                                        <td style="background-color: transparent; color: white;">User #{{ user.rank_ca }}</td>
+                                        <td style="background-color: transparent; color: white;">{{ "{:,.2f} €".format(user.total_ca) }}</td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr style="background-color: transparent;">
+                                    <td colspan="3" style="background-color: transparent; color: white;">Aucune donnée de classement disponible pour le moment.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {# Contenu de l'onglet "Par Bénéfice" #}
+    <div class="tab-pane fade" id="profit-ranking" role="tabpanel" aria-labelledby="profit-tab">
+        <div class="card mb-3" style="background-color: rgba(0, 0, 0, 0.5); color: white; border: none;">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table text-white" style="background-color: transparent;">
+                        <thead>
+                            <tr>
+                                <th class="text-white" style="background-color: transparent;">Rang</th>
+                                <th class="text-white" style="background-color: transparent;">Utilisateur</th>
+                                <th class="text-white" style="background-color: transparent;">Bénéfice Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if leaderboard %}
+                                {% for user in leaderboard | sort(attribute='rank_benefice') %}
+                                    <tr style="background-color: transparent;">
+                                        <td style="background-color: transparent; color: white;">{{ user.rank_benefice }}</td>
+                                        <td style="background-color: transparent; color: white;">User #{{ user.rank_benefice }}</td>
+                                        <td style="background-color: transparent; color: white;">{{ "{:,.2f} €".format(user.total_benefice) }}</td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr style="background-color: transparent;">
+                                    <td colspan="3" style="background-color: transparent; color: white;">Aucune donnée de classement disponible pour le moment.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

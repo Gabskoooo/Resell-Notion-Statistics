@@ -10,17 +10,29 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
-           <a class="navbar-brand" href="{{ url_for('dashboard') }}">Resell Notion Stats</a>
+           {# LOGO - TAILLE GROSSIE #}
+           <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+               <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" style="height: 40px; margin-right: 10px;"> {# Hauteur augmentée #}
+           </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     {% if current_user.is_authenticated %}
+                        {# EMOJI MAISON - TAILLE GROSSIE - DÉPLACÉ EN PREMIER #}
                         <li class="nav-item">
-                            {# MODIFICATION ICI : 'Accueil' pointe maintenant vers le tableau de bord #}
-                            <a class="nav-link" href="{{ url_for('dashboard') }}">Accueil</a>
+                            <a class="nav-link" href="{{ url_for('dashboard') }}"><span style="font-size: 1.5em;">🏠</span></a>
                         </li>
+                        {# EMOJI GRAPHIQUE - TAILLE GROSSIE - DÉPLACÉ À CÔTÉ DE LA MAISON #}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('statistics') }}"><span style="font-size: 1.5em;">📊</span></a>
+                        </li>
+                        {# EMOJI PODIUM - TAILLE GROSSIE - DÉPLACÉ À CÔTÉ DES STATS #}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('leaderboard') }}"><span style="font-size: 1.5em;">🏆</span></a>
+                        </li>
+                        {# BOUTONS PRODUITS ET VENTES DÉPLACÉS APRÈS LES EMOJIS #}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownProducts" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 Produits
@@ -39,10 +51,7 @@
                                 <li><a class="dropdown-item" href="{{ url_for('add_sale') }}">Enregistrer une Vente</a></li>
                             </ul>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('statistics') }}">Statistiques</a> {# <-- Lien vers la route 'statistics' #}
-                        </li>
-                        {# NOUVEL ONGLET AJOUTÉ ICI #}
+                        {# OPÉRATIONS SUPPLÉMENTAIRES (POSITION CONSERVÉE RELATIVEMENT AUX AUTRES) #}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('supplementary_operations') }}">Opérations Supplémentaires</a>
                         </li>
@@ -52,12 +61,11 @@
                     {% if current_user.is_authenticated %}
                      <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownUser" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Bienvenue, {{ current_user.username or current_user.email }}
+                                👤 {# EMOJI PROFIL - TAILLE GROSSIE #}
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="navbarDropdownUser">
-                                {# NOUVEAU LIEN : Vers la page de profil #}
-                                <li><a class="dropdown-item" href="{{ url_for('profile') }}">Mon Profil</a></li>
-                                <li><hr class="dropdown-divider"></li> {# Ligne de séparation optionnelle #}
+                                <li><a class="dropdown-item" href="{{ url_for('profile') }}">Mon Profil ({{ current_user.username or current_user.email }})</a></li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{{ url_for('logout') }}">Déconnexion</a></li>
                             </ul>
                         </li>

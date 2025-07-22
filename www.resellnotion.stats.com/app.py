@@ -773,7 +773,15 @@ def add_sale():
                     if product_data_for_sale:
                         purchase_price_at_sale = float(product_data_for_sale['purchase_price'])
 
+                # Calcul du bénéfice par vente (profit) et du chiffre d'affaires (CA) de cette vente
+                # Le profit est déjà calculé
                 profit = sale_price_float - purchase_price_at_sale - shipping_cost_float - fees_float
+
+                # Le CA pour cette vente est simplement le prix de vente
+                # Si tu veux inclure les frais de port dans le CA, tu peux faire:
+                # sale_ca = sale_price_float + shipping_cost_float
+                # Pour l'instant, je considère le CA comme le prix de vente du produit
+                sale_ca = sale_price_float
 
                 cur = conn.cursor()
                 # MODIFICATION ESSENTIELLE ICI : Ajout de RETURNING id pour récupérer l'ID de la nouvelle vente
@@ -782,7 +790,7 @@ def add_sale():
                     (current_user.id, product_id, item_name, quantity_sold, sale_price_float, purchase_price_at_sale,
                      sale_date, notes, platform, shipping_cost_float, fees_float, profit)
                 )
-                new_sale_id = cur.fetchone()[0] # Récupère l'ID de la vente nouvellement insérée
+                new_sale_id = cur.fetchone()[0]  # Récupère l'ID de la vente nouvellement insérée
                 cur.close()
 
                 if product_id:
@@ -813,6 +821,23 @@ def add_sale():
                         flash(
                             'Avertissement: Le produit lié à la vente n\'a pas été trouvé pour la mise à jour du stock.',
                             'warning')
+
+                # --- DÉBUT DE LA LOGIQUE D'INTÉGRATION DU CLASSEMENT ---
+                cur = conn.cursor()
+                cur.execute(
+                    """
+                    INSERT INTO classement_utilisateurs (user_id, total_ca, total_benefice, last_updated)
+                    VALUES (%s, %s, %s, NOW())
+                    ON CONFLICT (user_id) DO UPDATE SET
+                        total_ca = classement_utilisateurs.total_ca + EXCLUDED.total_ca,
+                        total_benefice = classement_utilisateurs.total_benefice + EXCLUDED.total_benefice,
+                        last_updated = NOW();
+                    """,
+                    (current_user.id, sale_ca, profit)
+                    # Utilise current_user.id, le CA de la vente et le profit de la vente
+                )
+                cur.close()
+                # --- FIN DE LA LOGIQUE D'INTÉGRATION DU CLASSEMENT ---
 
                 conn.commit()
                 # MODIFICATION ESSENTIELLE ICI : Redirection vers la nouvelle page de succès
@@ -854,6 +879,44 @@ def add_sale():
                                'fees': display_fees,
                                'notes': form_data['notes']
                            })
+
+@app.route('/leaderboard')
+@login_required # Pour que seuls les utilisateurs connectés puissent voir le classement
+def leaderboard():
+    conn = g.db
+    cur = None
+    leaderboard_data = []
+
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        # Jointure avec la table users pour récupérer le nom d'utilisateur
+        # Assure-toi que ta table utilisateur s'appelle 'users' et qu'elle a une colonne 'username'
+        cur.execute(
+            """
+            SELECT
+                cu.total_ca,
+                cu.total_benefice,
+                u.username, -- Supposons que ta table users a une colonne 'username'
+                ROW_NUMBER() OVER (ORDER BY cu.total_ca DESC) as rank_ca,
+                ROW_NUMBER() OVER (ORDER BY cu.total_benefice DESC) as rank_benefice
+            FROM
+                classement_utilisateurs cu
+            JOIN
+                users u ON cu.user_id = u.id
+            ORDER BY
+                cu.total_ca DESC; -- Tri principal par chiffre d'affaires
+            """
+        )
+        leaderboard_data = cur.fetchall()
+    except Exception as e:
+        flash(f"Erreur lors du chargement du classement : {e}", "danger")
+        print(f"DEBUG: Erreur de chargement leaderboard : {e}")
+    finally:
+        if cur and not cur.closed:
+            cur.close()
+
+    return render_template('leaderboard.html', leaderboard=leaderboard_data)
+
 
 @app.route('/sale_success/<int:sale_id>')
 @login_required
@@ -1325,29 +1388,55 @@ def delete_sale(id):
     cur = None # Initialisation du curseur
 
     try:
-        # Récupérer les détails de la vente pour remettre à jour le stock
+        # 1. Récupérer TOUS les détails de la vente à supprimer (y compris user_id, sale_price, et profit)
+        # C'est crucial de le faire AVANT de la supprimer.
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute('SELECT product_id, quantity FROM sales WHERE id = %s AND user_id = %s',
-                            (id, current_user.id))
-        sale = cur.fetchone()
+        cur.execute(
+            'SELECT user_id, product_id, quantity, sale_price, profit FROM sales WHERE id = %s AND user_id = %s',
+            (id, current_user.id)
+        )
+        sale_details = cur.fetchone()
         cur.close()
 
-        if sale is None:
+        if sale_details is None:
+            # Si la vente n'existe pas ou n'appartient pas à l'utilisateur actuel, on arrête ici.
             abort(404)
 
+        # Stocker les valeurs nécessaires pour les mises à jour futures
+        sale_user_id = sale_details['user_id']
+        sale_product_id = sale_details['product_id']
+        sale_quantity = sale_details['quantity']
+        sale_price_to_deduct = sale_details['sale_price'] # CA de la vente à déduire
+        profit_to_deduct = sale_details['profit']       # Bénéfice de la vente à déduire
+
         # Remettre la quantité en stock si la vente était liée à un produit
-        if sale['product_id']:
-            cur = conn.cursor() # Nouveau curseur pour l'UPDATE
-            cur.execute('UPDATE products SET quantity = quantity + %s WHERE id = %s', (sale['quantity'], sale['product_id']))
+        if sale_product_id:
+            cur = conn.cursor() # Nouveau curseur pour l'UPDATE product
+            cur.execute('UPDATE products SET quantity = quantity + %s WHERE id = %s', (sale_quantity, sale_product_id))
             cur.close()
 
-        # Supprimer la vente
-        cur = conn.cursor() # Nouveau curseur pour le DELETE
+        # Supprimer la vente de la table 'sales'
+        cur = conn.cursor() # Nouveau curseur pour le DELETE sale
         cur.execute('DELETE FROM sales WHERE id = %s AND user_id = %s', (id, current_user.id))
         cur.close()
 
-        conn.commit()
-        flash('Vente supprimée avec succès !', 'success')
+        # 2. Mettre à jour (décrémenter) les totaux dans la table classement_utilisateurs
+        cur = conn.cursor() # Nouveau curseur pour l'UPDATE classement_utilisateurs
+        cur.execute(
+            """
+            UPDATE classement_utilisateurs
+            SET
+                total_ca = total_ca - %s,
+                total_benefice = total_benefice - %s,
+                last_updated = NOW()
+            WHERE user_id = %s;
+            """,
+            (sale_price_to_deduct, profit_to_deduct, sale_user_id)
+        )
+        cur.close() # Ferme le curseur après l'opération
+
+        conn.commit() # Valide toutes les modifications dans la base de données
+        flash('Vente supprimée avec succès et classement mis à jour !', 'success')
         return redirect(url_for('sales'))
 
     except Exception as e:
@@ -1356,8 +1445,9 @@ def delete_sale(id):
         print(f"Erreur suppression vente: {e}")
         return redirect(url_for('sales'))
     finally:
-        if cur and not cur.closed: # S'assurer que le curseur est fermé
-            cur.close()
+        # Le finally n'a plus besoin de fermer le curseur si chaque curseur est fermé juste après son usage,
+        # comme c'est le cas dans cette révision.
+        pass
 @app.route('/supplementary_operations', methods=('GET',))
 @login_required
 @key_active_required
@@ -1430,7 +1520,7 @@ def add_supplementary_operation():
                            description=description,
                            operation_date=operation_date)
 
-# --- Route d'erreur 404 ---
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
