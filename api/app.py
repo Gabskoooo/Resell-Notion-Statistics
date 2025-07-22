@@ -676,7 +676,6 @@ def add_sale():
 
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        # CORRECTION APPLIQUÉE ICI : Séparer execute() et fetchall()
         cur.execute(
             'SELECT id, name, sku, size, quantity, purchase_price FROM products WHERE user_id = %s AND quantity > 0 ORDER BY name',
             (current_user.id,))
@@ -742,7 +741,8 @@ def add_sale():
                     product_data_for_sale = cur.fetchone()
                     cur.close()
                     if product_data_for_sale:
-                        purchase_price_at_sale = product_data_for_sale['purchase_price']
+                        # CORRECTION APPLIQUÉE ICI : Convertir le Decimal en float
+                        purchase_price_at_sale = float(product_data_for_sale['purchase_price'])
 
                 profit = sale_price_float - purchase_price_at_sale - shipping_cost_float - fees_float
 
