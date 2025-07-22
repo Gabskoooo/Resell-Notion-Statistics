@@ -13,9 +13,9 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            min-height: 100vh; /* Garde la hauteur à 100vh pour que le bouton soit en dessous de l'écran initialement */
             margin: 0;
-            overflow: hidden; /* Cache les barres de défilement */
+            overflow-y: auto; /* Permet le défilement vertical si nécessaire */
             color: #fff;
             font-family: 'Arial', sans-serif;
         }
@@ -75,23 +75,30 @@
         .sale-details-cards {
             display: flex;
             justify-content: center;
-            gap: 20px;
-            flex-wrap: wrap; /* Permet aux cartes de passer à la ligne sur petits écrans */
+            gap: 10px; /* Réduit l'espace entre les cartes pour aider à les garder sur une ligne */
+            /* flex-wrap: wrap; est supprimé ici pour que les cartes restent sur une seule ligne */
             margin-bottom: 40px;
+            width: 100%; /* S'assure que le conteneur prend toute la largeur disponible */
+            box-sizing: border-box; /* Inclut padding et border dans la largeur totale */
+            padding: 0 10px; /* Un peu de padding pour éviter qu'elles ne collent aux bords sur mobile */
         }
 
         .detail-card {
             background-color: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
-            padding: 20px 30px;
-            backdrop-filter: blur(5px); /* Effet verre dépoli */
+            padding: 10px 15px; /* Réduit le padding pour économiser de l'espace */
+            backdrop-filter: blur(5px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            font-size: 1.2em;
+            font-size: 1em; /* Réduit un peu la taille de la police pour les petits écrans */
             font-weight: bold;
             opacity: 0;
             transform: translateY(30px);
             animation: slideInFade 0.6s forwards ease-out;
+            flex: 1; /* Permet aux cartes de prendre une part égale de l'espace disponible */
+            min-width: 90px; /* Largeur minimale pour éviter un écrasement excessif */
+            max-width: 150px; /* Largeur maximale pour éviter qu'elles ne soient trop larges sur de grands écrans */
+            text-align: center; /* Centre le texte dans chaque carte */
         }
 
         /* Délais spécifiques pour les cartes */
@@ -160,13 +167,7 @@
                 max-width: 70%; /* Réduit encore sur les tablettes */
                 max-height: 250px; /* Ajuste la hauteur max */
             }
-            .detail-card {
-                width: calc(50% - 20px); /* Deux cartes par ligne */
-            }
-            .sale-details-cards {
-                flex-direction: row; /* Maintenir en ligne pour 2 colonnes */
-                justify-content: space-around; /* Espacement équitable */
-            }
+            /* Les règles pour .detail-card et .sale-details-cards sont retirées ici pour conserver l'affichage horizontal */
         }
 
         @media (max-width: 480px) {
@@ -177,23 +178,17 @@
                 max-width: 90%; /* Prend plus de place sur les très petits écrans si nécessaire */
                 max-height: 200px; /* Ajuste la hauteur max */
             }
-            .detail-card {
-                width: 80%; /* Une carte par ligne */
-            }
-            .sale-details-cards {
-                flex-direction: column; /* Une colonne */
-                align-items: center; /* Centrer les cartes */
-            }
+            /* Les règles pour .detail-card et .sale-details-cards sont retirées ici pour conserver l'affichage horizontal */
         }
     </style>
 </head>
 <body>
     <div class="success-container">
         <img src="{{ success_checkmark_url }}" alt="Succès" class="checkmark-icon">
-        <div class="got-em-text">SOLD'EM !</div> {# MODIFICATION : GOT'EM remplacé par SOLD'EM #}
+        <div class="got-em-text">SOLD'EM !</div>
 
         {% if sale.item_name %}
-            <p style="font-size: 1.8em; margin-top: -20px; margin-bottom: 30px; color: #eee;">{{ sale.item_name }}</p>
+            <p style="font-size: 1.5em; margin-top: -20px; margin-bottom: 30px; color: #eee;">{{ sale.item_name }}</p> {# MODIFICATION ICI : font-size de 1.8em à 1.5em #}
         {% endif %}
 
         {% if product_image_url %}
