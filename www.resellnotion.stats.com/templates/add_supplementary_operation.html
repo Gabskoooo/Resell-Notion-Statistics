@@ -1,0 +1,54 @@
+{# templates/add_supplementary_operation.html #}
+{% extends 'base.html' %}
+
+{% block title %}Ajouter une Opération{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Ajouter une {% if operation_type == 'charge' %}Charge{% else %}Bonus{% endif %}</h1>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flashes">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<form method="post">
+    <input type="hidden" name="type" value="{{ operation_type }}">
+
+    <div class="mb-3">
+        <label for="amount" class="form-label">Montant (€):</label>
+        <input type="number" step="0.01" class="form-control" id="amount" name="amount" value="{{ '%.2f'|format(amount|float) if amount and (amount|float is not none) else '' }}" required>
+    </div>
+
+    <div class="mb-3">
+        <label for="description" class="form-label">Description (Optionnel):</label>
+        <textarea class="form-control" id="description" name="description" rows="3">{{ description if description else '' }}</textarea>
+    </div>
+
+    <div class="mb-3">
+        <label for="operation_date" class="form-label">Date de l'opération:</label>
+        <input type="date" class="form-control" id="operation_date" name="operation_date" value="{{ operation_date if operation_date else '' }}" required>
+    </div>
+
+    <button type="submit" class="btn {% if operation_type == 'charge' %}btn-danger{% else %}btn-success{% endif %}">Enregistrer l'Opération</button>
+    <a href="{{ url_for('supplementary_operations') }}" class="btn btn-secondary ms-2">Annuler</a>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const operationDateInput = document.getElementById('operation_date');
+        // Définir la date du jour si le champ est vide (ex: au premier chargement de la page)
+        if (!operationDateInput.value) {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            operationDateInput.value = `${year}-${month}-${day}`;
+        }
+    });
+</script>
+{% endblock %}

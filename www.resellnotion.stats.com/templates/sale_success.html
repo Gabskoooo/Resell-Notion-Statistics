@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Vente Enregistrée !</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Styles spécifiques pour cette page */
+        body {
+            background: linear-gradient(135deg, #1A2A4C 0%, #301934 100%); /* Dégradé de l'image de référence */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden; /* Cache les barres de défilement */
+            color: #fff;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .success-container {
+            text-align: center;
+            opacity: 0; /* Caché au début */
+            transform: scale(0.8); /* Petitement au début */
+            animation: fadeInScale 0.8s forwards ease-out; /* Animation d'apparition */
+            animation-delay: 0.2s; /* Petit délai */
+            padding: 20px;
+            max-width: 90%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .checkmark-icon {
+            width: 150px;
+            height: 150px;
+            margin-bottom: 20px;
+            opacity: 0;
+            transform: scale(0);
+            animation: popIn 0.5s forwards ease-out;
+            animation-delay: 0.5s;
+        }
+
+        .got-em-text { /* La classe CSS garde le nom 'got-em-text' mais le contenu est 'SOLD'EM !' */
+            font-size: 4.5em; /* Grande taille */
+            font-weight: bold;
+            color: #4CAF50; /* Vert "succès" */
+            text-shadow: 0 0 10px rgba(76, 175, 80, 0.7);
+            margin-bottom: 30px;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideInFade 0.6s forwards ease-out;
+            animation-delay: 0.8s;
+            letter-spacing: 2px;
+        }
+
+        .product-image {
+            max-width: 80%; /* Prendra au maximum 80% de la largeur du conteneur */
+            max-height: 300px; /* Limite la hauteur de l'image */
+            width: auto; /* Laisse la largeur s'ajuster proportionnellement à la hauteur */
+            height: auto; /* La hauteur s'ajuste pour maintenir les proportions */
+            object-fit: contain; /* Assure que l'image est contenue dans ses dimensions sans être coupée, gardant son ratio */
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            margin-bottom: 40px;
+            opacity: 0;
+            transform: translateY(50px);
+            animation: slideInFade 0.7s forwards ease-out;
+            animation-delay: 1.2s;
+        }
+
+        .sale-details-cards {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap; /* Permet aux cartes de passer à la ligne sur petits écrans */
+            margin-bottom: 40px;
+        }
+
+        .detail-card {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px 30px;
+            backdrop-filter: blur(5px); /* Effet verre dépoli */
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            font-size: 1.2em;
+            font-weight: bold;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: slideInFade 0.6s forwards ease-out;
+        }
+
+        /* Délais spécifiques pour les cartes */
+        .detail-card:nth-child(1) { animation-delay: 1.5s; }
+        .detail-card:nth-child(2) { animation-delay: 1.7s; }
+        .detail-card:nth-child(3) { animation-delay: 1.9s; }
+
+        .detail-card .label {
+            font-size: 0.7em;
+            opacity: 0.7;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .back-button-container {
+            margin-top: 30px;
+            opacity: 0;
+            animation: fadeIn 0.8s forwards ease-out;
+            animation-delay: 2.2s;
+        }
+
+        .back-button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1em;
+            text-decoration: none; /* Pour le a-tag */
+            transition: background-color 0.3s ease;
+        }
+
+        .back-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Animations */
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0); }
+            60% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes slideInFade {
+            from { opacity: 0; transform: translateY(50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Media Queries pour petits écrans */
+        @media (max-width: 768px) {
+            .got-em-text {
+                font-size: 3em;
+            }
+            .product-image {
+                max-width: 70%; /* Réduit encore sur les tablettes */
+                max-height: 250px; /* Ajuste la hauteur max */
+            }
+            .detail-card {
+                width: calc(50% - 20px); /* Deux cartes par ligne */
+            }
+            .sale-details-cards {
+                flex-direction: row; /* Maintenir en ligne pour 2 colonnes */
+                justify-content: space-around; /* Espacement équitable */
+            }
+        }
+
+        @media (max-width: 480px) {
+            .got-em-text {
+                font-size: 2.5em;
+            }
+            .product-image {
+                max-width: 90%; /* Prend plus de place sur les très petits écrans si nécessaire */
+                max-height: 200px; /* Ajuste la hauteur max */
+            }
+            .detail-card {
+                width: 80%; /* Une carte par ligne */
+            }
+            .sale-details-cards {
+                flex-direction: column; /* Une colonne */
+                align-items: center; /* Centrer les cartes */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <img src="{{ success_checkmark_url }}" alt="Succès" class="checkmark-icon">
+        <div class="got-em-text">SOLD'EM !</div> {# MODIFICATION : GOT'EM remplacé par SOLD'EM #}
+
+        {% if sale.item_name %}
+            <p style="font-size: 1.8em; margin-top: -20px; margin-bottom: 30px; color: #eee;">{{ sale.item_name }}</p>
+        {% endif %}
+
+        {% if product_image_url %}
+            <img src="{{ product_image_url }}" alt="Image du Produit" class="product-image">
+        {% endif %}
+
+        <div class="sale-details-cards">
+            <div class="detail-card">
+                <span class="label">Prix Achat</span>
+                <span>{{ sale.purchase_price_formatted }}</span>
+            </div>
+            <div class="detail-card">
+                <span class="label">Prix Vente</span>
+                <span>{{ sale.sale_price_formatted }}</span>
+            </div>
+            <div class="detail-card">
+                <span class="label">Bénéfice</span>
+                <span style="color: {% if sale.profit >= 0 %}#4CAF50{% else %}#FF5722{% endif %};">{{ sale.profit_formatted }}</span>
+            </div>
+        </div>
+
+        <div class="back-button-container">
+            <a href="{{ url_for('dashboard') }}" class="back-button">Retour au Tableau de Bord</a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Redirection automatique après 10 secondes
+            setTimeout(function() {
+                window.location.href = "{{ url_for('dashboard') }}";
+            }, 10000); // 10000 millisecondes = 10 secondes
+        });
+    </script>
+</body>
+</html>
