@@ -39,7 +39,7 @@
                 <td>{{ product.size if product.size else 'N/A' }}</td> {# Ajouté #}
                 <td>{{ "%.2f"|format(product.purchase_price) }} €</td> {# Ajouté #}
                 <td>{{ product.quantity }}</td> {# Ajouté #}
-                <td>{{ product.date_added.split(' ')[0] if product.date_added else 'N/A' }}</td> {# Réactivé avec la bonne colonne #}
+                <td>{{ product.date_added.strftime('%Y-%m-%d') if product.date_added else 'N/A' }}</td>{# Réactivé avec la bonne colonne #}
                 <td>
                     {% if product.image_url %}
                         <img src="{{ product.image_url }}" alt="{{ product.name }}" style="max-width: 50px; max-height: 50px;">
