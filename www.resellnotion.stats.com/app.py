@@ -437,7 +437,8 @@ def dashboard():
                                total_sales_profit=total_sales_profit,
                                total_revenue=total_revenue,
                                net_result=net_result,
-                               latest_sales=latest_sales_for_template)
+                               latest_sales=latest_sales_for_template,
+                               total_monthly_charges=total_charge_operations) # <-- This is the only change
     except Exception as e:
         flash(f"Une erreur est survenue lors du chargement du tableau de bord: {e}", 'danger')
         print(f"Erreur tableau de bord: {e}")

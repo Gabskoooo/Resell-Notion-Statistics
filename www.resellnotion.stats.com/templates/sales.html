@@ -4,6 +4,85 @@
 {% block title %}Historique des Ventes{% endblock %}
 
 {% block content %}
+<style>
+    /* Styles Responsifs pour sales.html (basé sur products.html) */
+    @media (max-width: 768px) {
+        h1 {
+            font-size: 1.8em; /* Réduit la taille du titre */
+        }
+        .btn {
+            padding: 0.7em 1em;
+            font-size: 0.9em;
+        }
+        .btn.mb-3 {
+            width: 100%;
+            margin-bottom: 15px !important;
+        }
+
+        /* Masquer les éléments spécifiques sur mobile dans les cartes */
+        .hide-on-mobile {
+            display: none !important;
+        }
+        /* Assure que les éléments de la carte s'empilent sur mobile */
+        .card-sale-row > div {
+            margin-bottom: 0.25rem; /* Ajoute un petit espace entre les éléments empilés */
+        }
+        .card-sale-row > div:last-child {
+            margin-bottom: 0;
+        }
+        .sale-info-item {
+            font-size: 0.9em; /* Adjust font size for mobile view */
+        }
+        /* Styles spécifiques pour le panneau d'actions sur mobile */
+        #actionPanel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.9); /* Fond plus opaque pour le panneau */
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none; /* Masqué par défaut */
+        }
+        #actionPanel .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        h1 {
+            font-size: 1.5em;
+        }
+        .card-body {
+            font-size: 0.8em; /* Réduit la taille générale de la police des cartes */
+            padding: 0.75rem; /* Réduit le padding des cartes */
+        }
+    }
+
+    /* Assurer que les labels de l'en-tête ne wrap pas */
+    .sale-header-label {
+        font-weight: bold;
+        white-space: nowrap;
+    }
+    /* S'assurer que les textes des produits ne wrap pas à moins que la colonne ne le permette */
+    .sale-info-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis; /* Ajoute des points de suspension si le texte est trop long */
+        display: block; /* Permet à overflow: hidden de fonctionner */
+    }
+    /* Style pour la surbrillance de la carte sélectionnée */
+    .sale-card.selected-sale-card {
+        border: 2px solid #007bff; /* Couleur de surbrillance Bootstrap primary */
+        box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+    }
+    .badge {
+        font-size: 0.9em; /* Ajuste la taille du badge de profit */
+    }
+</style>
 <h1 class="mb-4">Historique des Ventes</h1>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -16,126 +95,127 @@
     {% endif %}
 {% endwith %}
 
-{% if sales %}
-<div class="table-responsive">
-    <table class="table table-striped table-hover" id="salesTable"> {# Ajout d'un ID pour le JavaScript #}
-        <thead>
-            <tr>
-                <th>Produit</th>
-                <th>SKU</th>
-                <th>Taille</th>
-                <th>Quantité</th>
-                <th>Prix Vente (€)</th>
-                <th>Prix Achat (€)</th>
-                <th>Frais Port (€)</th>
-                <th>Frais Platf. (€)</th>
-                <th>Profit (€)</th>
-                <th>Date Vente</th>
-                <th>Canal</th>
-                <th>Notes</th>
-                <th>Options</th> {# Nouveau : Remplace la colonne "Actions" pour le bouton "..." #}
-            </tr>
-        </thead>
-        <tbody>
-            {% for sale in sales %}
-            {# Ajout d'un data-sale-id et d'une classe pour identifier la ligne avec JavaScript #}
-            <tr data-sale-id="{{ sale.id }}" class="sale-row">
-                <td>{{ sale.item_name }}</td>
-                <td>{{ sale.sku }}</td>
-                <td>{{ sale.size }}</td>
-                <td>{{ sale.quantity }}</td>
-                <td>{{ sale.sale_price_formatted }}</td>
-                <td>{{ sale.purchase_price_at_sale_formatted }}</td>
-                <td>{{ sale.shipping_cost_formatted }}</td>
-                <td>{{ sale.fees_formatted }}</td>
-                <td>
-                    <span class="badge {% if sale.profit > 0 %}bg-success{% elif sale.profit < 0 %}bg-danger{% else %}bg-secondary{% endif %}">
-                        {{ sale.profit_formatted }}
-                    </span>
-                </td>
-                <td>{{ sale.sale_date }}</td>
-                <td>{{ sale.sale_channel if sale.sale_channel else 'N/A' }}</td>
-                <td>{{ sale.notes if sale.notes else '-' }}</td>
-                <td>
-                    {# Bouton pour afficher les actions associées à cette ligne #}
-                    <button type="button" class="btn btn-sm btn-secondary show-actions-btn" data-bs-toggle="tooltip" title="Afficher les actions">
-                        <i class="fas fa-ellipsis-h"></i> {# Icône "..." de Font Awesome #}
-                    </button>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+<a href="{{ url_for('add_sale') }}" class="btn btn-primary mb-3">Enregistrer une nouvelle vente</a>
 
-{# Panneau d'actions situé en dehors du tableau #}
-{# Passer le préfixe d'URL direct que le JavaScript peut compléter #}
-<div id="actionPanel" class="card mt-4 p-3" style="display: none;"
-     data-base-url="/sales/"> {# URL de base pour les actions de vente, sans utiliser url_for directement ici #}
-    <div class="card-body text-center">
-        <h5 class="card-title">Actions pour la Vente Sélectionnée (ID: <span id="selectedSaleIdDisplay"></span>)</h5>
-        <p class="card-text" id="selectedSaleNameDisplay"></p>
-        <a id="editSaleLink" href="#" class="btn btn-info me-2">Modifier</a>
-        <form id="deleteSaleForm" action="#" method="post" class="d-inline">
-            <button type="submit" class="btn btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette vente ?');">Supprimer</button>
-        </form>
-        <button type="button" class="btn btn-secondary ms-2" id="hideActionPanel">Masquer les actions</button>
+{# Carte d'en-tête flottante - Visible sur desktop seulement #}
+<div class="card text-white mb-3 d-none d-md-block" style="background-color: rgba(0, 0, 0, 0.7);">
+    <div class="card-body py-2"> {# Padding vertical réduit #}
+        <div class="row align-items-center g-2"> {# g-2 pour un petit espacement entre les colonnes #}
+            <div class="col-md-3"> {# Nom #}
+                <span class="sale-header-label">Nom</span>
+            </div>
+            <div class="col-md-2"> {# SKU #}
+                <span class="sale-header-label">SKU</span>
+            </div>
+            <div class="col-md-1 text-center"> {# Taille #}
+                <span class="sale-header-label">Taille</span>
+            </div>
+            <div class="col-md-2 text-center"> {# Prix Vente #}
+                <span class="sale-header-label">Prix Vente (€)</span>
+            </div>
+            <div class="col-md-1 text-center"> {# Bénéfice #}
+                <span class="sale-header-label">Bénéfice (€)</span>
+            </div>
+            <div class="col-md-2 text-center"> {# Date Vente #}
+                <span class="sale-header-label">Date Vente</span>
+            </div>
+            <div class="col-md-1 text-md-end"> {# Options #}
+                <span class="sale-header-label">Options</span>
+            </div>
+        </div>
     </div>
 </div>
 
+{% if sales %}
+<div class="row">
+    {% for sale in sales %}
+    <div class="col-12 mb-3">
+        <div class="card text-white sale-card" style="background-color: rgba(0, 0, 0, 0.7); font-size: 0.9em;" data-sale-id="{{ sale.id }}" data-sale-name="{{ sale.item_name }}">
+            <div class="card-body">
+                <div class="row align-items-center card-sale-row g-2">
+                    <div class="col-12 col-md-3"> {# Nom #}
+                        <span class="d-inline d-md-none sale-header-label">Nom: </span><span class="sale-info-text">{{ sale.item_name }}</span>
+                    </div>
+                    <div class="col-12 col-md-2"> {# SKU #}
+                        <span class="d-inline d-md-none sale-header-label">SKU: </span><span class="sale-info-text">{{ sale.sku }}</span>
+                    </div>
+                    <div class="col-12 col-md-1 text-center text-md-start"> {# Taille #}
+                        <span class="d-inline d-md-none sale-header-label">Taille: </span><span class="sale-info-text">{{ sale.size if sale.size else 'N/A' }}</span>
+                    </div>
+                    <div class="col-12 col-md-2 text-center text-md-start"> {# Prix Vente #}
+                        <span class="d-inline d-md-none sale-header-label">Prix Vente (€): </span><span class="sale-info-text">{{ sale.sale_price_formatted }}</span>
+                    </div>
+                    <div class="col-12 col-md-1 text-center text-md-start"> {# Bénéfice #}
+                        <span class="d-inline d-md-none sale-header-label">Bénéfice (€): </span>
+                        <span class="badge {% if sale.profit > 0 %}bg-success{% elif sale.profit < 0 %}bg-danger{% else %}bg-secondary{% endif %}">
+                            {{ sale.profit_formatted }}
+                        </span>
+                    </div>
+                    <div class="col-12 col-md-2 text-center text-md-start"> {# Date Vente #}
+                        <span class="d-inline d-md-none sale-header-label">Date Vente: </span><span class="sale-info-text">{{ sale.sale_date }}</span>
+                    </div>
+
+                    <div class="col-12 col-md-1 mt-3 mt-md-0 text-md-end"> {# Options button #}
+                        <button type="button" class="btn btn-sm btn-secondary toggle-action-panel">...</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
 {% else %}
     <p>Aucune vente enregistrée pour le moment.</p>
 {% endif %}
 
+{# Panneau d'actions flottant #}
+<div id="actionPanel" class="text-white bg-dark p-3 rounded" style="display:none; position:fixed; bottom:20px; right:20px; z-index:100;">
+    <h5>Actions pour : <span id="selectedSaleNameDisplay"></span></h5>
+    <div class="d-flex flex-column">
+        <a id="editSaleLink" href="#" class="btn btn-info mb-2">Modifier</a>
+        <form id="deleteSaleForm" method="post" action="#" style="display:inline;">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette vente ?');">Supprimer</button>
+        </form>
+        <button id="hideActionPanelBtn" class="btn btn-secondary mt-3">Masquer les actions</button>
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const salesTable = document.getElementById('salesTable');
+        const salesCards = document.querySelectorAll('.sale-card');
         const actionPanel = document.getElementById('actionPanel');
+        const selectedSaleNameDisplay = document.getElementById('selectedSaleNameDisplay');
         const editSaleLink = document.getElementById('editSaleLink');
         const deleteSaleForm = document.getElementById('deleteSaleForm');
-        const selectedSaleIdDisplay = document.getElementById('selectedSaleIdDisplay');
-        const selectedSaleNameDisplay = document.getElementById('selectedSaleNameDisplay');
-        const hideActionPanelBtn = document.getElementById('hideActionPanel');
+        const hideActionPanelBtn = document.getElementById('hideActionPanelBtn');
 
-        // Récupère l'URL de base depuis l'attribut 'data-' du panneau
-        const baseUrl = actionPanel.dataset.baseUrl;
+        const baseUrl = "{{ url_for('sales') }}"; // Base URL for sales routes
 
-        // Gère le clic sur le bouton "..."
-        salesTable.addEventListener('click', function(event) {
-            const target = event.target;
-            const showActionsBtn = target.closest('.show-actions-btn'); // Trouve le bouton cliqué
+        salesCards.forEach(card => {
+            card.addEventListener('click', function(event) {
+                // Check if the click originated from the '...' button or anywhere else on the card
+                if (event.target.closest('.toggle-action-panel')) {
+                    const saleId = this.dataset.saleId;
+                    const saleName = this.dataset.saleName;
 
-            if (showActionsBtn) {
-                const row = showActionsBtn.closest('.sale-row'); // Trouve la ligne parente
-                const saleId = row.dataset.saleId; // Récupère l'ID de la vente de la ligne
-                const saleName = row.querySelector('td:first-child').innerText; // Récupère le nom de l'article
+                    // Update action panel content
+                    selectedSaleNameDisplay.innerText = `Article: ${saleName}`;
+                    editSaleLink.href = `${baseUrl}/${saleId}/edit`;
+                    deleteSaleForm.action = `${baseUrl}/${saleId}/delete`;
 
-                selectedSaleIdDisplay.innerText = saleId; // Affiche l'ID de la vente sélectionnée
-                selectedSaleNameDisplay.innerText = `Article: ${saleName}`; // Affiche le nom de l'article
+                    actionPanel.style.display = 'block';
 
-                // Construit les URLs complètes en JavaScript
-                editSaleLink.href = `${baseUrl}${saleId}/edit`; // Ex: /sales/123/edit
-                deleteSaleForm.action = `${baseUrl}${saleId}/delete`; // Ex: /sales/123/delete
-
-                actionPanel.style.display = 'block'; // Affiche le panneau d'actions
-
-                // Gère la mise en surbrillance de la ligne sélectionnée
-                document.querySelectorAll('.sale-row').forEach(r => r.classList.remove('table-primary'));
-                row.classList.add('table-primary'); // Ajoute la classe Bootstrap pour surligner
-            }
+                    // Handle selected card highlighting
+                    document.querySelectorAll('.sale-card').forEach(c => c.classList.remove('selected-sale-card'));
+                    this.classList.add('selected-sale-card');
+                }
+            });
         });
 
-        // Gère le clic sur le bouton "Masquer les actions"
         hideActionPanelBtn.addEventListener('click', function() {
-            actionPanel.style.display = 'none'; // Masque le panneau
-            document.querySelectorAll('.sale-row').forEach(r => r.classList.remove('table-primary')); // Retire la mise en surbrillance
+            actionPanel.style.display = 'none';
+            document.querySelectorAll('.sale-card').forEach(c => c.classList.remove('selected-sale-card'));
         });
-
-        // Initialisation des tooltips Bootstrap (nécessite l'inclusion du bundle JS de Bootstrap)
-        // var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        // var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        //     return new bootstrap.Tooltip(tooltipTriggerEl)
-        // })
     });
 </script>
 {% endblock %}

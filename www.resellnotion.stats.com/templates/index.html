@@ -1,8 +1,58 @@
+{# templates/index.html #}
 {% extends 'base.html' %}
 
 {% block title %}Tableau de Bord{% endblock %}
 
 {% block content %}
+<style>
+    /* Styles Responsifs pour index.html */
+    @media (max-width: 768px) {
+        h1 {
+            font-size: 1.8em; /* Réduit la taille du titre */
+        }
+        h2 {
+            font-size: 1.6em; /* Réduit la taille des sous-titres */
+        }
+        .card-title {
+            font-size: 1.2em; /* Ajuste la taille des titres de carte */
+        }
+        .card-text {
+            font-size: 2em; /* Réduit la taille du texte principal dans les cartes (fs-3 est assez grand) */
+        }
+        .table-responsive {
+            border: 1px solid #dee2e6; /* Ajoute une bordure pour mieux délimiter la table */
+            border-radius: 0.25rem; /* Arrondit les coins */
+            overflow-x: auto; /* Assure le défilement horizontal si le contenu dépasse */
+        }
+        .table thead th {
+            font-size: 0.8em; /* Réduit la taille de la police des en-têtes de tableau */
+            white-space: nowrap; /* Empêche les en-têtes de se casser sur plusieurs lignes */
+        }
+        .table tbody td {
+            font-size: 0.85em; /* Réduit la taille de la police des cellules de tableau */
+            white-space: nowrap; /* Empêche les cellules de se casser sur plusieurs lignes */
+        }
+        .badge {
+            font-size: 0.75em; /* Ajuste la taille des badges de profit */
+        }
+    }
+
+    @media (max-width: 576px) { /* Pour les très petits écrans, force l'empilement des cartes */
+        .row .col-md-6, .row .col-lg-4 {
+            flex: 0 0 100%; /* Chaque colonne prend toute la largeur */
+            max-width: 100%;
+        }
+        .card-text {
+            font-size: 1.8em; /* Encore plus petit sur mobile */
+        }
+        .card-title {
+            font-size: 1.1em;
+        }
+        .table thead th, .table tbody td {
+            font-size: 0.75em; /* Encore plus petit pour le tableau */
+        }
+    }
+</style>
 <h1 class="mb-4">Tableau de Bord</h1>
 
 <div class="row">
@@ -57,6 +107,6 @@
     </table>
 </div>
 {% else %}
-<p>Aucune vente récente enregistrée.</p>
+    <p>Aucune vente enregistrée pour le moment.</p>
 {% endif %}
 {% endblock %}

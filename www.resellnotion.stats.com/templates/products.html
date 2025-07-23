@@ -4,6 +4,69 @@
 {% block title %}Mes Produits{% endblock %}
 
 {% block content %}
+<style>
+    /* Styles Responsifs pour products.html - Ajustement pour les cartes */
+    @media (max-width: 768px) {
+        h1 {
+            font-size: 1.8em; /* Réduit la taille du titre */
+        }
+        .btn {
+            padding: 0.6em 0.8em; /* Réduit le padding des boutons sur mobile */
+            font-size: 0.8em; /* Réduit la taille de la police des boutons sur mobile */
+        }
+        .btn.mb-3 { /* Ajustement spécifique pour le bouton "Ajouter un nouveau produit" */
+            width: 100%;
+            margin-bottom: 15px !important;
+        }
+
+        /* Masquer les éléments spécifiques sur mobile dans les cartes */
+        .hide-on-mobile {
+            display: none !important;
+        }
+        /* Assure que les éléments de la carte s'empilent sur mobile */
+        .card-product-row > div {
+            margin-bottom: 0.25rem; /* Ajoute un petit espace entre les éléments empilés */
+        }
+        .card-product-row > div:last-child {
+            margin-bottom: 0;
+        }
+        /* Ajustement de l'image sur mobile */
+        .product-image-small {
+            max-width: 60px; /* Taille de l'image pour les très petits écrans */
+            max-height: 60px;
+        }
+    }
+
+    @media (max-width: 576px) {
+        h1 {
+            font-size: 1.5em;
+        }
+        .card-body {
+            font-size: 0.8em; /* Réduit la taille générale de la police des cartes */
+            padding: 0.75rem; /* Réduit le padding des cartes */
+        }
+    }
+
+    /* Taille par défaut de l'image pour tous les écrans (desktop) */
+    .product-image-small {
+        max-width: 80px; /* Agrandit l'image */
+        max-height: 80px;
+        vertical-align: middle; /* Alignement vertical pour l'image avec le texte */
+    }
+
+    /* Assurer que les labels de l'en-tête ne wrap pas */
+    .product-header-label {
+        font-weight: bold;
+        white-space: nowrap;
+    }
+    /* S'assurer que les textes des produits ne wrap pas à moins que la colonne ne le permette */
+    .product-info-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis; /* Ajoute des points de suspension si le texte est trop long */
+        display: block; /* Permet à overflow: hidden de fonctionner */
+    }
+</style>
 <h1 class="mb-4">Mes Produits</h1>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -16,49 +79,225 @@
 
 <a href="{{ url_for('add_product') }}" class="btn btn-primary mb-3">Ajouter un nouveau produit</a>
 
-{% if products %}
-<div class="table-responsive">
-    <table class="table table-dark table-hover">
-        <thead>
-            <tr>
-                <th>SKU</th>
-                <th>Nom</th>
-                <th>Taille</th>
-                <th>Prix Achat</th>
-                <th>Quantité</th>
-                <th>Date Ajout</th>
-                <th>Image</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
+{# Champ de recherche #}
+<div class="mb-3">
+    <input type="text" id="productSearch" class="form-control" placeholder="Rechercher par SKU ou Nom de produit...">
+</div>
+
+{# Ajout des filtres par taille et date #}
+<div class="row mb-3">
+    <div class="col-md-6 mb-2 mb-md-0">
+        <select id="sizeFilter" class="form-select">
+            <option value="">Filtrer par Taille (Tout)</option>
+            {% set unique_sizes = [] %}
             {% for product in products %}
-            <tr>
-                <td>{{ product.sku }}</td> {# Ajouté #}
-                <td>{{ product.name }}</td>
-                <td>{{ product.size if product.size else 'N/A' }}</td> {# Ajouté #}
-                <td>{{ "%.2f"|format(product.purchase_price) }} €</td> {# Ajouté #}
-                <td>{{ product.quantity }}</td> {# Ajouté #}
-                <td>{{ product.date_added.strftime('%Y-%m-%d') if product.date_added else 'N/A' }}</td>{# Réactivé avec la bonne colonne #}
-                <td>
-                    {% if product.image_url %}
-                        <img src="{{ product.image_url }}" alt="{{ product.name }}" style="max-width: 50px; max-height: 50px;">
-                    {% else %}
-                        Aucune
-                    {% endif %}
-                </td>
-                <td>
-                    <a href="{{ url_for('edit_product', id=product.id) }}" class="btn btn-sm btn-info me-2">Modifier</a>
-                    <form action="{{ url_for('delete_product', id=product.id) }}" method="post" style="display:inline;">
-                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?');">Supprimer</button>
-                    </form>
-                </td>
-            </tr>
+                {% if product.size and product.size not in unique_sizes %}
+                    {% set _ = unique_sizes.append(product.size) %}
+                {% endif %}
             {% endfor %}
-        </tbody>
-    </table>
+            {% for size in unique_sizes | sort %}
+                <option value="{{ size }}">{{ size }}</option>
+            {% endfor %}
+            {% if 'N/A' not in unique_sizes %} {# Option pour les produits sans taille spécifique #}
+                 <option value="N/A">N/A</option>
+            {% endif %}
+        </select>
+    </div>
+    <div class="col-md-6">
+        <select id="dateFilter" class="form-select">
+            <option value="all">Filtrer par Date d'Ajout (Tout)</option>
+            <option value="today">Aujourd'hui</option>
+            <option value="last7days">7 derniers jours</option>
+            <option value="last30days">30 derniers jours</option>
+            <option value="thismonth">Mois en cours</option>
+            <option value="thisyear">Année en cours</option>
+        </select>
+    </div>
+</div>
+
+{# Carte d'en-tête flottante - Visible sur desktop seulement #}
+<div class="card text-white mb-3 d-none d-md-block" style="background-color: rgba(0, 0, 0, 0.7);">
+    <div class="card-body py-2"> {# Padding vertical réduit #}
+        <div class="row align-items-center g-2"> {# g-2 pour un petit espacement entre les colonnes #}
+            <div class="col-md-1 text-center"> {# Image #}
+                <span class="product-header-label">Image</span>
+            </div>
+            <div class="col-md-2"> {# SKU #}
+                <span class="product-header-label">SKU</span>
+            </div>
+            <div class="col-md-3"> {# Nom #}
+                <span class="product-header-label">Nom</span>
+            </div>
+            <div class="col-md-1 text-center"> {# Taille #}
+                <span class="product-header-label">Taille</span>
+            </div>
+            <div class="col-md-2 text-center"> {# Prix Achat #}
+                <span class="product-header-label">Prix Achat (€)</span>
+            </div>
+            <div class="col-md-1 text-center"> {# Quantité #}
+                <span class="product-header-label">Quantité</span>
+            </div>
+            <div class="col-md-1 text-center"> {# Date Ajout #}
+                <span class="product-header-label">Date Ajout</span>
+            </div>
+            <div class="col-md-1 text-md-end"> {# Actions #}
+                <span class="product-header-label">Actions</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if products %}
+<div class="row" id="productCardsContainer"> {# Ajout d'un ID pour le JavaScript #}
+    {% for product in products %}
+    <div class="col-12 mb-3 product-card-item"
+         data-sku="{{ product.sku | lower }}"
+         data-name="{{ product.name | lower }}"
+         data-size="{{ (product.size | lower) if product.size else 'n/a' }}"
+         data-date-added="{{ product.date_added.strftime('%Y-%m-%d') if product.date_added else '' }}"> {# Ajout des data attributes #}
+        <div class="card text-white" style="background-color: rgba(0, 0, 0, 0.7); font-size: 0.9em;">
+            <div class="card-body">
+                {# Main row for product details and actions #}
+                <div class="row align-items-center card-product-row g-2"> {# g-2 pour un petit espacement entre les colonnes #}
+                    <div class="col-12 col-md-1 text-center text-md-start"> {# Image #}
+                        <div class="product-image-container">
+                            {% if product.image_url %}
+                                <img src="{{ product.image_url }}" alt="{{ product.name }}" class="product-image-small">
+                            {% else %}
+                                {# Placeholder pour l'image si aucune n'est disponible #}
+                                <span class="d-flex align-items-center justify-content-center border" style="width: 80px; height: 80px; line-height: 1; font-size: 0.7em;">No Image</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-2"> {# SKU #}
+                        <span class="d-inline d-md-none product-header-label">SKU: </span><span class="product-sku product-info-text">{{ product.sku }}</span>
+                    </div>
+                    <div class="col-12 col-md-3"> {# Nom #}
+                        <span class="d-inline d-md-none product-header-label">Nom: </span><span class="product-name product-info-text">{{ product.name }}</span>
+                    </div>
+                    <div class="col-12 col-md-1 text-center text-md-start"> {# Taille #}
+                        <span class="d-inline d-md-none product-header-label">Taille: </span><span class="product-size-display product-info-text">{{ product.size if product.size else 'N/A' }}</span>
+                    </div>
+                    <div class="col-12 col-md-2 text-center text-md-start"> {# Prix Achat #}
+                        <span class="d-inline d-md-none product-header-label">Prix Achat (€): </span><span class="product-info-text">{{ "%.2f"|format(product.purchase_price) }} €</span>
+                    </div>
+                    <div class="col-12 col-md-1 text-center text-md-start"> {# Quantité #}
+                        <span class="d-inline d-md-none product-header-label">Quantité: </span><span class="product-info-text">{{ product.quantity }}</span>
+                    </div>
+
+                    {# Date Ajout - hidden on mobile, visible on desktop #}
+                    <div class="col-12 col-md-1 text-center text-md-start hide-on-mobile d-md-block">
+                        <span class="product-date-display product-info-text">{{ product.date_added.strftime('%Y-%m-%d') if product.date_added else 'N/A' }}</span>
+                    </div>
+
+                    {# Actions - hidden on mobile, visible on desktop #}
+                    <div class="col-12 col-md-1 mt-3 mt-md-0 text-md-end hide-on-mobile d-md-block d-flex flex-column flex-md-row justify-content-end align-items-end"> {# Utilise flexbox pour aligner les boutons #}
+                        <a href="{{ url_for('edit_product', id=product.id) }}" class="btn btn-sm btn-info me-1 mb-1 mb-md-0">Modifier</a> {# me-1 pour réduire l'espace entre boutons, mb-1 pour mobile #}
+                        <form action="{{ url_for('delete_product', id=product.id) }}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?');">Supprimer</button>
+                        </form>
+                    </div>
+                    {# Actions for mobile only - visible on mobile, hidden on desktop #}
+                    <div class="col-12 d-block d-md-none text-center mt-3">
+                        <a href="{{ url_for('edit_product', id=product.id) }}" class="btn btn-sm btn-info me-2">Modifier</a>
+                        <form action="{{ url_for('delete_product', id=product.id) }}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?');">Supprimer</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 {% else %}
-<p>Aucun produit enregistré pour le moment. <a href="{{ url_for('add_product') }}">Ajoutez-en un !</a></p>
+<p>Aucun produit enregistré pour le moment. <a href="{{ url_for('add_product') }}">Ajouter un produit</a>.</p>
 {% endif %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('productSearch');
+        const sizeFilter = document.getElementById('sizeFilter');
+        const dateFilter = document.getElementById('dateFilter');
+        const productCardsContainer = document.getElementById('productCardsContainer');
+        const productCardItems = productCardsContainer ? productCardsContainer.getElementsByClassName('product-card-item') : [];
+
+        function applyFilters() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const selectedSize = sizeFilter.value.toLowerCase();
+            const selectedDateFilter = dateFilter.value;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Reset time for accurate date comparison
+
+            for (let i = 0; i < productCardItems.length; i++) {
+                const cardItem = productCardItems[i];
+                const sku = cardItem.dataset.sku;
+                const name = cardItem.dataset.name;
+                const size = cardItem.dataset.size;
+                const dateAddedStr = cardItem.dataset.dateAdded;
+                const dateAdded = dateAddedStr ? new Date(dateAddedStr + 'T00:00:00') : null; // Parse date as YYYY-MM-DD to avoid timezone issues
+
+                let isSearchMatch = true;
+                if (searchTerm) {
+                    isSearchMatch = sku.includes(searchTerm) || name.includes(searchTerm);
+                }
+
+                let isSizeMatch = true;
+                if (selectedSize && selectedSize !== 'n/a') { // Check if 'N/A' is explicitly selected or if a specific size is selected
+                    isSizeMatch = (selectedSize === size);
+                } else if (selectedSize === 'n/a') { // If "N/A" is selected, match products with 'n/a' size
+                    isSizeMatch = (size === 'n/a' || !size);
+                }
+
+
+                let isDateMatch = true;
+                if (selectedDateFilter !== 'all' && dateAdded) {
+                    let filterDate = new Date(today); // Start with today's date for calculations
+
+                    switch (selectedDateFilter) {
+                        case 'today':
+                            isDateMatch = dateAdded.getTime() === today.getTime();
+                            break;
+                        case 'last7days':
+                            filterDate.setDate(today.getDate() - 7);
+                            isDateMatch = dateAdded >= filterDate && dateAdded <= today;
+                            break;
+                        case 'last30days':
+                            filterDate.setDate(today.getDate() - 30);
+                            isDateMatch = dateAdded >= filterDate && dateAdded <= today;
+                            break;
+                        case 'thismonth':
+                            isDateMatch = dateAdded.getMonth() === today.getMonth() && dateAdded.getFullYear() === today.getFullYear();
+                            break;
+                        case 'thisyear':
+                            isDateMatch = dateAdded.getFullYear() === today.getFullYear();
+                            break;
+                    }
+                } else if (selectedDateFilter !== 'all' && !dateAdded) {
+                    // If a date filter is selected but product has no date, it doesn't match
+                    isDateMatch = false;
+                }
+
+                if (isSearchMatch && isSizeMatch && isDateMatch) {
+                    cardItem.style.display = ""; // Affiche la carte
+                } else {
+                    cardItem.style.display = "none"; // Masque la carte
+                }
+            }
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('keyup', applyFilters);
+        }
+        if (sizeFilter) {
+            sizeFilter.addEventListener('change', applyFilters);
+        }
+        if (dateFilter) {
+            dateFilter.addEventListener('change', applyFilters);
+        }
+
+        // Apply filters on initial load to ensure correct display based on default filter values
+        applyFilters();
+    });
+</script>
 {% endblock %}

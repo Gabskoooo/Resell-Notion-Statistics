@@ -1,8 +1,58 @@
+{# templates/edit_product.html #}
 {% extends 'base.html' %}
 
 {% block title %}Modifier Produit{% endblock %}
 
 {% block content %}
+<style>
+    /* Styles Responsifs pour edit_product.html */
+    @media (max-width: 768px) {
+        h1 {
+            font-size: 1.8em; /* Réduit la taille du titre */
+        }
+        .form-label {
+            font-size: 0.9em; /* Réduit la taille des étiquettes */
+        }
+        .form-control {
+            font-size: 0.95em; /* Ajuste la taille de la police des champs */
+            padding: 0.6em 0.75em; /* Réduit un peu le padding */
+        }
+        .img-thumbnail {
+            max-width: 100px; /* Réduit la taille de l'image de prévisualisation */
+            height: auto;
+        }
+        .btn {
+            padding: 0.7em 1em; /* Ajuste le padding des boutons */
+            font-size: 0.9em; /* Réduit la taille de la police des boutons */
+            width: 100%; /* Rend les boutons pleine largeur sur petits écrans */
+            margin-bottom: 10px; /* Ajoute un espace entre les boutons empilés */
+        }
+        .btn + .btn { /* Pour le bouton "Annuler" ou "Supprimer" lorsqu'il est à côté du premier */
+            margin-left: 0 !important; /* Supprime la marge gauche pour l'empilement */
+            margin-top: 5px; /* Ajoute un peu d'espace si les boutons sont l'un au-dessus de l'autre */
+        }
+    }
+
+    @media (max-width: 576px) {
+        h1 {
+            font-size: 1.5em;
+        }
+        .form-label {
+            font-size: 0.85em;
+        }
+        .form-control {
+            font-size: 0.9em;
+            padding: 0.5em 0.6em;
+        }
+        .img-thumbnail {
+            max-width: 80px;
+        }
+        .btn {
+            padding: 0.6em 0.8em;
+            font-size: 0.85em;
+        }
+    }
+</style>
 <h1 class="mb-4">Modifier Produit: {{ product.name }} ({{ product.sku }})</h1>
 
 {% if error %}
@@ -35,8 +85,19 @@
     <div class="mb-3">
         <label for="image_url" class="form-label">URL de l'image du produit (optionnel):</label>
         <input type="url" class="form-control" id="image_url" name="image_url" value="{{ product.image_url if product.image_url else '' }}">
+        {% if product.image_url %}
+        <img src="{{ product.image_url }}" alt="Aperçu de l'image" class="img-thumbnail mt-2" style="max-width: 150px; height: auto;">
+        {% endif %}
     </div>
-    <button type="submit" class="btn btn-primary me-2">Modifier Produit</button>
-    <a href="{{ url_for('list_products') }}" class="btn btn-secondary">Annuler</a>
+    <div class="mb-3">
+        <label for="description" class="form-label">Description (optionnel):</label>
+        <textarea class="form-control" id="description" name="description" rows="3">{{ product.description if product.description else '' }}</textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+    <a href="{{ url_for('products') }}" class="btn btn-secondary ms-2">Annuler</a>
+    <form action="{{ url_for('delete_product', product_id=product.id) }}" method="post" class="d-inline">
+        <button type="submit" class="btn btn-danger ms-2" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?');">Supprimer le produit</button>
+    </form>
 </form>
 {% endblock %}

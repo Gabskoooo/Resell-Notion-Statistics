@@ -4,6 +4,42 @@
 {% block title %}Enregistrer Vente{% endblock %}
 
 {% block content %}
+<style>
+    /* Styles Responsifs pour add_sale.html */
+    @media (max-width: 768px) {
+        h1 {
+            font-size: 1.8em; /* Réduit la taille du titre */
+        }
+        .form-label {
+            font-size: 0.9em; /* Réduit la taille des labels */
+        }
+        .form-control, .form-select {
+            font-size: 0.9em; /* Réduit la taille du texte dans les inputs et selects */
+            padding: 0.6rem 0.8rem; /* Ajuste le padding */
+        }
+        .btn {
+            padding: 10px 20px; /* Ajuste le padding du bouton */
+            font-size: 0.9em;
+        }
+    }
+
+    @media (max-width: 480px) {
+        h1 {
+            font-size: 1.5em; /* Encore plus petit sur mobile */
+        }
+        .form-label {
+            font-size: 0.85em;
+        }
+        .form-control, .form-select {
+            font-size: 0.85em;
+            padding: 0.5rem 0.7rem;
+        }
+        .btn {
+            padding: 8px 15px;
+            font-size: 0.8em;
+        }
+    }
+</style>
 <h1 class="mb-4">Enregistrer une nouvelle Vente</h1>
 
 {% with messages = get_flashed_messages(with_categories=true) %}

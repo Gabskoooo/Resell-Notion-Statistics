@@ -4,6 +4,44 @@
 {% block title %}Page Non Trouvée{% endblock %}
 
 {% block content %}
+<style>
+    /* Styles Responsifs pour 404.html */
+    .container.text-center.text-white.mt-5 {
+        padding: 20px; /* Assure un padding sur les petits écrans */
+    }
+
+    @media (max-width: 768px) {
+        .display-1 {
+            font-size: 5em; /* Réduit la taille du 404 sur tablette */
+        }
+        h2 {
+            font-size: 1.8em; /* Réduit la taille du titre */
+        }
+        .lead {
+            font-size: 1em; /* Réduit la taille du paragraphe */
+        }
+        .btn {
+            padding: 10px 20px; /* Ajuste le padding du bouton */
+            font-size: 0.9em;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .display-1 {
+            font-size: 3em; /* Encore plus petit sur mobile */
+        }
+        h2 {
+            font-size: 1.5em;
+        }
+        .lead {
+            font-size: 0.9em;
+        }
+        .btn {
+            padding: 8px 15px;
+            font-size: 0.8em;
+        }
+    }
+</style>
 <div class="container text-center text-white mt-5">
     <h1 class="display-1">404</h1>
     <h2 class="mb-4">Page Non Trouvée</h2>

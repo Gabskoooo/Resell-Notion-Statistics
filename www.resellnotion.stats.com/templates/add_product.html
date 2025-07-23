@@ -3,6 +3,64 @@
 {% block title %}Ajouter Produit{% endblock %}
 
 {% block content %}
+<style>
+    /* Styles Responsifs pour add_product.html */
+    @media (max-width: 768px) {
+        h1 {
+            font-size: 1.8em; /* Réduit la taille du titre */
+        }
+        .form-label {
+            font-size: 0.9em; /* Réduit la taille des labels */
+        }
+        .form-control {
+            font-size: 0.9em; /* Réduit la taille du texte dans les inputs */
+            padding: 0.6rem 0.8rem; /* Ajuste le padding */
+        }
+        .img-thumbnail {
+            max-width: 100px; /* Réduit la taille de l'image de prévisualisation */
+        }
+        .list-group-item {
+            font-size: 0.85em; /* Réduit la taille des suggestions SKU */
+            padding: 8px 10px;
+        }
+        .list-group-item img {
+            width: 40px; /* Réduit la taille des images dans les suggestions */
+            height: 40px;
+        }
+        .btn {
+            padding: 10px 20px; /* Ajuste le padding du bouton */
+            font-size: 0.9em;
+        }
+    }
+
+    @media (max-width: 480px) {
+        h1 {
+            font-size: 1.5em; /* Encore plus petit sur mobile */
+        }
+        .form-label {
+            font-size: 0.85em;
+        }
+        .form-control {
+            font-size: 0.85em;
+            padding: 0.5rem 0.7rem;
+        }
+        .img-thumbnail {
+            max-width: 80px; /* Encore plus petit pour l'image de prévisualisation */
+        }
+        .list-group-item {
+            font-size: 0.8em;
+            padding: 6px 8px;
+        }
+        .list-group-item img {
+            width: 30px;
+            height: 30px;
+        }
+        .btn {
+            padding: 8px 15px;
+            font-size: 0.8em;
+        }
+    }
+</style>
 <h1 class="mb-4">Ajouter un nouveau produit</h1>
 
 {% with messages = get_flashed_messages(with_categories=true) %}

@@ -4,6 +4,48 @@
 {% block title %}Ajouter une Opération{% endblock %}
 
 {% block content %}
+<style>
+    /* Styles Responsifs pour add_supplementary_operation.html */
+    @media (max-width: 768px) {
+        h1 {
+            font-size: 1.8em; /* Réduit la taille du titre */
+        }
+        .form-label {
+            font-size: 0.9em; /* Réduit la taille des étiquettes */
+        }
+        .form-control {
+            font-size: 0.95em; /* Ajuste la taille de la police des champs */
+            padding: 0.6em 0.75em; /* Réduit un peu le padding */
+        }
+        .btn {
+            padding: 0.7em 1em; /* Ajuste le padding des boutons */
+            font-size: 0.9em; /* Réduit la taille de la police des boutons */
+            width: 100%; /* Rend les boutons pleine largeur sur petits écrans */
+            margin-bottom: 10px; /* Ajoute un espace entre les boutons empilés */
+        }
+        .btn + .btn { /* Pour le bouton "Annuler" lorsqu'il est à côté du premier */
+            margin-left: 0 !important; /* Supprime la marge gauche pour l'empilement */
+            margin-top: 5px; /* Ajoute un peu d'espace si les boutons sont l'un au-dessus de l'autre */
+        }
+    }
+
+    @media (max-width: 576px) {
+        h1 {
+            font-size: 1.5em;
+        }
+        .form-label {
+            font-size: 0.85em;
+        }
+        .form-control {
+            font-size: 0.9em;
+            padding: 0.5em 0.6em;
+        }
+        .btn {
+            padding: 0.6em 0.8em;
+            font-size: 0.85em;
+        }
+    }
+</style>
 <h1 class="mb-4">Ajouter une {% if operation_type == 'charge' %}Charge{% else %}Bonus{% endif %}</h1>
 
 {% with messages = get_flashed_messages(with_categories=true) %}

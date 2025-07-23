@@ -6,6 +6,124 @@
     <title>{% block title %}Mon Application{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Par défaut, cacher l'offcanvas et l'overlay sur toutes les tailles d'écran */
+        /* Ils seront rendus visibles et stylisés spécifiquement pour mobile via les media queries ci-dessous */
+        .offcanvas-menu,
+        .offcanvas-overlay {
+            display: none;
+        }
+
+        /* Cache le bouton navbar-toggler sur les écrans larges (lg) et plus */
+        @media (min-width: 992px) { /* Bootstrap's 'lg' breakpoint */
+            .navbar-toggler {
+                display: none !important;
+            }
+        }
+
+        /* Styles pour l'offcanvas personnalisé et l'overlay UNIQUEMENT sur mobile */
+        @media (max-width: 991.98px) { /* Appliquer uniquement sur les écrans plus petits que large (lg)*/
+            .offcanvas-menu {
+                display: flex; /* Rendu visible par flexbox sur mobile */
+                position: fixed;
+                top: 0;
+                right: -300px; /* Caché par défaut, hors de l'écran */
+                width: 250px; /* Largeur du menu */
+                height: 100%;
+                background-color: #212529; /* Couleur de fond sombre de la navbar */
+                color: white;
+                padding: 1rem;
+                transition: right 0.3s ease-in-out; /* Animation de glissement*/
+                z-index: 1050; /* Au-dessus de l'overlay*/
+                box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
+                flex-direction: column;
+            }
+
+            .offcanvas-menu.show {
+                right: 0; /* Affiché */
+            }
+
+            .offcanvas-overlay {
+                display: block; /* Rendu visible par block sur mobile */
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.7); /* Fond noir semi-transparent*/
+                z-index: 1040; /* Entre la page et le menu*/
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+            }
+
+            .offcanvas-overlay.show {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            /* Cache la navbar par défaut sur mobile (elle sera remplacée par l'offcanvas) */
+            .navbar-collapse {
+                display: none !important;
+            }
+
+            /* Assure que le bouton "toggler" est visible */
+            .navbar-toggler {
+                display: block; /* S'assure qu'il est visible sur mobile */
+            }
+
+            /* Styles pour les éléments de menu dans l'offcanvas */
+            .offcanvas-menu .navbar-nav {
+                flex-direction: column !important; /* Les éléments s'empilent verticalement*/
+                width: 100%;
+            }
+
+            .offcanvas-menu .nav-item {
+                margin-bottom: 0.5rem; /* Espacement entre les éléments*/
+            }
+
+            .offcanvas-menu .nav-link,
+            .offcanvas-menu .dropdown-item {
+                color: rgba(255, 255, 255, 0.75); /* Couleur du texte*/
+                padding: 0.75rem 1rem;
+                border-radius: 0.25rem;
+            }
+
+            .offcanvas-menu .nav-link:hover,
+            .offcanvas-menu .dropdown-item:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+                color: white;
+            }
+
+            .offcanvas-menu .dropdown-menu {
+                position: static !important; /* Garde le menu déroulant dans le flux*/
+                transform: none !important;
+                background-color: rgba(0, 0, 0, 0.3); /* Fond pour les sous-menus*/
+                border: none;
+                margin-top: 0.5rem;
+            }
+
+            .offcanvas-menu .dropdown-divider {
+                border-top-color: rgba(255, 255, 255, 0.1);
+            }
+
+            /* Ajustement pour le logo et le bouton toggler pour qu'ils soient sur une seule ligne*/
+            .navbar .container-fluid {
+                justify-content: space-between; /* Espace le logo et le toggler */
+            }
+
+            .navbar-brand {
+                margin-right: 0; /* Supprime la marge à droite du logo */
+            }
+
+            .offcanvas-menu .ms-auto { /* Pour la section de connexion/profil */
+                margin-left: 0 !important;
+                margin-top: 1rem;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                padding-top: 1rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -14,9 +132,10 @@
            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
                <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" style="height: 40px; margin-right: 10px;"> {# Hauteur augmentée #}
            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <button class="navbar-toggler" type="button" aria-controls="offcanvasMenu" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
+            {# Le collapse original reste pour les écrans non-mobiles#}
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     {% if current_user.is_authenticated %}
@@ -35,7 +154,7 @@
                         {# BOUTONS PRODUITS ET VENTES DÉPLACÉS APRÈS LES EMOJIS #}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownProducts" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Produits
+                                <span style="font-size: 1.2em;">📦</span> Produits
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="navbarDropdownProducts">
                                <li><a class="dropdown-item" href="{{ url_for('products') }}">Voir les Produits</a></li>
@@ -44,7 +163,7 @@
                         </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownSales" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Ventes
+                                <span style="font-size: 1.2em;">🎫</span> Ventes
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="navbarDropdownSales">
                                 <li><a class="dropdown-item" href="{{ url_for('sales') }}">Voir les Ventes</a></li>
@@ -53,7 +172,7 @@
                         </li>
                         {# OPÉRATIONS SUPPLÉMENTAIRES (POSITION CONSERVÉE RELATIVEMENT AUX AUTRES) #}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('supplementary_operations') }}">Opérations Supplémentaires</a>
+                            <a class="nav-link" href="{{ url_for('supplementary_operations') }}"><span style="font-size: 1.2em;">➕</span> Opérations Supplémentaires</a>
                         </li>
                     {% endif %}
                 </ul>
@@ -82,6 +201,69 @@
         </div>
     </nav>
 
+    {# Offcanvas Menu for Mobile #}
+    {# Cet élément et son overlay ne sont stylisés et rendus visibles que sur mobile via CSS #}
+    <div class="offcanvas-overlay" id="offcanvasOverlay"></div>
+    <div class="offcanvas-menu" id="offcanvasMenu">
+        <button type="button" class="btn-close btn-close-white ms-auto" aria-label="Close" id="offcanvasCloseBtn"></button>
+        <ul class="navbar-nav">
+            {% if current_user.is_authenticated %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('dashboard') }}"><span style="font-size: 1.5em;">🏠</span> Tableau de Bord</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('statistics') }}"><span style="font-size: 1.5em;">📊</span> Statistiques</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('leaderboard') }}"><span style="font-size: 1.5em;">🏆</span> Classement</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="offcanvasDropdownProducts" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span style="font-size: 1.2em;">📦</span> Produits
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="offcanvasDropdownProducts">
+                       <li><a class="dropdown-item" href="{{ url_for('products') }}">Voir les Produits</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('add_product') }}">Ajouter un Produit</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="offcanvasDropdownSales" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span style="font-size: 1.2em;">🎫</span> Ventes
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="offcanvasDropdownSales">
+                        <li><a class="dropdown-item" href="{{ url_for('sales') }}">Voir les Ventes</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('add_sale') }}">Enregistrer une Vente</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('supplementary_operations') }}"><span style="font-size: 1.2em;">➕</span> Opérations Supplémentaires</a>
+                </li>
+            {% endif %}
+        </ul>
+        <ul class="navbar-nav ms-auto">
+            {% if current_user.is_authenticated %}
+             <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="offcanvasDropdownUser" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        👤 Mon Profil
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="offcanvasDropdownUser">
+                        <li><a class="dropdown-item" href="{{ url_for('profile') }}">Mon Profil ({{ current_user.username or current_user.email }})</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('logout') }}">Déconnexion</a></li>
+                    </ul>
+                </li>
+            {% else %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('login') }}">Connexion</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('register') }}">Inscription</a>
+                </li>
+            {% endif %}
+        </ul>
+    </div>
+
+
     <div class="container mt-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -94,5 +276,56 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const navbarToggler = document.querySelector('.navbar-toggler');
+            const offcanvasMenu = document.getElementById('offcanvasMenu');
+            const offcanvasOverlay = document.getElementById('offcanvasOverlay');
+            const offcanvasCloseBtn = document.getElementById('offcanvasCloseBtn');
+
+            function toggleOffcanvas() {
+                // Seulement basculer si l'écran est suffisamment petit pour l'offcanvas (mobile)
+                if (window.innerWidth < 992) {
+                    offcanvasMenu.classList.toggle('show');
+                    offcanvasOverlay.classList.toggle('show');
+                    document.body.classList.toggle('offcanvas-open'); // Pour désactiver le scroll du body
+                }
+            }
+
+            if (navbarToggler) {
+                // L'écouteur est ajouté, mais l'action de toggleOffcanvas est conditionnée par la taille de l'écran.
+                navbarToggler.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    toggleOffcanvas();
+                });
+            }
+
+            if (offcanvasOverlay) {
+                offcanvasOverlay.addEventListener('click', toggleOffcanvas);
+            }
+
+            if (offcanvasCloseBtn) {
+                offcanvasCloseBtn.addEventListener('click', toggleOffcanvas);
+            }
+
+            // Gestion des clics sur les liens du menu pour fermer l'offcanvas
+            if (offcanvasMenu) {
+                offcanvasMenu.querySelectorAll('.nav-link, .dropdown-item').forEach(item => {
+                    if (!item.classList.contains('dropdown-toggle')) {
+                        item.addEventListener('click', toggleOffcanvas);
+                    }
+                });
+            }
+
+            // Empêcher le scroll du body quand l'offcanvas est ouvert
+            const style = document.createElement('style');
+            style.innerHTML = `
+                body.offcanvas-open {
+                    overflow: hidden;
+                }
+            `;
+            document.head.appendChild(style);
+        });
+    </script>
 </body>
 </html>

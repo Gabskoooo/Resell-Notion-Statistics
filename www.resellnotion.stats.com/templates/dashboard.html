@@ -4,26 +4,85 @@
 {% block title %}Tableau de Bord{% endblock %}
 
 {% block content %}
+<style>
+    /* Styles Responsifs pour dashboard.html */
+    @media (max-width: 768px) {
+        h1 {
+            font-size: 1.8em; /* Réduit la taille du titre */
+        }
+        /* Ajustements pour les cartes d'indicateurs sur mobile */
+        .card.text-center .card-header {
+            font-size: 0.9em; /* Réduit la taille du texte de l'en-tête de la carte */
+            padding: 0.5rem;
+        }
+        .card.text-center .card-title {
+            font-size: 1.5em; /* Réduit la taille du titre des chiffres */
+        }
+        .card.text-center .card-text {
+            font-size: 0.8em; /* Réduit la taille du texte descriptif */
+        }
+        .card.text-center .card-footer .btn {
+            font-size: 0.8em; /* Réduit la taille des boutons dans le pied de carte */
+            padding: 0.4em 0.8em;
+        }
+
+        /* Styles pour les cartes de dernières ventes sur mobile (déjà gérées pour être full width) */
+        .latest-sales-card .card-title {
+            font-size: 1.1em;
+        }
+        .latest-sales-card .card-text {
+            font-size: 0.8em;
+        }
+    }
+
+    @media (max-width: 576px) {
+        h1 {
+            font-size: 1.5em;
+        }
+        /* Ajustements supplémentaires pour les très petits écrans */
+        .card.text-center .card-header {
+            font-size: 0.8em;
+            padding: 0.4rem;
+        }
+        .card.text-center .card-title {
+            font-size: 1.2em;
+        }
+        .card.text-center .card-text {
+            font-size: 0.7em;
+        }
+        .card.text-center .card-footer .btn {
+            font-size: 0.7em;
+            padding: 0.3em 0.6em;
+        }
+
+        .latest-sales-card .card-title {
+            font-size: 1em;
+        }
+        .latest-sales-card .card-text {
+            font-size: 0.75em;
+        }
+    }
+</style>
 <h1 class="mb-4">Votre Tableau de Bord</h1>
 
 <div class="row">
-    <div class="col-md-3"> {# Changé de md-4 à md-3 pour faire de la place pour 4 colonnes #}
+    <div class="col-6 col-md-3"> {# Ajout de col-6 pour 2 colonnes sur mobile #}
         <div class="card text-center mb-3">
             <div class="card-header bg-primary text-white">
                 Valeur Totale du Stock
             </div>
             <div class="card-body">
                 <h2 class="card-title">{{ '%.2f'|format(total_stock_value) }}€</h2>
-                <p class="card-text">Coût total des articles actuellement en stock.</p>
+                <p class="card-text d-none d-md-block">Coût total des articles actuellement en stock.</p> {# Masqué sur mobile #}
             </div>
             <div class="card-footer text-muted">
                 <a href="{{ url_for('products') }}" class="btn btn-primary btn-sm">Voir les produits</a>
             </div>
         </div>
     </div>
-    <div class="col-md-3"> {# Changé de md-4 à md-3 #}
+    <div class="col-6 col-md-3"> {# Ajout de col-6 pour 2 colonnes sur mobile #}
         <div class="card text-center mb-3">
-            <div class="card-header bg-success text-white">
+            <div class="card-header bg-primary text-white"> {# Changé de bg-success à bg-primary #}
                 Bénéfice Total des Ventes
             </div>
             <div class="card-body">
@@ -34,16 +93,16 @@
                         0.00€
                     {% endif %}
                 </h2>
-                <p class="card-text">Bénéfice net cumulé de toutes vos ventes.</p>
+                <p class="card-text d-none d-md-block">Bénéfice net cumulé de toutes vos ventes.</p> {# Masqué sur mobile #}
             </div>
             <div class="card-footer text-muted">
-                <a href="{{ url_for('sales') }}" class="btn btn-success btn-sm">Voir l'historique des ventes</a>
+                <a href="{{ url_for('sales') }}" class="btn btn-primary btn-sm">Voir l'historique des ventes</a> {# Changé de btn-success à btn-primary #}
             </div>
         </div>
     </div>
-    <div class="col-md-3"> {# Changé de md-4 à md-3 #}
+    <div class="col-6 col-md-3"> {# Ajout de col-6 pour 2 colonnes sur mobile #}
         <div class="card text-center mb-3">
-            <div class="card-header bg-info text-white">
+            <div class="card-header bg-primary text-white"> {# Changé de bg-info à bg-primary #}
                 Chiffre d'Affaires Total
             </div>
             <div class="card-body">
@@ -54,17 +113,17 @@
                         0.00€
                     {% endif %}
                 </h2>
-                <p class="card-text">Total des revenus bruts de toutes les ventes enregistrées.</p>
+                <p class="card-text d-none d-md-block">Total des revenus bruts de toutes les ventes enregistrées.</p> {# Masqué sur mobile #}
             </div>
             <div class="card-footer text-muted">
-                <a href="{{ url_for('sales') }}" class="btn btn-info btn-sm">Gérer les ventes</a>
+                <a href="{{ url_for('sales') }}" class="btn btn-primary btn-sm">Gérer les ventes</a> {# Changé de btn-info à btn-primary #}
             </div>
         </div>
     </div>
     {# NOUVEAU BLOC : Résultat Net #}
-    <div class="col-md-3"> {# Nouvelle colonne pour le Résultat Net #}
+    <div class="col-6 col-md-3"> {# Ajout de col-6 pour 2 colonnes sur mobile #}
         <div class="card text-center mb-3">
-            <div class="card-header {% if net_result >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white">
+            <div class="card-header bg-primary text-white"> {# Changé de conditionnel bg-success/danger à bg-primary #}
                 Résultat Net
             </div>
             <div class="card-body">
@@ -75,11 +134,11 @@
                         0.00€
                     {% endif %}
                 </h2>
-                <p class="card-text">Bénéfice total après toutes les opérations.</p>
+                <p class="card-text d-none d-md-block">Bénéfice total après toutes les opérations.</p> {# Masqué sur mobile #}
             </div>
             <div class="card-footer text-muted">
                 {# Vous pouvez ajouter un lien ici si vous créez une page pour les opérations supplémentaires #}
-                <a href="{{ url_for('supplementary_operations') }}" class="btn btn-secondary btn-sm">Voir les opérations</a> {# Remplacez par votre vraie route #}
+                <a href="{{ url_for('supplementary_operations') }}" class="btn btn-primary btn-sm">Voir les opérations</a> {# Changé de btn-secondary à btn-primary #}
             </div>
         </div>
     </div>
@@ -87,41 +146,29 @@
 
 <h2 class="mt-4 mb-3">Dernières Ventes</h2>
 {% if latest_sales %}
-<div class="table-responsive">
-    <table class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th>Nom</th>
-                <th>SKU</th>
-                <th>Taille</th>
-                <th>Prix Vente (€)</th>
-                <th>Prix Achat (€)</th>
-                <th>Frais Port (€)</th>
-                <th>Frais Platf. (€)</th>
-                <th>Bénéfice (€)</th>
-                <th>Date Vente</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for sale in latest_sales %}
-            <tr>
-                <td>{{ sale.item_name }}</td>
-                <td>{{ sale.sku }}</td>
-                <td>{{ sale.size }}</td>
-                <td>{{ sale.sale_price_formatted }}</td>
-                <td>{{ sale.purchase_price_at_sale_formatted }}</td>
-                <td>{{ sale.shipping_cost_formatted }}</td>
-                <td>{{ sale.fees_formatted }}</td>
-                <td>
+<div class="row">
+    {% for sale in latest_sales %}
+    <div class="col-12 mb-3 latest-sales-card"> {# Chaque carte prend toute la largeur sur mobile et a une marge en bas #}
+        <div class="card text-white" style="background-color: rgba(0, 0, 0, 0.7); font-size: 0.9em;">
+            <div class="card-body">
+                <h5 class="card-title">{{ sale.item_name }}</h5>
+                <p class="card-text mb-1"><strong>SKU:</strong> {{ sale.sku }}</p>
+                <p class="card-text mb-1"><strong>Prix Vente:</strong> {{ sale.sale_price_formatted }}</p>
+                <p class="card-text mb-1 d-none d-md-block"><strong>Taille:</strong> {{ sale.size }}</p> {# Caché sur mobile #}
+                <p class="card-text mb-1 d-none d-md-block"><strong>Prix Achat:</strong> {{ sale.purchase_price_at_sale_formatted }}</p> {# Caché sur mobile #}
+                <p class="card-text mb-1 d-none d-md-block"><strong>Frais Port:</strong> {{ sale.shipping_cost_formatted }}</p> {# Caché sur mobile #}
+                <p class="card-text mb-1 d-none d-md-block"><strong>Frais Platf.:</strong> {{ sale.fees_formatted }}</p> {# Caché sur mobile #}
+                <p class="card-text mb-1">
+                    <strong>Bénéfice:</strong>
                     <span class="badge {% if sale.profit > 0 %}bg-success{% elif sale.profit < 0 %}bg-danger{% else %}bg-secondary{% endif %}">
                         {{ sale.profit_formatted }}
                     </span>
-                </td>
-                <td>{{ sale.sale_date }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                </p>
+                <p class="card-text d-none d-md-block"><strong>Date Vente:</strong> {{ sale.sale_date }}</p> {# Caché sur mobile #}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 {% else %}
     <p>Aucune vente enregistrée pour le moment.</p>

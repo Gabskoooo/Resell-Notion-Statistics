@@ -58,11 +58,11 @@
         }
 
         .product-image {
-            max-width: 80%; /* Prendra au maximum 80% de la largeur du conteneur */
-            max-height: 300px; /* Limite la hauteur de l'image */
-            width: auto; /* Laisse la largeur s'ajuster proportionnellement à la hauteur */
-            height: auto; /* La hauteur s'ajuste pour maintenir les proportions */
-            object-fit: contain; /* Assure que l'image est contenue dans ses dimensions sans être coupée, gardant son ratio */
+            max-width: 60%; /* MODIFIÉ: Rend l'image plus petite */
+            max-height: 200px; /* MODIFIÉ: Rend l'image plus petite */
+            width: auto;
+            height: auto;
+            object-fit: contain;
             /* border-radius: 10px; -- SUPPRIMÉ */
             /* box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); -- SUPPRIMÉ */
             /* margin-bottom: 40px; -- SUPPRIMÉ */
@@ -77,6 +77,7 @@
             justify-content: center;
             gap: 10px; /* Réduit l'espace entre les cartes pour aider à les garder sur une ligne */
             /* flex-wrap: wrap; est supprimé ici pour que les cartes restent sur une seule ligne */
+            margin-top: 60px; /* AJOUTÉ: Augmente l'espace au-dessus des cartes */
             margin-bottom: 40px;
             width: 100%; /* S'assure que le conteneur prend toute la largeur disponible */
             box-sizing: border-box; /* Inclut padding et border dans la largeur totale */
@@ -164,8 +165,8 @@
                 font-size: 3em;
             }
             .product-image {
-                max-width: 70%; /* Réduit encore sur les tablettes */
-                max-height: 250px; /* Ajuste la hauteur max */
+                max-width: 50%; /* Ajuste pour les tablettes */
+                max-height: 180px; /* Ajuste la hauteur max */
             }
             /* Les règles pour .detail-card et .sale-details-cards sont retirées ici pour conserver l'affichage horizontal */
         }
@@ -175,8 +176,8 @@
                 font-size: 2.5em;
             }
             .product-image {
-                max-width: 90%; /* Prend plus de place sur les très petits écrans si nécessaire */
-                max-height: 200px; /* Ajuste la hauteur max */
+                max-width: 70%; /* Prend plus de place sur les très petits écrans si nécessaire */
+                max-height: 150px; /* Ajuste la hauteur max */
             }
             /* Les règles pour .detail-card et .sale-details-cards sont retirées ici pour conserver l'affichage horizontal */
         }
