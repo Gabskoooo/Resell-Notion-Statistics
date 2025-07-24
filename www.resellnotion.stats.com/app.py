@@ -23,6 +23,7 @@ import io
 import base64
 from flask_mail import Mail, Message
 from datetime import datetime, date, timedelta
+import matplotlib.ticker as mticker
 
 from dateutil.relativedelta import relativedelta
 load_dotenv()
@@ -982,6 +983,26 @@ def add_product():
                            description=form_data['description'],
                            error=error)
 
+@app.route('/get_product_name_suggestions', methods=['GET'])
+@login_required
+def get_product_name_suggestions():
+    query = request.args.get('query', '').upper()
+    suggestions = []
+    if query:
+        count = 0
+        for item in SKU_DATA:
+            # Vérifie si le query est contenu dans le nom du produit (insensible à la casse)
+            # ou dans le SKU (si vous voulez que la recherche par nom puisse aussi trouver par SKU)
+            if query in item['product_name'].upper() or query in item['sku'].upper():
+                suggestions.append({
+                    'sku': item['sku'],
+                    'name': item['product_name'], # Le nom du produit sera le 'name' pour le frontend
+                    'image_url': item['image_url']
+                })
+                count += 1
+                if count >= 10: # Limite à 10 suggestions pour de meilleures performances
+                    break
+    return jsonify(suggestions)
 @app.route('/products/<int:id>/edit', methods=('GET', 'POST'))
 @login_required
 @key_active_required
@@ -1520,8 +1541,8 @@ def edit_sale(id):
 
 
 @app.route('/statistics')
-# @login_required # Décommentez si ces décorateurs sont nécessaires
-# @key_active_required # Décommentez si ces décorateurs sont nécessaires
+@login_required # Décommentez si ces décorateurs sont nécessaires
+@key_active_required # Décommentez si ces décorateurs sont nécessaires
 def statistics():
     conn = g.db
     user_id = current_user.id
@@ -1770,18 +1791,17 @@ def statistics():
             ax.grid(True, color='#333', linestyle='--')
 
             # Légende
-            # facecolor='transparent' pour le fond transparent de la légende
-            # edgecolor='none' pour pas de bordure
-            # labelcolor='white' pour la couleur du texte de la légende
-            ax.legend(facecolor='transparent', edgecolor='none', labelcolor='white')
+            ax.legend(facecolor='none', edgecolor='none', labelcolor='white')
 
             # Formatage de l'axe Y en monnaie
-            import matplotlib.ticker as mticker
             formatter = mticker.FormatStrFormatter(
                 '%d€')  # Format entier pour l'exemple, ajustez si besoin (ex: '%.2f€' pour 2 décimales)
             ax.yaxis.set_major_formatter(formatter)
 
             plt.tight_layout()  # Ajuster la mise en page pour éviter les chevauchements
+
+            # Ajout de cette ligne pour formater automatiquement les étiquettes de l'axe X
+            fig.autofmt_xdate()
 
             # Sauvegardez le graphique dans un objet BytesIO (en mémoire)
             buffer = io.BytesIO()
@@ -1820,15 +1840,11 @@ def statistics():
     finally:
         if cur and not cur.closed:  # S'assurer que le curseur est fermé
             cur.close()
-# --- Nouvelle fonction pour sauvegarder un rapport (utilisée par la tâche planifiée plus tard) ---
-import json  # Toujours nécessaire si vous gérez d'autres JSON ailleurs, mais pas pour le rapport_json_data
+
 from datetime import datetime, date
 
 
-# Fonction utilitaire pour gérer les valeurs 'infinity'
 
-# --- Nouvelle route (pour les tests manuels seulement) pour générer un rapport ---
-# Plus tard, cette logique sera déplacée vers une tâche planifiée.
 
 
 @app.route('/sales/<int:id>/delete', methods=('POST',))
