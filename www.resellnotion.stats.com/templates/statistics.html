@@ -2,8 +2,15 @@
 
 {% block head %}
 <title>Statistiques</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
+    /* Global styles for dark theme cards */
+    .dark-card {
+        background-color: rgba(33, 37, 41, 0.7); /* Semi-transparent dark background */
+        color: #f8f9fa; /* Light text color */
+        border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+        border-radius: 0.25rem;
+    }
+
     /* Style pour le graphique flouté */
     .blurred-chart-container {
         position: relative;
@@ -60,124 +67,166 @@
         color: gray;
     }
 
-    /* NOUVEAUX STYLES pour la section du tableau des taux d'évolution */
-    /* Ces styles peuvent être supprimés si la section n'est plus un tableau */
-    .evolution-section-header {
-        background-color: rgba(33, 37, 41, 0.9) !important; /* Gris très foncé pour l'en-tête de la carte */
-        color: #f8f9fa !important; /* Texte clair */
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important; /* Bordure légère */
+    /* Styles for individual indicator cards */
+    .indicator-card {
+        text-align: center;
+        padding: 15px;
+        margin-bottom: 15px; /* Spacing between cards */
+        display: flex;
+        flex-direction: column;
+        justify-content: center; /* Vertically center content */
+        align-items: center; /* Horizontally center content */
+        height: 100%; /* Ensure cards in a row have equal height */
     }
 
-    .evolution-section-body {
-        background-color: rgba(52, 58, 64, 0.7) !important; /* Gris foncé semi-transparent pour le corps de la carte */
-        color: #f8f9fa !important; /* Texte clair */
+    .indicator-card h5 {
+        font-size: 0.9rem; /* Slightly smaller title for more harmony */
+        margin-bottom: 5px;
+        color: rgba(248, 249, 250, 0.8); /* Slightly muted title color */
     }
 
-    /* Styles pour le tableau à l'intérieur de la section d'évolution */
-    /* Ces règles ne seront plus nécessaires une fois la table retirée */
-    .evolution-section-body .table {
-        background-color: rgba(33, 37, 41, 0.8);
-        color: inherit !important; /* Hérite la couleur du texte du parent */
-        margin-bottom: 0 !important; /* Supprime la marge par défaut du tableau */
+    .indicator-card .display-6 {
+        font-size: 1.8rem; /* Consistent size with main stats */
+        font-weight: bold;
+        line-height: 1.2;
+        margin-top: 0;
     }
 
-    .evolution-section-body .table thead th {
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important; /* Bordure sous les en-têtes de colonne */
-        color: #fff !important; /* Texte blanc pour les en-têtes du tableau */
+    /* Responsive adjustments for indicator cards */
+    /* On small screens (sm), 3 per row (col-sm-4) for the first 3, then 2 per row (col-sm-6) */
+    @media (max-width: 767.98px) {
+        .col-sm-4 {
+            flex: 0 0 33.333%;
+            max-width: 33.333%;
+        }
+        .col-sm-6 {
+            flex: 0 0 50%;
+            max-width: 50%;
+        }
+        .indicator-card .display-6 {
+            font-size: 1.5rem; /* Reduce font size slightly on mobile */
+        }
+        .indicator-card h5 {
+            font-size: 0.8rem; /* Reduce title font size on mobile */
+        }
     }
-    .evolution-section-body .table tbody tr {
-        border-color: rgba(255, 255, 255, 0.1) !important; /* Bordure entre les lignes */
+
+    /* On extra small screens (xs), 2 per row (col-6) */
+    @media (max-width: 575.98px) {
+        .col-12 { /* Ensure full width before sm breakpoint */
+             flex: 0 0 100%;
+             max-width: 100%;
+        }
+        .col-6 { /* Overrides col-12 for 2 per row */
+            flex: 0 0 50%;
+            max-width: 50%;
+        }
     }
-    .evolution-section-body .table tbody td {
-        border-color: rgba(255, 255, 255, 0.1) !important; /* Bordure entre les cellules */
+
+    /* Evolution cards adjustments (retained from previous versions) */
+    .evolution-card-title {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .evolution-card-text {
+        font-size: 1.8rem !important;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">Statistiques Détaillées</h1>
+    <h1 class="mb-4 text-center">Statistiques Détaillées</h1>
 
-    <div class="mb-4 d-flex flex-wrap justify-content-center">
-        <a href="{{ url_for('statistics', period='this_week') }}"
-           class="btn {% if selected_period == 'this_week' %}btn-primary{% else %}btn-outline-primary{% endif %} m-1">Cette Semaine</a>
-        <a href="{{ url_for('statistics', period='last_week') }}"
-           class="btn {% if selected_period == 'last_week' %}btn-primary{% else %}btn-outline-primary{% endif %} m-1">Semaine Dernière</a>
-        <a href="{{ url_for('statistics', period='this_month') }}"
-           class="btn {% if selected_period == 'this_month' %}btn-primary{% else %}btn-outline-primary{% endif %} m-1">Ce Mois-ci</a>
-        <a href="{{ url_for('statistics', period='last_month') }}"
-           class="btn {% if selected_period == 'last_month' %}btn-primary{% else %}btn-outline-primary{% endif %} m-1">Mois Dernier</a>
-        <a href="{{ url_for('statistics', period='this_year') }}"
-           class="btn {% if selected_period == 'this_year' %}btn-primary{% else %}btn-outline-primary{% endif %} m-1">Cette Année</a>
-        <a href="{{ url_for('statistics', period='last_year') }}"
-           class="btn {% if selected_period == 'last_year' %}btn-primary{% else %}btn-outline-primary{% endif %} m-1">Année Dernière</a>
+    <div class="mb-4 d-flex justify-content-center">
+        <div class="form-group w-50"> {# Set width for the dropdown #}
+            <label for="periodSelect" class="sr-only">Sélectionner la Période</label>
+            <select class="form-control dark-card" id="periodSelect"> {# Added dark-card to select for consistent styling #}
+                <option value="this_week" {% if selected_period == 'this_week' %}selected{% endif %}>Cette Semaine</option>
+                <option value="last_week" {% if selected_period == 'last_week' %}selected{% endif %}>Semaine Dernière</option>
+                <option value="this_month" {% if selected_period == 'this_month' %}selected{% endif %}>Ce Mois-ci</option>
+                <option value="last_month" {% if selected_period == 'last_month' %}selected{% endif %}>Mois Dernier</option>
+                <option value="this_year" {% if selected_period == 'this_year' %}selected{% endif %}>Cette Année</option>
+                <option value="last_year" {% if selected_period == 'last_year' %}selected{% endif %}>Année Dernière</option>
+                <option value="all" {% if selected_period == 'all' %}selected{% endif %}>Toutes les données</option>
+            </select>
+        </div>
     </div>
 
-    <div class="card mb-4">
-        <div class="card-header">
-            Résumé des Performances de la Période
+    <h2 class="mb-4 text-center">Résumé des Performances de la Période</h2> {# Title for the section, mb-4 adds spacing #}
+    <div class="row justify-content-center">
+        {# Nb Ventes Card #}
+        <div class="col-6 col-sm-4 col-lg mb-3"> {# col-6 for xs, col-sm-4 for 3-per-row on sm, col-lg for flexible on larger #}
+            <div class="dark-card">
+                <h5>Nb Ventes</h5>
+                <p class="display-6">{{ total_sales_count }}</p>
+            </div>
         </div>
-        <div class="card-body">
-            <div class="row row-cols-md-auto g-4 justify-content-around">
-                <div class="col text-center">
-                    <h5>Nb Ventes</h5>
-                    <p class="display-6">{{ total_sales_count }}</p>
-                </div>
-                <div class="col text-center">
-                    <h5>Prix Vente Total</h5>
-                    <p class="display-6">{{ "%.2f"|format(total_sales_revenue) }}€</p>
-                </div>
-                <div class="col text-center">
-                    <h5>Bénéfice Total</h5>
-                    <p class="display-6">{{ "%.2f"|format(total_sales_profit) }}€</p>
-                </div>
-                <div class="col text-center">
-                    <h5>Taux Marge (%)</h5>
-                    <p class="display-6">{{ "%.2f"|format(margin_rate) }}%</p>
-                </div>
-                <div class="col text-center">
-                    <h5>Jours Moy. Vente</h5>
-                    <p class="display-6">{{ "%.2f"|format(average_days_to_sell) }} jours</p>
+        {# Prix Vente Total Card #}
+        <div class="col-6 col-sm-4 col-lg mb-3">
+            <div class="dark-card indicator-card">
+                <h5>Prix Vente Total</h5>
+                <p class="display-6">{{ "%.2f"|format(total_sales_revenue) }}€</p>
+            </div>
+        </div>
+        {# Bénéfice Total Card #}
+        <div class="col-6 col-sm-4 col-lg mb-3">
+            <div class="dark-card indicator-card">
+                <h5>Bénéfice Total</h5>
+                <p class="display-6">{{ "%.2f"|format(total_sales_profit) }}€</p>
+            </div>
+        </div>
+        {# Taux Marge (%) Card #}
+        <div class="col-6 col-sm-6 col-lg mb-3"> {# col-sm-6 for 2-per-row on sm for the last two #}
+            <div class="dark-card indicator-card">
+                <h5>Taux Marge (%)</h5>
+                <p class="display-6">{{ "%.2f"|format(margin_rate) }}%</p>
+            </div>
+        </div>
+        {# Jours Moy. Vente Card #}
+        <div class="col-6 col-sm-6 col-lg mb-3">
+            <div class="dark-card indicator-card">
+                <h5>Jours Moy. Vente</h5>
+                <p class="display-6">{{ "%.2f"|format(average_days_to_sell) }} jours</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4 dark-card"> {# This card still wraps the chart #}
+        <div class="card-header dark-card">
+            Évolution des Ventes et Bénéfices (Période Actuelle)
+        </div>
+        <div class="card-body d-flex justify-content-center align-items-center flex-column"> {# MODIFIÉ ICI #}
+            {# Conteneur pour l'image Matplotlib avec styles ajustés #}
+            <img id="dynamicSalesChart" src="data:image/png;base64,{{ plot_base64 }}"
+                 style="max-width: 100%; height: auto; display: block;">
+
+            {# Le message de flou est maintenant géré par JS en fonction de total_sales_count #}
+            <div class="blurred-chart-container" id="blurredChartMessageContainer" style="display: none;">
+                <div class="blurred-chart"></div>
+                <div class="blurred-message">
+                    Veuillez enregistrer au moins 5 ventes pour obtenir ce graphique.
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card mb-4">
-        <div class="card-header">
-            Évolution des Ventes et Bénéfices (Période Actuelle)
-        </div>
-        <div class="card-body">
-            {# Affiche le graphique réel si au moins 5 ventes ont été enregistrées #}
-            {% if total_sales_count >= 5 %}
-                <canvas id="dynamicSalesChart"></canvas>
-            {% else %}
-                <div class="blurred-chart-container">
-                    <div class="blurred-chart"></div>
-                    <div class="blurred-message">
-                        Veuillez enregistrer au moins 5 ventes pour obtenir ce graphique.
-                    </div>
-                </div>
-            {% endif %}
-        </div>
-    </div>
-
     {# NOUVELLE SECTION: Taux d'Évolution vs. Période Précédente en cartes #}
-    <h2 class="mt-5 mb-3">Taux d'Évolution vs. Période Précédente</h2>
-    <div class="row">
+    <h2 class="mt-5 mb-3 text-center">Taux d'Évolution vs. Période Précédente</h2>
+    <div class="row justify-content-center">
         {# Évolution du Coût d'achat (COGS) #}
         <div class="col-md-6 col-lg-4 mb-4">
-            {# Retrait des classes bg-success/danger/secondary pour hériter du style .card par défaut (noir semi-transparent) #}
-            <div class="card text-white">
-                <div class="card-body">
-                    <h5 class="card-title">Évolution Coût d'achat (PA)</h5>
-                    <p class="card-text fs-3">
+            <div class="card text-white h-100 dark-card">
+                <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                    <h5 class="card-title evolution-card-title">Évolution Coût d'achat (PA)</h5>
+                    <p class="card-text evolution-card-text">
                         {% if evolution_rate_cogs is string and evolution_rate_cogs == 'infinity' %}
                             N/A (croissance infinie)
                         {% elif evolution_rate_cogs is not string and evolution_rate_cogs == 0.0 %}
-                            0.00%
+                            <span class="evolution-neutral">0.00%</span>
                         {% elif evolution_rate_cogs is not string and evolution_rate_cogs is defined %}
-                            {{ "%.2f"|format(evolution_rate_cogs) }}%
+                            <span class="{% if evolution_rate_cogs > 0 %}evolution-negative{% elif evolution_rate_cogs < 0 %}evolution-positive{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_cogs) }}%</span>
                         {% else %}
                             N/A
                         {% endif %}
@@ -188,17 +237,16 @@
 
         {# Évolution du Prix de Vente (Revenue) #}
         <div class="col-md-6 col-lg-4 mb-4">
-            {# Retrait des classes bg-success/danger/secondary pour hériter du style .card par défaut (noir semi-transparent) #}
-            <div class="card text-white">
-                <div class="card-body">
-                    <h5 class="card-title">Évolution Prix de Vente (PV)</h5>
-                    <p class="card-text fs-3">
+            <div class="card text-white h-100 dark-card">
+                <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                    <h5 class="card-title evolution-card-title">Évolution Prix de Vente (PV)</h5>
+                    <p class="card-text evolution-card-text">
                         {% if evolution_rate_revenue is string and evolution_rate_revenue == 'infinity' %}
                             N/A (croissance infinie)
                         {% elif evolution_rate_revenue is not string and evolution_rate_revenue == 0.0 %}
-                            0.00%
+                            <span class="evolution-neutral">0.00%</span>
                         {% elif evolution_rate_revenue is not string and evolution_rate_revenue is defined %}
-                            {{ "%.2f"|format(evolution_rate_revenue) }}%
+                            <span class="{% if evolution_rate_revenue > 0 %}evolution-positive{% elif evolution_rate_revenue < 0 %}evolution-negative{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_revenue) }}%</span>
                         {% else %}
                             N/A
                         {% endif %}
@@ -209,17 +257,16 @@
 
         {# Évolution du Bénéfice (Profit) #}
         <div class="col-md-6 col-lg-4 mb-4">
-            {# Retrait des classes bg-success/danger/secondary pour hériter du style .card par défaut (noir semi-transparent) #}
-            <div class="card text-white">
-                <div class="card-body">
-                    <h5 class="card-title">Évolution Bénéfice</h5>
-                    <p class="card-text fs-3">
+            <div class="card text-white h-100 dark-card">
+                <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                    <h5 class="card-title evolution-card-title">Évolution Bénéfice</h5>
+                    <p class="card-text evolution-card-text">
                         {% if evolution_rate_profit is string and evolution_rate_profit == 'infinity' %}
                             N/A (croissance infinie)
                         {% elif evolution_rate_profit is not string and evolution_rate_profit == 0.0 %}
-                            0.00%
+                            <span class="evolution-neutral">0.00%</span>
                         {% elif evolution_rate_profit is not string and evolution_rate_profit is defined %}
-                            {{ "%.2f"|format(evolution_rate_profit) }}%
+                            <span class="{% if evolution_rate_profit > 0 %}evolution-positive{% elif evolution_rate_profit < 0 %}evolution-negative{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_profit) }}%</span>
                         {% else %}
                             N/A
                         {% endif %}
@@ -233,76 +280,29 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        {% if total_sales_count >= 5 %}
-            const dynamicCtx = document.getElementById('dynamicSalesChart').getContext('2d');
-            const dynamicSalesChart = new Chart(dynamicCtx, {
-                type: 'line',
-                data: {
-                    labels: {{ graph_labels | tojson }},
-                    datasets: [
-                        {
-                            label: 'Coût d\'achat',
-                            data: {{ graph_cogs_values | tojson }},
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                            tension: 0.1,
-                            fill: false
-                        },
-                        {
-                            label: 'Prix de Vente',
-                            data: {{ graph_revenue_values | tojson }},
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                            tension: 0.1,
-                            fill: false
-                        },
-                        {
-                            label: 'Bénéfice Net',
-                            data: {{ graph_profit_values | tojson }},
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            tension: 0.1,
-                            fill: false
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Montant (€)'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: '{{ "Jour" if graph_granularity == "day" else "Mois" }}'
-                            }
-                        }
-                    },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    if (context.parsed.y !== null) {
-                                        label += new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(context.parsed.y);
-                                    }
-                                    return label;
-                                }
-                            }
-                        }
-                    }
-                }
+        // Dropdown period selection logic
+        const periodSelect = document.getElementById('periodSelect');
+        if (periodSelect) {
+            periodSelect.addEventListener('change', function() {
+                const selectedPeriod = this.value;
+                window.location.href = "{{ url_for('statistics') }}?period=" + selectedPeriod;
             });
-        {% endif %}
+        }
+
+        // --- DÉBUT DES MODIFICATIONS POUR LE GRAPHIQUE (MATPLOTLIB) ---
+        const totalSalesCount = {{ total_sales_count | tojson }};
+
+        const chartImage = document.getElementById('dynamicSalesChart'); // Cible l'image
+        const blurredMessageContainer = document.getElementById('blurredChartMessageContainer');
+
+        if (totalSalesCount >= 5) {
+            chartImage.style.display = 'block'; // Affiche l'image
+            blurredMessageContainer.style.display = 'none'; // Cache le message flou
+        } else {
+            chartImage.style.display = 'none'; // Cache l'image
+            blurredMessageContainer.style.display = 'block'; // Affiche le message flou
+        }
+        // --- FIN DES MODIFICATIONS POUR LE GRAPHIQUE ---
     });
 </script>
 {% endblock %}

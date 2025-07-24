@@ -1,4 +1,5 @@
 import os
+import decimal
 import psycopg2 # Importez psycopg2
 import psycopg2.extras # Pour RealDictCursor
 from urllib.parse import urlparse # Pour parser l'URL de la DB
@@ -14,15 +15,33 @@ import json
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, g # Importez jsonify ici
 from functools import wraps # Importez wraps pour le décorateur
 from decimal import Decimal
+import matplotlib
+import matplotlib.dates as mdates # Assurez-vous d'avoir cet import
+matplotlib.use('Agg') # Important: Utilisez le backend 'Agg' pour la génération d'images non-interactives
+import matplotlib.pyplot as plt
+import io
+import base64
+from flask_mail import Mail, Message
+from datetime import datetime, date, timedelta
 
+from dateutil.relativedelta import relativedelta
 load_dotenv()
 # Render définit automatiquement DATABASE_URL pour votre base de données liée.
 
 
 app = Flask(__name__)
+app.config['DEBUG'] = True # <--- TRÈS IMPORTANT
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)  # Session dure 7 jours
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'  # Remplacez par le serveur SMTP de votre fournisseur d'e-mail (ex: smtp.gmail.com)
+app.config['MAIL_PORT'] = 587                  # Port SMTP (généralement 587 pour TLS, 465 pour SSL)
+app.config['MAIL_USE_TLS'] = True              # Utiliser TLS (recommandé)
+app.config['MAIL_USE_SSL'] = False             # Ne pas utiliser SSL si TLS est activé
+app.config['MAIL_USERNAME'] = 'resell.notion2025@gmail.com' # Votre adresse e-mail d'envoi
+app.config['MAIL_PASSWORD'] = 'aiym thsq fqwo mbqj' # Le mot de passe de votre e-mail (ou un mot de passe d'application si Gmail)
+app.config['MAIL_DEFAULT_SENDER'] = 'resell.notion2025@gmail.com' # L'expéditeur par défaut
 
+mail = Mail(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -32,6 +51,368 @@ login_manager.needs_refresh_message_category = "info"
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 ASSETS_DIR = os.path.join(PROJECT_ROOT, '..', 'www.resellnotion.stats.com', 'assets')
+
+def send_performance_report_email(recipient_email, subject, html_body):
+    """
+    Envoie un e-mail de bilan de performance à un destinataire donné.
+    """
+    try:
+        msg = Message(subject, recipients=[recipient_email])
+        msg.html = html_body # Le corps de l'e-mail sera en HTML
+        mail.send(msg)
+        print(f"E-mail de bilan envoyé à {recipient_email} avec succès.")
+        return True
+    except Exception as e:
+        print(f"Erreur lors de l'envoi de l'e-mail à {recipient_email}: {e}")
+        return False
+
+def _save_report_metadata(conn, user_id, report_type, period_label, report_start_date, report_end_date):
+    """Sauvegarde les métadonnées d'un rapport dans la base de données."""
+    cur = None
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO generated_reports (user_id, report_type, period_label, report_start_date, report_end_date, generation_date, file_path)
+            VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id;
+        """, (user_id, report_type, period_label, report_start_date, report_end_date, datetime.now(), None)) # file_path est None pour les rapports dynamiques
+        report_id = cur.fetchone()[0]
+        conn.commit()
+        print(f"Rapport de type '{report_type}' pour la période '{period_label}' enregistré avec l'ID: {report_id}")
+        return report_id
+    except Exception as e:
+        print(f"ERREUR lors de l'enregistrement des métadonnées du rapport: {e}")
+        if conn:
+            conn.rollback() # Annuler la transaction en cas d'erreur
+        return None
+    finally:
+        if cur and not cur.closed:
+            cur.close()
+
+# --- Fonction get_report_data (mise à jour pour la correction Decimal) ---
+def get_report_data(conn, user_id, start_date, end_date, report_type):
+    cur = None
+    report_data = {
+        'sales_summary': {
+            'total_revenue': decimal.Decimal(0),
+            'total_profit': decimal.Decimal(0),
+            'margin_rate': decimal.Decimal(0)
+        },
+        'sales_history': [],
+        'stock_indicators': {
+            'total_products_in_stock': 0,
+            'total_stock_value': decimal.Decimal(0),
+            'stock_rotation_rate': decimal.Decimal(0)
+        },
+        'stock_by_size': [],
+        'daily_sales_count': [],
+        'daily_purchases_count': [],
+        'oldest_product_in_stock': None # NOUVEAU : pour la paire la plus vieille
+    }
+
+    print(f"\n--- DEBUG get_report_data ---")
+    print(f"  user_id: {user_id}")
+    print(f"  start_date: {start_date} (Type: {type(start_date)})")
+    print(f"  end_date: {end_date} (Type: {type(end_date)})")
+    print(f"  report_type: '{report_type}' (Type: {type(report_type)})")
+
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+        # 1. Requête pour le résumé des ventes
+        cur.execute("""
+            SELECT
+                COALESCE(SUM(sale_price), 0.00) AS total_revenue,
+                COALESCE(SUM(profit), 0.00) AS total_profit
+            FROM
+                sales
+            WHERE
+                user_id = %s AND sale_date BETWEEN %s AND %s;
+        """, (user_id, start_date, end_date))
+        summary = cur.fetchone()
+
+        report_data['sales_summary']['total_revenue'] = summary['total_revenue']
+        report_data['sales_summary']['total_profit'] = summary['total_profit']
+        if summary['total_revenue'] > 0:
+            report_data['sales_summary']['margin_rate'] = (summary['total_profit'] / summary['total_revenue'] * 100).quantize(decimal.Decimal('0.01'))
+        else:
+            report_data['sales_summary']['margin_rate'] = decimal.Decimal(0)
+
+        # 2. Requête pour l'historique des ventes (toujours par jour)
+        group_by_clause = "DATE_TRUNC('day', sale_date)"
+
+        sql_query_history = f"""
+            SELECT
+                {group_by_clause} AS period,
+                COALESCE(SUM(sale_price), 0.00) AS revenue,
+                COALESCE(SUM(profit), 0.00) AS profit
+            FROM
+                sales
+            WHERE
+                user_id = %s AND sale_date BETWEEN %s AND %s
+            GROUP BY
+                period
+            ORDER BY
+                period;
+        """
+        print(f"  SQL Query History (Daily Grouping): {sql_query_history}")
+        print(f"  Parameters: (user_id={user_id}, start_date={start_date}, end_date={end_date})")
+
+        cur.execute(sql_query_history, (user_id, start_date, end_date))
+        sales_history = cur.fetchall()
+        report_data['sales_history'] = sales_history
+        print(f"  Sales History fetched: {sales_history}")
+
+        # 3. Requêtes pour les indicateurs de stock (total)
+        cur.execute("""
+            SELECT
+                COUNT(id) AS total_products_in_stock,
+                COALESCE(SUM(purchase_price), 0.00) AS total_stock_value
+            FROM
+                products
+            WHERE
+                user_id = %s;
+        """, (user_id,))
+        stock_summary = cur.fetchone()
+
+        report_data['stock_indicators']['total_products_in_stock'] = stock_summary['total_products_in_stock']
+        report_data['stock_indicators']['total_stock_value'] = stock_summary['total_stock_value']
+
+        # Taux de rotation du stock
+        if report_data['stock_indicators']['total_stock_value'] > 0:
+            report_data['stock_indicators']['stock_rotation_rate'] = (
+                report_data['sales_summary']['total_revenue'] / report_data['stock_indicators']['total_stock_value']
+            ).quantize(decimal.Decimal('0.01'))
+        else:
+            report_data['stock_indicators']['stock_rotation_rate'] = decimal.Decimal(0)
+
+        # Requête pour le décompte du stock par taille
+        cur.execute("""
+            SELECT
+                COALESCE(size, 'Non spécifié') AS size,
+                COUNT(id) AS product_count
+            FROM
+                products
+            WHERE
+                user_id = %s
+            GROUP BY
+                size
+            ORDER BY
+                product_count DESC;
+        """, (user_id,))
+        stock_by_size_data = cur.fetchall()
+        report_data['stock_by_size'] = stock_by_size_data
+        print(f"  Stock by Size fetched: {stock_by_size_data}")
+
+        # Requête pour le nombre de ventes (transactions) par jour
+        cur.execute("""
+            SELECT
+                DATE_TRUNC('day', sale_date) AS period,
+                COUNT(id) AS sales_count
+            FROM
+                sales
+            WHERE
+                user_id = %s AND sale_date BETWEEN %s AND %s
+            GROUP BY
+                period
+            ORDER BY
+                period;
+        """, (user_id, start_date, end_date))
+        daily_sales_data = cur.fetchall()
+        report_data['daily_sales_count'] = daily_sales_data
+        print(f"  Daily Sales Count fetched: {daily_sales_data}")
+
+
+        # Requête pour le nombre de produits achetés (entrées en stock) par jour
+        cur.execute("""
+            SELECT
+                DATE_TRUNC('day', date_added) AS period,
+                COUNT(id) AS products_bought_count
+            FROM
+                products
+            WHERE
+                user_id = %s AND date_added BETWEEN %s AND %s
+            GROUP BY
+                period
+            ORDER BY
+                period;
+        """, (user_id, start_date, end_date))
+        daily_purchases_data = cur.fetchall()
+        report_data['daily_purchases_count'] = daily_purchases_data
+        print(f"  Daily Purchases Count fetched: {daily_purchases_data}")
+
+        # NOUVEAU : Requête pour la paire la plus vieille en stock
+        cur.execute("""
+            SELECT
+                name,
+                sku,
+                date_added,
+                size,
+                image_url
+            FROM
+                products
+            WHERE
+                user_id = %s
+            ORDER BY
+                date_added ASC
+            LIMIT 1;
+        """, (user_id,))
+        oldest_product = cur.fetchone()
+        report_data['oldest_product_in_stock'] = oldest_product
+        print(f"  Oldest product in stock fetched: {oldest_product}")
+
+
+        print(f"--- FIN DEBUG get_report_data ---")
+        return report_data
+
+    except Exception as e:
+        print(f"ERREUR DANS get_report_data: {e}")
+        return None
+
+    finally:
+        if cur and not cur.closed:
+            cur.close()
+
+
+def create_bar_chart(x_data_dates, y_data_counts, title, y_label):
+    if not x_data_dates or not y_data_counts:
+        return None
+
+    plt.style.use('dark_background')
+    plt.rcParams['axes.edgecolor'] = 'gray'
+    plt.rcParams['xtick.color'] = 'white'
+    plt.rcParams['ytick.color'] = 'white'
+    plt.rcParams['axes.labelcolor'] = 'white'
+    plt.rcParams['text.color'] = 'white'
+    plt.rcParams['grid.color'] = 'gray'
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    # CORRECTION ICI : Changement de la couleur des barres en bleu cyan (#78b3e8)
+    ax.bar(x_data_dates, y_data_counts, color='#78b3e8')
+
+    ax.set_title(title)
+    ax.set_xlabel('Date')
+    ax.set_ylabel(y_label)
+    ax.grid(axis='y', linestyle='--', alpha=0.6)
+
+    # Formater les étiquettes de l'axe des x en fonction de la période
+    date_diff = (x_data_dates[-1] - x_data_dates[0]).days
+    if date_diff <= 7:
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%a %d'))
+        ax.xaxis.set_major_locator(mdates.DayLocator())
+    elif date_diff <= 31:
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
+        ax.xaxis.set_major_locator(mdates.DayLocator(interval=2))
+    else:
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+        ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
+
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', transparent=True)
+    buf.seek(0)
+    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+    plt.close(fig)
+    return img_base64
+
+def create_pie_chart(labels, values, title):
+    if not labels or not values:
+        return None
+
+    plt.style.use('dark_background')
+    plt.rcParams['axes.edgecolor'] = 'gray'
+    plt.rcParams['xtick.color'] = 'white'
+    plt.rcParams['ytick.color'] = 'white'
+    plt.rcParams['axes.labelcolor'] = 'white'
+    plt.rcParams['text.color'] = 'white'
+    plt.rcParams['grid.color'] = 'gray'
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    num_colors = len(labels)
+    colors_list = [plt.cm.get_cmap('tab20', 20)(i) for i in range(num_colors)]
+
+    wedges, texts, autotexts = ax.pie(values, autopct='%1.1f%%', startangle=90, colors=colors_list,
+                                     textprops={'color': 'white'},
+                                     pctdistance=0.85)
+
+    ax.axis('equal')
+    ax.set_title(title)
+
+    for text in texts:
+        text.set_color('white')
+
+    # Correction ici : suppression de 'prop={'color': 'white'}' de l'appel à legend
+    legend = ax.legend(wedges, labels, title="Tailles", loc="center left", bbox_to_anchor=(1, 0.5), frameon=False)
+
+    # Définir la couleur du titre de la légende
+    plt.setp(legend.get_title(), color='white')
+
+    # NOUVEAU : Définir la couleur de chaque élément de texte dans la légende
+    for text in legend.get_texts():
+        text.set_color('white')
+
+    plt.tight_layout()
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', transparent=True)
+    buf.seek(0)
+    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+    plt.close(fig)
+    return img_base64
+
+
+def create_combined_sales_plot(x_data_dates, y_data_revenue, y_data_profit, title):
+    if not x_data_dates or (not y_data_revenue and not y_data_profit):
+        return None
+
+    plt.style.use('dark_background')
+    plt.rcParams['axes.edgecolor'] = 'gray'
+    plt.rcParams['xtick.color'] = 'white'
+    plt.rcParams['ytick.color'] = 'white'
+    plt.rcParams['axes.labelcolor'] = 'white'
+    plt.rcParams['text.color'] = 'white'
+    plt.rcParams['grid.color'] = 'gray'
+
+    fig, ax = plt.subplots(figsize=(12, 6)) # Taille plus large pour un graphique combiné
+
+    # Tracer le Chiffre d'Affaires
+    ax.plot(x_data_dates, y_data_revenue, marker='o', linestyle='-', color='#78b3e8', label='Chiffre d\'Affaires') # Bleu clair
+    # Tracer le Bénéfice
+    ax.plot(x_data_dates, y_data_profit, marker='x', linestyle='--', color='#28a745', label='Bénéfice') # Vert
+
+    ax.set_title(title)
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Montant (€)')
+    ax.grid(True, linestyle='--', alpha=0.6)
+
+    # Formater les étiquettes de l'axe des x en fonction de la période
+    date_diff = (x_data_dates[-1] - x_data_dates[0]).days # Différence en jours entre la dernière et la première date
+
+    if date_diff <= 7: # Pour une semaine (affiche chaque jour)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%a %d')) # Ex: Lun 01, Mar 02
+        ax.xaxis.set_major_locator(mdates.DayLocator()) # Tick pour chaque jour
+    elif date_diff <= 31: # Pour un mois (affiche tous les 2 jours pour éviter le chevauchement)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d')) # Ex: Jan 01, Jan 03
+        ax.xaxis.set_major_locator(mdates.DayLocator(interval=2)) # Tick tous les 2 jours
+    else: # Pour des périodes plus longues (affiche une fois par semaine)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d')) # Ex: 2023-01-01
+        ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1)) # Tick une fois par semaine
+
+
+    plt.xticks(rotation=45, ha='right') # Rotation des labels pour la lisibilité
+    ax.legend() # Ajoute la légende pour les deux courbes
+
+    plt.tight_layout() # Ajuste la mise en page pour éviter les chevauchements
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', transparent=True)
+    buf.seek(0)
+    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+    plt.close(fig) # Ferme la figure pour libérer la mémoire
+    return img_base64
 
 # --- Décorateur personnalisé pour vérifier le statut de la clé ---
 def key_active_required(f):
@@ -1137,15 +1518,16 @@ def edit_sale(id):
     # Pour la requête GET (affichage initial du formulaire d'édition)
     return render_template('edit_sale.html', sale=sale, products=products_for_dropdown)
 
+
 @app.route('/statistics')
-@login_required
-@key_active_required
+# @login_required # Décommentez si ces décorateurs sont nécessaires
+# @key_active_required # Décommentez si ces décorateurs sont nécessaires
 def statistics():
     conn = g.db
     user_id = current_user.id
-    cur = None # Initialisation du curseur
+    cur = None  # Initialisation du curseur
 
-    selected_period = request.args.get('period', 'this_month') # Default to 'this_month'
+    selected_period = request.args.get('period', 'this_month')  # Default to 'this_month'
 
     today = datetime.now()
 
@@ -1153,7 +1535,7 @@ def statistics():
     current_end_date = None
     previous_start_date = None
     previous_end_date = None
-    graph_granularity = 'month' # Default graph granularity
+    graph_granularity = 'month'  # Default graph granularity
 
     if selected_period == 'this_week':
         current_start_date = today - timedelta(days=today.weekday())
@@ -1192,7 +1574,7 @@ def statistics():
         previous_start_date = current_start_date.replace(year=current_start_date.year - 1)
         previous_end_date = current_end_date.replace(year=current_end_date.year - 1)
         graph_granularity = 'month'
-    else: # Fallback to 'this_month'
+    else:  # Fallback to 'this_month'
         current_start_date = today.replace(day=1)
         next_month_first_day = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
         current_end_date = next_month_first_day - timedelta(days=1)
@@ -1208,9 +1590,10 @@ def statistics():
     try:
         cur = conn.cursor()
         cur.execute("SELECT COUNT(id) FROM sales WHERE user_id = %s AND sale_date BETWEEN %s AND %s",
-                                       (user_id, current_start_date_str, current_end_date_str))
+                    (user_id, current_start_date_str, current_end_date_str))
         total_sales_count_query = cur.fetchone()
-        total_sales_count = total_sales_count_query[0] if total_sales_count_query and total_sales_count_query[0] is not None else 0
+        total_sales_count = total_sales_count_query[0] if total_sales_count_query and total_sales_count_query[
+            0] is not None else 0
         cur.close()
 
         cur = conn.cursor()
@@ -1218,7 +1601,8 @@ def statistics():
             "SELECT SUM((s.sale_price - s.purchase_price_at_sale) * s.quantity) FROM sales s WHERE s.user_id = %s AND s.sale_date BETWEEN %s AND %s",
             (user_id, current_start_date_str, current_end_date_str))
         total_sales_profit_query = cur.fetchone()
-        total_sales_profit = total_sales_profit_query[0] if total_sales_profit_query and total_sales_profit_query[0] is not None else 0.0
+        total_sales_profit = total_sales_profit_query[0] if total_sales_profit_query and total_sales_profit_query[
+            0] is not None else 0.0
         cur.close()
 
         cur = conn.cursor()
@@ -1226,7 +1610,8 @@ def statistics():
             "SELECT SUM(s.sale_price * s.quantity) FROM sales s WHERE s.user_id = %s AND s.sale_date BETWEEN %s AND %s",
             (user_id, current_start_date_str, current_end_date_str))
         total_sales_revenue_query = cur.fetchone()
-        total_sales_revenue = total_sales_revenue_query[0] if total_sales_revenue_query and total_sales_revenue_query[0] is not None else 0.0
+        total_sales_revenue = total_sales_revenue_query[0] if total_sales_revenue_query and total_sales_revenue_query[
+            0] is not None else 0.0
         cur.close()
 
         cur = conn.cursor()
@@ -1234,7 +1619,9 @@ def statistics():
             "SELECT SUM(s.purchase_price_at_sale * s.quantity) FROM sales s WHERE s.user_id = %s AND s.sale_date BETWEEN %s AND %s",
             (user_id, current_start_date_str, current_end_date_str))
         total_cogs_for_sold_items_query = cur.fetchone()
-        total_cogs_for_sold_items = total_cogs_for_sold_items_query[0] if total_cogs_for_sold_items_query and total_cogs_for_sold_items_query[0] is not None else 0.0
+        total_cogs_for_sold_items = total_cogs_for_sold_items_query[0] if total_cogs_for_sold_items_query and \
+                                                                          total_cogs_for_sold_items_query[
+                                                                              0] is not None else 0.0
         cur.close()
 
         margin_rate = 0.0
@@ -1253,7 +1640,8 @@ def statistics():
               AND s.sale_date BETWEEN %s AND %s
         ''', (user_id, current_start_date_str, current_end_date_str))
         average_days_to_sell_query = cur.fetchone()
-        average_days_to_sell = average_days_to_sell_query[0] if average_days_to_sell_query and average_days_to_sell_query[0] is not None else 0.0
+        average_days_to_sell = average_days_to_sell_query[0] if average_days_to_sell_query and \
+                                                                average_days_to_sell_query[0] is not None else 0.0
         average_days_to_sell = round(average_days_to_sell, 2)
         cur.close()
 
@@ -1289,7 +1677,7 @@ def statistics():
                 graph_cogs_values.append(found_data['cogs'] if found_data else 0)
                 graph_profit_values.append(found_data['profit'] if found_data else 0)
                 current_day_iter += timedelta(days=1)
-        else: # graph_granularity == 'month'
+        else:  # graph_granularity == 'month'
             graph_query = '''
                 SELECT
                     TO_CHAR(sale_date, 'YYYY-MM') AS period_label, -- MODIFICATION ICI
@@ -1323,7 +1711,6 @@ def statistics():
                 else:
                     current_month_iter = current_month_iter.replace(month=current_month_iter.month + 1)
 
-
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
             "SELECT SUM(s.sale_price * s.quantity) AS prev_revenue, "
@@ -1336,9 +1723,13 @@ def statistics():
         previous_period_totals = cur.fetchone()
         cur.close()
 
-        prev_total_revenue = previous_period_totals['prev_revenue'] if previous_period_totals and previous_period_totals['prev_revenue'] is not None else 0.0
-        prev_total_cogs = previous_period_totals['prev_cogs'] if previous_period_totals and previous_period_totals['prev_cogs'] is not None else 0.0
-        prev_total_profit = previous_period_totals['prev_profit'] if previous_period_totals and previous_period_totals['prev_profit'] is not None else 0.0
+        prev_total_revenue = previous_period_totals['prev_revenue'] if previous_period_totals and \
+                                                                       previous_period_totals[
+                                                                           'prev_revenue'] is not None else 0.0
+        prev_total_cogs = previous_period_totals['prev_cogs'] if previous_period_totals and previous_period_totals[
+            'prev_cogs'] is not None else 0.0
+        prev_total_profit = previous_period_totals['prev_profit'] if previous_period_totals and previous_period_totals[
+            'prev_profit'] is not None else 0.0
 
         def calculate_evolution_rate(current_value, previous_value):
             if previous_value == 0:
@@ -1351,6 +1742,57 @@ def statistics():
         evolution_rate_cogs = calculate_evolution_rate(total_cogs_for_sold_items, prev_total_cogs)
         evolution_rate_revenue = calculate_evolution_rate(total_sales_revenue, prev_total_revenue)
         evolution_rate_profit = calculate_evolution_rate(total_sales_profit, prev_total_profit)
+
+        # --- DÉBUT DU CODE MATPLOTLIB ---
+        plot_base64 = None
+        if total_sales_count >= 5:  # Génère le graphique uniquement s'il y a assez de données
+            fig, ax = plt.subplots(figsize=(10, 6))  # Taille de la figure
+
+            # Définir l'arrière-plan de la figure et des axes comme transparent
+            fig.patch.set_alpha(0)
+            ax.patch.set_alpha(0)
+
+            # Tracé des données
+            ax.plot(graph_labels, graph_cogs_values, label='Coût d\'achat', color='#FF6384', marker='o')
+            ax.plot(graph_labels, graph_revenue_values, label='Prix de Vente', color='#36A2EB', marker='o')
+            ax.plot(graph_labels, graph_profit_values, label='Bénéfice Net', color='#4BC0C0', marker='o')
+
+            # Titres et étiquettes avec couleur pour le thème sombre
+            ax.set_title('Évolution des Ventes et Bénéfices (Période Actuelle)', color='#f8f9fa')
+            ax.set_xlabel('Jour' if graph_granularity == 'day' else 'Mois', color='#f8f9fa')
+            ax.set_ylabel('Montant (€)', color='#f8f9fa')
+
+            # Couleur des ticks des axes
+            ax.tick_params(axis='x', colors='#f8f9fa')
+            ax.tick_params(axis='y', colors='#f8f9fa')
+
+            # Lignes de grille
+            ax.grid(True, color='#333', linestyle='--')
+
+            # Légende
+            # facecolor='transparent' pour le fond transparent de la légende
+            # edgecolor='none' pour pas de bordure
+            # labelcolor='white' pour la couleur du texte de la légende
+            ax.legend(facecolor='transparent', edgecolor='none', labelcolor='white')
+
+            # Formatage de l'axe Y en monnaie
+            import matplotlib.ticker as mticker
+            formatter = mticker.FormatStrFormatter(
+                '%d€')  # Format entier pour l'exemple, ajustez si besoin (ex: '%.2f€' pour 2 décimales)
+            ax.yaxis.set_major_formatter(formatter)
+
+            plt.tight_layout()  # Ajuster la mise en page pour éviter les chevauchements
+
+            # Sauvegardez le graphique dans un objet BytesIO (en mémoire)
+            buffer = io.BytesIO()
+            plt.savefig(buffer, format='png', bbox_inches='tight', transparent=True)
+            buffer.seek(0)  # Remettre le curseur au début du buffer
+
+            # Encodez le contenu du buffer en base64
+            plot_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+
+            plt.close(fig)  # Fermez la figure pour libérer la mémoire
+        # --- FIN DU CODE MATPLOTLIB ---
 
         return render_template('statistics.html',
                                total_sales_count=total_sales_count,
@@ -1368,15 +1810,26 @@ def statistics():
 
                                evolution_rate_cogs=evolution_rate_cogs,
                                evolution_rate_revenue=evolution_rate_revenue,
-                               evolution_rate_profit=evolution_rate_profit
+                               evolution_rate_profit=evolution_rate_profit,
+                               plot_base64=plot_base64  # Passez l'image encodée au template
                                )
     except Exception as e:
         flash(f"Une erreur est survenue lors du chargement des statistiques : {e}", 'danger')
         print(f"Erreur statistiques: {e}")
-        return redirect(url_for('dashboard')) # Redirige vers le tableau de bord ou une page d'erreur
+        return redirect(url_for('dashboard'))  # Redirige vers le tableau de bord ou une page d'erreur
     finally:
-        if cur and not cur.closed: # S'assurer que le curseur est fermé
+        if cur and not cur.closed:  # S'assurer que le curseur est fermé
             cur.close()
+# --- Nouvelle fonction pour sauvegarder un rapport (utilisée par la tâche planifiée plus tard) ---
+import json  # Toujours nécessaire si vous gérez d'autres JSON ailleurs, mais pas pour le rapport_json_data
+from datetime import datetime, date
+
+
+# Fonction utilitaire pour gérer les valeurs 'infinity'
+
+# --- Nouvelle route (pour les tests manuels seulement) pour générer un rapport ---
+# Plus tard, cette logique sera déplacée vers une tâche planifiée.
+
 
 @app.route('/sales/<int:id>/delete', methods=('POST',))
 @login_required
@@ -1518,7 +1971,256 @@ def add_supplementary_operation():
                            description=description,
                            operation_date=operation_date)
 
+# --- Route Flask /generate_test_report (Modifiée pour la semaine actuelle) ---
+@app.route('/generate_test_report', methods=['POST'])
+@login_required
+def generate_test_report():
+    report_type = request.form.get('report_type')
+    period_value = request.form.get('period_value') # Utilisé pour les rapports actuels (weekly/monthly)
+    current_request_time = datetime.now() # Utiliser l'heure de la requête comme référence
+    start_date = None
+    end_date = None
+    period_label = ""
 
+    if report_type == 'weekly': # Pour la semaine COURANTE (si vous avez un bouton pour ça)
+        # La semaine commence un lundi (weekday() = 0)
+        days_since_monday = current_request_time.weekday()
+        start_date = datetime(current_request_time.year, current_request_time.month, current_request_time.day, 0, 0, 0) - timedelta(days=days_since_monday)
+        end_date = start_date + timedelta(days=6, hours=23, minutes=59, seconds=59, microseconds=999999)
+        period_label = f"Semaine du {start_date.strftime('%d/%m/%Y')} au {end_date.strftime('%d/%m/%Y')}"
+    elif report_type == 'monthly': # Pour le mois COURANT (si vous avez un bouton pour ça)
+        start_date = datetime(current_request_time.year, current_request_time.month, 1, 0, 0, 0)
+        last_day = monthrange(current_request_time.year, current_request_time.month)[1]
+        end_date = datetime(current_request_time.year, current_request_time.month, last_day, 23, 59, 59, 999999)
+        period_label = f"Mois de {current_request_time.strftime('%B %Y')}"
+    elif report_type == 'custom':
+        start_date_str = request.form.get('start_date')
+        end_date_str = request.form.get('end_date')
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').replace(hour=0, minute=0, second=0, microsecond=0)
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59, microsecond=999999)
+            period_label = f"Période personnalisée du {start_date.strftime('%d/%m/%Y')} au {end_date.strftime('%d/%m/%Y')}"
+        except ValueError:
+            flash("Dates invalides pour le rapport personnalisé.", 'danger')
+            return redirect(url_for('report_preferences'))
+    elif report_type == 'previous_weekly': # NOUVEAU : rapport pour la SEMAINE PRÉCÉDENTE
+        # Calcule le dimanche de la semaine précédente
+        # today.weekday() : Lundi=0, Mardi=1, ..., Dimanche=6
+        # Si on est Jeudi (3), today.weekday()+1 = 4. today - timedelta(days=4) = Dimanche dernier
+        # Si on est Dimanche (6), today.weekday()+1 = 7. today - timedelta(days=7) = Dimanche de la semaine d'avant
+        end_date_prev_week_day = current_request_time - timedelta(days=current_request_time.weekday() + 1)
+        end_date = datetime(end_date_prev_week_day.year, end_date_prev_week_day.month, end_date_prev_week_day.day, 23, 59, 59, 999999)
+        start_date = datetime(end_date.year, end_date.month, end_date.day, 0, 0, 0) - timedelta(days=6) # 6 jours avant pour avoir le Lundi
+        period_label = f"Semaine précédente du {start_date.strftime('%d/%m/%Y')} au {end_date.strftime('%d/%m/%Y')}"
+    elif report_type == 'previous_monthly': # NOUVEAU : rapport pour le MOIS PRÉCÉDENT
+        # Commence par le premier jour du mois actuel
+        first_day_current_month = datetime(current_request_time.year, current_request_time.month, 1)
+        # Recule d'un jour pour obtenir le dernier jour du mois précédent
+        end_date_prev_month_day = first_day_current_month - timedelta(days=1)
+        end_date = datetime(end_date_prev_month_day.year, end_date_prev_month_day.month, end_date_prev_month_day.day, 23, 59, 59, 999999)
+        # Le premier jour du mois précédent
+        start_date = datetime(end_date_prev_month_day.year, end_date_prev_month_day.month, 1, 0, 0, 0)
+        period_label = f"Mois précédent de {start_date.strftime('%B %Y')}"
+    else:
+        flash("Type de rapport non valide.", 'danger')
+        return redirect(url_for('report_preferences'))
+
+    conn = g.db
+    try:
+        report_id = _save_report_metadata(conn, current_user.id, report_type, period_label, start_date, end_date)
+        if report_id:
+            flash(f"Bilan '{period_label}' généré avec succès !", 'success')
+            return redirect(url_for('view_report', report_id=report_id))
+        else:
+            flash("Impossible de générer le bilan.", 'danger')
+            return redirect(url_for('report_preferences'))
+    except Exception as e:
+        flash(f"Erreur lors de la génération du bilan: {e}", 'danger')
+        return redirect(url_for('report_preferences'))
+@app.route('/report_preferences')
+@login_required
+def report_preferences():
+    conn = g.db
+    cur = None
+    reports = [] # Initialise la liste des rapports
+
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        # Requête pour récupérer tous les rapports générés pour l'utilisateur actuel
+        cur.execute("""
+            SELECT id, report_type, period_label, report_start_date, report_end_date, generation_date, file_path
+            FROM generated_reports
+            WHERE user_id = %s
+            ORDER BY generation_date DESC; -- Tri par date de génération descendante (les plus récents en premier)
+        """, (current_user.id,))
+        reports = cur.fetchall() # Récupère tous les résultats
+    except Exception as e:
+        print(f"Erreur lors de la récupération des bilans passés: {e}")
+        flash("Une erreur est survenue lors du chargement des bilans passés.", 'danger')
+    finally:
+        if cur:
+            cur.close()
+
+    # Passe la liste des rapports au template
+    return render_template('report_preferences.html', reports=reports)
+
+
+@app.route('/delete_report/<int:report_id>', methods=['POST'])
+@login_required
+def delete_report(report_id):
+    conn = g.db
+    cur = None
+    try:
+        cur = conn.cursor()
+
+        # Vérifier d'abord si le rapport appartient bien à l'utilisateur connecté
+        cur.execute("SELECT user_id FROM generated_reports WHERE id = %s;", (report_id,))
+        report_owner_result = cur.fetchone()
+
+        if report_owner_result and report_owner_result[0] == current_user.id:
+            # Si le rapport existe et appartient à l'utilisateur, on le supprime
+            cur.execute("DELETE FROM generated_reports WHERE id = %s;", (report_id,))
+            conn.commit()
+            flash("Le bilan a été supprimé avec succès.", 'success')
+        else:
+            # Si le rapport n'existe pas ou n'appartient pas à l'utilisateur
+            flash("Vous n'êtes pas autorisé à supprimer ce bilan ou il n'existe pas.", 'danger')
+            conn.rollback()  # Annuler toute opération si non autorisé/non trouvé
+    except Exception as e:
+        print(f"Erreur lors de la suppression du bilan {report_id}: {e}")
+        flash("Une erreur est survenue lors de la suppression du bilan.", 'danger')
+        if conn:
+            conn.rollback()  # Annuler la transaction en cas d'erreur
+    finally:
+        if cur:
+            cur.close()
+    return redirect(url_for('report_preferences'))  # Redirige vers la page des préférences
+
+@app.route('/view_report/<int:report_id>')
+@login_required
+def view_report(report_id):
+    conn = g.db
+    user_id = current_user.id
+    cur = None
+
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        # 1. Fetch report metadata
+        cur.execute("""
+            SELECT id, report_type, period_label, report_start_date, report_end_date, generation_date, file_path
+            FROM generated_reports
+            WHERE id = %s AND user_id = %s;
+        """, (report_id, user_id))
+        report_meta = cur.fetchone()
+
+        if not report_meta:
+            flash("Bilan introuvable ou vous n'avez pas l'autorisation d'y accéder.", 'danger')
+            print(f"DEBUG view_report: Bilan introuvable pour ID {report_id} ou User ID {user_id}")
+            return redirect(url_for('report_preferences'))
+
+        report_type = report_meta['report_type']
+        start_date = report_meta['report_start_date']
+        end_date = report_meta['report_end_date']
+        period_label = report_meta['period_label']
+
+        if not start_date or not end_date:
+            flash("Impossible de déterminer la période du bilan. Les dates de début ou de fin sont manquantes.", 'danger')
+            print(f"DEBUG view_report: Dates manquantes pour le rapport ID {report_id}")
+            return redirect(url_for('report_preferences'))
+
+        # 3. Get actual report data
+        report_data = get_report_data(conn, user_id, start_date, end_date, report_type)
+
+        if not report_data:
+            flash("Impossible de charger les données du bilan. Il se peut qu'il n'y ait pas de données de ventes pour cette période.", 'danger')
+            print(f"DEBUG view_report: get_report_data a renvoyé None pour le rapport ID {report_id}")
+            return redirect(url_for('report_preferences'))
+
+        # 4. Generate plots
+        plot_sales_overview = None
+        plot_stock_by_size = None
+        plot_daily_sales_count = None       # NOUVEAU
+        plot_daily_purchases_count = None   # NOUVEAU
+
+        # Générer une plage de dates continues pour l'axe des X pour tous les graphiques quotidiens
+        all_dates = []
+        current_date = start_date.date()
+        while current_date <= end_date.date():
+            all_dates.append(current_date)
+            current_date += timedelta(days=1)
+
+        # Préparation du graphique combiné Chiffre d'Affaires et Bénéfice
+        if report_data['sales_history']:
+            revenue_map = {item['period'].date(): item['revenue'] for item in report_data['sales_history']}
+            profit_map = {item['period'].date(): item['profit'] for item in report_data['sales_history']}
+
+            full_revenues = [revenue_map.get(d, decimal.Decimal(0)) for d in all_dates]
+            full_profits = [profit_map.get(d, decimal.Decimal(0)) for d in all_dates]
+
+            try:
+                plot_sales_overview = create_combined_sales_plot(all_dates, full_revenues, full_profits, 'Chiffre d\'Affaires et Bénéfice par Jour')
+            except Exception as plot_e:
+                print(f"ERREUR LORS DE LA CRÉATION DU GRAPHIQUE COMBINÉ DES VENTES: {plot_e}")
+                flash(f"Impossible de générer le graphique combiné des ventes : {plot_e}", 'warning')
+        else:
+             print(f"DEBUG view_report: Aucune donnée sales_history trouvée pour le rapport {report_id}.")
+
+        # Générer le graphique en camembert pour le stock par taille
+        if report_data['stock_by_size']:
+            sizes = [item['size'] for item in report_data['stock_by_size']]
+            counts = [item['product_count'] for item in report_data['stock_by_size']]
+            try:
+                plot_stock_by_size = create_pie_chart(sizes, counts, "Répartition du Stock par Taille")
+            except Exception as pie_e:
+                print(f"ERREUR LORS DE LA CRÉATION DU GRAPHIQUE CAMEMBERT: {pie_e}")
+                flash(f"Impossible de générer le graphique de répartition du stock : {pie_e}", 'warning')
+        else:
+            print(f"DEBUG view_report: Aucune donnée stock_by_size trouvée pour le rapport {report_id}.")
+
+
+        # NOUVEAU : Préparation des données pour le nombre de ventes (transactions) par jour
+        if report_data['daily_sales_count']:
+            sales_count_map = {item['period'].date(): item['sales_count'] for item in report_data['daily_sales_count']}
+            full_sales_counts = [sales_count_map.get(d, 0) for d in all_dates]
+            try:
+                plot_daily_sales_count = create_bar_chart(all_dates, full_sales_counts, "Nombre de Ventes par Jour", "Nombre de Ventes")
+            except Exception as e:
+                print(f"ERREUR GRAPHIQUE VENTES QUOTIDIENNES: {e}")
+                flash(f"Impossible de générer le graphique des ventes quotidiennes : {e}", 'warning')
+        else:
+            print(f"DEBUG view_report: Aucune donnée daily_sales_count trouvée pour le rapport {report_id}.")
+
+
+        # NOUVEAU : Préparation des données pour le nombre de produits achetés (entrées en stock) par jour
+        if report_data['daily_purchases_count']:
+            purchases_count_map = {item['period'].date(): item['products_bought_count'] for item in report_data['daily_purchases_count']}
+            full_purchases_counts = [purchases_count_map.get(d, 0) for d in all_dates]
+            try:
+                plot_daily_purchases_count = create_bar_chart(all_dates, full_purchases_counts, "Nombre de Produits Achetés par Jour", "Nombre de Produits")
+            except Exception as e:
+                print(f"ERREUR GRAPHIQUE ACHATS QUOTIDIENS: {e}")
+                flash(f"Impossible de générer le graphique des achats quotidiens : {e}", 'warning')
+        else:
+            print(f"DEBUG view_report: Aucune donnée daily_purchases_count trouvée pour le rapport {report_id}.")
+
+
+        # 5. Render template
+        print(f"DEBUG view_report: Atteint le rendu du template pour le rapport ID {report_id}")
+        return render_template('report_display.html',
+                               report_meta=report_meta,
+                               report_data=report_data,
+                               plot_sales_overview=plot_sales_overview,
+                               plot_stock_by_size=plot_stock_by_size,
+                               plot_daily_sales_count=plot_daily_sales_count,      # NOUVEAU
+                               plot_daily_purchases_count=plot_daily_purchases_count) # NOUVEAU
+
+    except Exception as e:
+        flash(f"Erreur lors de l'affichage du bilan : {e}", 'danger')
+        print(f"ERREUR DANS view_report (bloc except général): {e}")
+        return redirect(url_for('report_preferences'))
+    finally:
+        if cur and not cur.closed:
+            cur.close()
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404

@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+
+{% block title %}Préférences de Rapports{% endblock %}
+
+{% block head %}
+    {{ super() }}
+    <style>
+        .dark-card {
+            background-color: rgba(33, 37, 41, 0.7);
+            color: #f8f9fa;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.25rem;
+        }
+        .form-label {
+            color: #f8f9fa;
+        }
+        /* Style pour le bouton de fermeture de la modale dans un thème sombre */
+        .modal-content.dark-card .btn-close {
+            filter: invert(1); /* Inverse les couleurs pour un X blanc sur fond sombre */
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4 text-center">Préférences de Rapports et Historique</h1>
+
+    {# Afficher les messages flash de Flask #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message | safe }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {# Formulaire de Génération de Rapport Existant #}
+    <div class="card dark-card mb-4">
+        <div class="card-header dark-card">Générer un Nouveau Bilan</div>
+        <div class="card-body">
+            <form id="reportForm" action="{{ url_for('generate_test_report') }}" method="POST">
+                <div class="mb-3">
+                    <label for="reportType" class="form-label">Type de Période</label>
+                    <select class="form-select" id="reportType" name="report_type">
+                        <option value="weekly">Semaine actuelle</option>
+                        <option value="monthly">Mois actuel</option>
+                        <option value="custom">Personnalisée</option>
+                    </select>
+                </div>
+
+                <div id="customDateRange" class="mb-3" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="startDate" class="form-label">Date de début</label>
+                            <input type="date" class="form-control" id="startDate" name="start_date">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="endDate" class="form-label">Date de fin</label>
+                            <input type="date" class="form-control" id="endDate" name="end_date">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Générer le Bilan</button>
+            </form>
+        </div>
+    </div>
+
+    {# Boutons de Génération Rapide pour Périodes Précédentes #}
+    <div class="card dark-card mb-4">
+        <div class="card-header dark-card">Génération Rapide de Rapports Historiques</div>
+        <div class="card-body">
+            <p class="text-center text-muted mb-3">Cliquez pour générer un rapport pour la période complète précédente.</p>
+            <div class="row">
+                <div class="col-md-6 text-center mb-3">
+                    <form action="{{ url_for('generate_test_report') }}" method="POST">
+                        <input type="hidden" name="report_type" value="previous_weekly">
+                        <button type="submit" class="btn btn-info w-100">Générer Rapport Hebdomadaire Précédent</button>
+                    </form>
+                </div>
+                <div class="col-md-6 text-center mb-3">
+                    <form action="{{ url_for('generate_test_report') }}" method="POST">
+                        <input type="hidden" name="report_type" value="previous_monthly">
+                        <button type="submit" class="btn btn-info w-100">Générer Rapport Mensuel Précédent</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# NOUVELLE SECTION DE L'HISTORIQUE DES BILANS EN FORMAT CARTE #}
+    <div class="card dark-card mb-4">
+        <div class="card-header dark-card">Bilans Passés</div>
+        <div class="card-body">
+            {% if reports %}
+                {# Utilisation d'une grille Bootstrap pour afficher les cartes #}
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                    {% for report in reports %}
+                        <div class="col">
+                            <div class="card dark-card h-100"> {# h-100 assure que toutes les cartes de la ligne ont la même hauteur #}
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="card-title text-white mb-2">{{ report.period_label }}</h5>
+                                    <p class="card-text mb-3">
+                                        Type: <span class="badge bg-secondary">{{ report.report_type | capitalize }}</span><br>
+                                        Généré le: {{ report.generation_date.strftime('%d/%m/%Y à %H:%M') }}
+                                    </p>
+                                    {# Les boutons sont placés au bas de la carte grâce à 'mt-auto' #}
+                                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                                        <a href="{{ url_for('view_report', report_id=report.id) }}" class="btn btn-sm btn-outline-light">Voir le Bilan</a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger delete-report-btn" data-report-id="{{ report.id }}" data-report-label="{{ report.period_label }}">Supprimer</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-center">Aucun bilan généré pour le moment.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {# MODAL DE CONFIRMATION DE SUPPRESSION (reste le même) #}
+    <div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content dark-card">
+          <div class="modal-header">
+            <h5 class="modal-title" id="deleteConfirmationModalLabel">Confirmer la suppression</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            Êtes-vous sûr de vouloir supprimer le bilan <strong id="reportLabelToDelete"></strong> ? Cette action est irréversible.
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            <form id="deleteReportForm" method="POST" action="">
+                <input type="hidden" name="report_id_to_delete" id="reportIdToDelete">
+                <button type="submit" class="btn btn-danger">Supprimer</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Logique existante pour le formulaire de rapport
+        const reportTypeSelect = document.getElementById('reportType');
+        const customDateRange = document.getElementById('customDateRange');
+
+        function toggleCustomDateInputs() {
+            if (reportTypeSelect.value === 'custom') {
+                customDateRange.style.display = 'block';
+            } else {
+                customDateRange.style.display = 'none';
+            }
+        }
+
+        reportTypeSelect.addEventListener('change', toggleCustomDateInputs);
+        toggleCustomDateInputs(); // Appeler au chargement pour l'état initial
+
+        // Logique pour les boutons de suppression (reste la même)
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmationModal'));
+        const deleteButtons = document.querySelectorAll('.delete-report-btn');
+        const reportLabelToDelete = document.getElementById('reportLabelToDelete');
+        const reportIdToDelete = document.getElementById('reportIdToDelete');
+        const deleteReportForm = document.getElementById('deleteReportForm');
+
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const reportId = this.dataset.reportId;
+                const reportLabel = this.dataset.reportLabel;
+
+                reportLabelToDelete.textContent = reportLabel;
+                reportIdToDelete.value = reportId;
+                deleteReportForm.action = "{{ url_for('delete_report', report_id='0') }}".replace('0', reportId);
+
+                deleteModal.show();
+            });
+        });
+    });
+</script>
+{% endblock %}
