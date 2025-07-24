@@ -50,6 +50,7 @@ login_manager.login_view = 'login'
 login_manager.needs_refresh_message = "Votre session a expiré, veuillez vous reconnecter."
 login_manager.needs_refresh_message_category = "info"
 
+TABLE_NAME = "sku_database" # Le nom de la table
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 ASSETS_DIR = os.path.join(PROJECT_ROOT, '..', 'www.resellnotion.stats.com', 'assets')
 
@@ -565,25 +566,55 @@ except Exception as e:
 
 # --- NOUVELLE ROUTE POUR LES SUGGESTIONS SKU ---
 @app.route('/get_sku_suggestions', methods=['GET'])
-@login_required # Ajoutez cette ligne si vous voulez que les suggestions soient disponibles uniquement pour les utilisateurs connectés
+@login_required  # Cette ligne est conservée comme demandé
 def get_sku_suggestions():
-    query = request.args.get('query', '').upper()
+    query = request.args.get('query', '').strip()
     suggestions = []
-    if query:
-        count = 0
-        for item in SKU_DATA:
-            # Vérifie si le query est contenu dans le SKU (insensible à la casse)
-            # ou dans le nom du produit (insensible à la casse)
-            if query in item['sku'].upper() or query in item['product_name'].upper(): #
-                suggestions.append({
-                    'sku': item['sku'],
-                    'image_url': item['image_url'],
-                    'product_name': item['product_name'] # Ajout du nom du produit
-                })
-                count += 1
-                if count >= 10: # Limite à 10 suggestions pour de meilleures performances
-                    break
-    return jsonify(suggestions)
+
+    if not query:
+        return jsonify(suggestions)
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Impossible de se connecter à la base de données."}), 500
+
+        cur = conn.cursor()
+
+        # Le pattern de recherche pour ILIKE
+        search_pattern = f"%{query}%"
+
+        # Requête SQL pour rechercher dans 'sku' ou 'product_name' et limiter les résultats
+        sql_query = f"""
+            SELECT sku, image_url, product_name
+            FROM {TABLE_NAME}
+            WHERE sku ILIKE %s OR product_name ILIKE %s
+            LIMIT 10;
+        """
+
+        cur.execute(sql_query, (search_pattern, search_pattern))
+
+        results = cur.fetchall()
+
+        for row in results:
+            suggestions.append({
+                'sku': row[0],  # Premier élément est le sku
+                'image_url': row[1],  # Deuxième élément est l'image_url
+                'product_name': row[2]  # Troisième élément est le product_name
+            })
+
+        cur.close()
+        conn.close()
+
+        return jsonify(suggestions)
+
+    except Exception as e:
+        print(f"Erreur lors de la récupération des suggestions de SKU : {e}")
+        return jsonify({"error": f"Une erreur est survenue lors de la recherche de SKU: {e}"}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route('/register', methods=('GET', 'POST'))
@@ -983,26 +1014,58 @@ def add_product():
                            description=form_data['description'],
                            error=error)
 
-@app.route('/get_product_name_suggestions', methods=['GET'])
-@login_required
+
 def get_product_name_suggestions():
-    query = request.args.get('query', '').upper()
+    query = request.args.get('query', '').strip()  # .strip() pour enlever les espaces inutiles
     suggestions = []
-    if query:
-        count = 0
-        for item in SKU_DATA:
-            # Vérifie si le query est contenu dans le nom du produit (insensible à la casse)
-            # ou dans le SKU (si vous voulez que la recherche par nom puisse aussi trouver par SKU)
-            if query in item['product_name'].upper() or query in item['sku'].upper():
-                suggestions.append({
-                    'sku': item['sku'],
-                    'name': item['product_name'], # Le nom du produit sera le 'name' pour le frontend
-                    'image_url': item['image_url']
-                })
-                count += 1
-                if count >= 10: # Limite à 10 suggestions pour de meilleures performances
-                    break
-    return jsonify(suggestions)
+
+    if not query:
+        return jsonify(suggestions)  # Retourne une liste vide si la requête est vide
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Impossible de se connecter à la base de données."}), 500
+
+        cur = conn.cursor()
+
+        # Nous allons utiliser la clause ILIKE pour une recherche insensible à la casse
+        # et le caractère '%' pour les correspondances partielles.
+        # Nous concaténons '%' au début et à la fin de la requête.
+        search_pattern = f"%{query}%"
+
+        # Requête SQL pour rechercher dans product_name ou sku et limiter les résultats
+        sql_query = f"""
+            SELECT sku, product_name, image_url
+            FROM {TABLE_NAME}
+            WHERE product_name ILIKE %s OR sku ILIKE %s
+            LIMIT 10;
+        """
+
+        cur.execute(sql_query, (search_pattern, search_pattern))
+
+        results = cur.fetchall()  # Récupère tous les résultats
+
+        for row in results:
+            suggestions.append({
+                'sku': row[0],  # Premier élément est le sku
+                'name': row[1],  # Deuxième élément est le product_name
+                'image_url': row[2]  # Troisième élément est l'image_url
+            })
+
+        cur.close()
+        conn.close()  # Toujours fermer la connexion
+
+        return jsonify(suggestions)
+
+    except Exception as e:
+        print(f"Erreur lors de la récupération des suggestions : {e}")
+        return jsonify({"error": f"Une erreur est survenue lors de la recherche: {e}"}), 500
+    finally:
+        if conn:
+            # S'assurer que la connexion est fermée même en cas d'erreur non gérée
+            conn.close()
 @app.route('/products/<int:id>/edit', methods=('GET', 'POST'))
 @login_required
 @key_active_required

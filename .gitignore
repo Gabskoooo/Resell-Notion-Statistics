@@ -2,4 +2,4 @@
 .env
 *.db
 key_generate.py
-sku_img.py
+database sku img/extract_wtc.py
