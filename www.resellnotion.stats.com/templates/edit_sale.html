@@ -1,0 +1,146 @@
+{# templates/edit_sale.html #}
+{% extends 'base.html' %}
+
+{% block title %}Modifier Vente{% endblock %}
+
+{% block content %}
+<style>
+    /* Styles Responsifs pour edit_sale.html */
+    @media (max-width: 768px) {
+        h1 {
+            font-size: 1.8em; /* Réduit la taille du titre */
+        }
+        .form-label {
+            font-size: 0.9em; /* Réduit la taille des labels */
+        }
+        .form-control, .form-select {
+            font-size: 0.9em; /* Réduit la taille du texte dans les inputs et selects */
+            padding: 0.6rem 0.8rem; /* Ajuste le padding */
+        }
+        .btn {
+            padding: 10px 20px; /* Ajuste le padding du bouton */
+            font-size: 0.9em;
+        }
+    }
+
+    @media (max-width: 480px) {
+        h1 {
+            font-size: 1.5em; /* Encore plus petit sur mobile */
+        }
+        .form-label {
+            font-size: 0.85em;
+        }
+        .form-control, .form-select {
+            font-size: 0.85em;
+            padding: 0.5rem 0.7rem;
+        }
+        .btn {
+            padding: 8px 15px;
+            font-size: 0.8em;
+        }
+    }
+</style>
+<h1 class="mb-4">Modifier Vente</h1>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flashes">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<form method="post">
+    <div class="mb-3">
+        <label for="product_id" class="form-label">Produit en Stock Associé (Optionnel):</label>
+        <select class="form-select" id="product_id" name="product_id">
+            <option value="">-- Aucun produit associé --</option>
+            {% for product in products %}
+            {#
+                Note importante : La route Flask `edit_sale` telle que fournie
+                ne récupère que l'id, le nom et le SKU pour `products_for_dropdown`.
+                Les attributs `data-product-size`, `data-product-quantity`, `data-product-purchase-price`
+                ne seront pas peuplés ici et le JavaScript ne pourra pas les utiliser
+                à moins que la requête SQL dans la route Flask `edit_sale` ne soit
+                étendue pour inclure ces champs supplémentaires.
+            #}
+            <option value="{{ product.id }}"
+                    data-product-name="{{ product.name }}"
+                    data-product-sku="{{ product.sku }}"
+                    {% if product.id == sale.product_id|int %}selected{% endif %}>
+                {{ product.sku }} - {{ product.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label for="item_name" class="form-label">Nom de l'article vendu:</label>
+        <input type="text" class="form-control" id="item_name" name="item_name" value="{{ sale.item_name }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="quantity" class="form-label">Quantité vendue:</label>
+        <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="{{ sale.quantity }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="sale_price" class="form-label">Prix de vente (€):</label>
+        <input type="number" step="0.01" class="form-control" id="sale_price" name="sale_price" value="{{ '%.2f'|format(sale.sale_price|float) }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="sale_date" class="form-label">Date de vente:</label>
+        {# Assurez-vous que sale.sale_date est un objet date pour strftime #}
+        <input type="date" class="form-control" id="sale_date" name="sale_date" value="{{ sale.sale_date.strftime('%Y-%m-%d') if sale.sale_date else '' }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="notes" class="form-label">Notes (Optionnel):</label>
+        <textarea class="form-control" id="notes" name="notes" rows="3">{{ sale.notes if sale.notes else '' }}</textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+    <a href="{{ url_for('sales') }}" class="btn btn-secondary ms-2">Annuler</a>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const productIdSelect = document.getElementById('product_id');
+        const itemNameInput = document.getElementById('item_name');
+        const quantityInput = document.getElementById('quantity');
+        const saleDateInput = document.getElementById('sale_date');
+
+        function updateItemDetails() {
+            const selectedOption = productIdSelect.options[productIdSelect.selectedIndex];
+            const productName = selectedOption.dataset.productName;
+            // productSku est disponible dans les data-attributs mais non utilisé pour remplir un champ direct ici.
+            // productSize, productQuantity, productPurchasePrice ne sont PAS disponibles pour le JS
+            // car ils ne sont pas récupérés par la route Flask pour toutes les options du dropdown.
+
+            if (productName) {
+                itemNameInput.value = productName;
+                // Si vous voulez mettre à jour la quantité max en fonction du stock du produit sélectionné,
+                // vous devrez étendre la requête SQL dans votre route Flask pour inclure la quantité du produit.
+                // Sans cela, la ligne ci-dessous ne fonctionnera pas correctement :
+                // quantityInput.setAttribute('max', selectedOption.dataset.productQuantity);
+            } else {
+                // Si l'option "-- Aucun produit associé --" est sélectionnée
+                // Nous ne vidons pas item_name car une vente peut toujours avoir un nom d'article non lié à un produit en stock.
+                quantityInput.removeAttribute('max'); // Supprime la limite max de quantité
+            }
+        }
+
+        productIdSelect.addEventListener('change', updateItemDetails);
+
+        // Au chargement de la page, si un produit est déjà sélectionné (par sale.product_id),
+        // nous pouvons appeler updateItemDetails pour synchroniser itemName si nécessaire.
+        // Cela est particulièrement utile si le formulaire a été soumis avec des erreurs de validation
+        // et qu'une sélection de produit était déjà active.
+        if (productIdSelect.value) {
+            // Note: Comme mentionné ci-dessus, cette fonction ne peut mettre à jour
+            // que itemName avec les données actuellement disponibles via les data-attributs du dropdown.
+            // Pour des attributs comme la quantité ou le prix d'achat, la route Flask doit les fournir.
+            updateItemDetails();
+        }
+    });
+</script>
+{% endblock %}

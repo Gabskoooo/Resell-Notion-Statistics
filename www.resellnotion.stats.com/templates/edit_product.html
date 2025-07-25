@@ -96,7 +96,7 @@
 
     <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
     <a href="{{ url_for('products') }}" class="btn btn-secondary ms-2">Annuler</a>
-    <form action="{{ url_for('delete_product', product_id=product.id) }}" method="post" class="d-inline">
+    <form action="{{ url_for('delete_product', id=product.id) }}" method="post" class="d-inline"> {# CHANGEMENT ICI #}
         <button type="submit" class="btn btn-danger ms-2" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?');">Supprimer le produit</button>
     </form>
 </form>

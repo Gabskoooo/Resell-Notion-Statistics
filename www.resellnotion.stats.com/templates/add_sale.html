@@ -5,27 +5,27 @@
 
 {% block content %}
 <style>
-    /* Styles Responsifs pour add_sale.html */
+    /* Vos styles responsifs existants */
     @media (max-width: 768px) {
         h1 {
-            font-size: 1.8em; /* Réduit la taille du titre */
+            font-size: 1.8em;
         }
         .form-label {
-            font-size: 0.9em; /* Réduit la taille des labels */
+            font-size: 0.9em;
         }
         .form-control, .form-select {
-            font-size: 0.9em; /* Réduit la taille du texte dans les inputs et selects */
-            padding: 0.6rem 0.8rem; /* Ajuste le padding */
+            font-size: 0.9em;
+            padding: 0.6rem 0.8rem;
         }
         .btn {
-            padding: 10px 20px; /* Ajuste le padding du bouton */
+            padding: 10px 20px;
             font-size: 0.9em;
         }
     }
 
     @media (max-width: 480px) {
         h1 {
-            font-size: 1.5em; /* Encore plus petit sur mobile */
+            font-size: 1.5em;
         }
         .form-label {
             font-size: 0.85em;
@@ -38,6 +38,71 @@
             padding: 8px 15px;
             font-size: 0.8em;
         }
+        /* Styles spécifiques pour les cartes sur très petits écrans */
+        .product-cards-container {
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Force au moins 3 cartes (100px*3=300px min) */
+            gap: 8px; /* Réduit l'espacement entre les cartes */
+        }
+        .product-card {
+            padding: 10px; /* Réduit le rembourrage interne de la carte */
+            font-size: 0.8em; /* Réduit la taille de la police dans les cartes */
+        }
+        .product-card h5 {
+            font-size: 1em; /* Ajuste la taille du titre de la carte */
+            margin-bottom: 5px;
+        }
+        .product-card p {
+            font-size: 0.75em; /* Ajuste la taille des paragraphes dans la carte */
+        }
+        .product-card .btn-select-product {
+            padding: 6px 10px; /* Réduit le padding du bouton */
+            font-size: 0.75em; /* Réduit la taille du texte du bouton */
+        }
+    }
+
+    /* Styles par défaut pour les cartes de produit (écrans plus larges) */
+    .product-cards-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Au moins 250px par carte par défaut */
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .product-card {
+        border: 1px solid #333; /* Bordure plus foncée */
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3); /* Ombre plus prononcée */
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background-color: rgba(0, 0, 0, 0.7); /* Fond noir semi-transparent */
+        color: #f8f9fa; /* Texte clair pour contraste */
+    }
+
+    .product-card.selected {
+        border-color: #007bff; /* Mettre en évidence la carte sélectionnée avec une couleur vive */
+        box-shadow: 0 0 10px rgba(0, 123, 255, 0.7);
+    }
+
+    .product-card h5 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        color: #ffffff; /* Titre blanc */
+    }
+
+    .product-card p {
+        margin-bottom: 5px;
+        font-size: 0.9em;
+        color: #e2e6ea; /* Texte gris clair */
+    }
+
+    .product-card .btn-select-product {
+        margin-top: 10px;
+        width: 100%;
+        background-color: #28a745; /* Vert */
+        border-color: #28a745;     /* Vert */
+        color: #fff;
     }
 </style>
 <h1 class="mb-4">Enregistrer une nouvelle Vente</h1>
@@ -54,23 +119,40 @@
 
 <form method="post">
     <div class="mb-3">
-        <label for="product_id" class="form-label">Produit Vendu (Optionnel - pour les produits en stock):</label>
-        <select class="form-select" id="product_id" name="product_id">
-            <option value="">Sélectionnez un produit existant</option>
+        <label class="form-label">Sélectionner un Produit en Stock (Optionnel - pour les produits en stock):</label>
+
+        <div class="mb-3">
+            <input type="text" class="form-control" id="product-search" placeholder="Rechercher par nom ou SKU...">
+        </div>
+
+        <div class="product-cards-container">
             {% for product in products %}
-            {# Format d'affichage modifié à SKU (Taille) - Nom du Produit #}
-            <option value="{{ product.id }}"
-                    data-product-name="{{ product.name }}"
-                    data-product-sku="{{ product.sku }}"
-                    data-product-size="{{ product.size }}"
-                    data-product-quantity="{{ product.quantity }}"
-                    data-product-purchase-price="{{ product.purchase_price if product.purchase_price else 0 }}"
-                    {% if product.id == sale.product_id|int %}selected{% endif %}>
-                {{ product.sku }} ({{ product.size }}) - {{ product.name }}
-            </option>
+            <div class="product-card" data-product-id="{{ product.id }}"
+                 data-product-name="{{ product.name | lower }}"
+                 data-product-sku="{{ product.sku | lower }}"> {# Ajout data-product-name et data-product-sku pour la recherche #}
+                <h5>{{ product.name }}</h5>
+                <p><strong>SKU:</strong> {{ product.sku }}</p>
+                <p><strong>Taille:</strong> {{ product.size }}</p>
+                <p><strong>Quantité disponible:</strong> {{ product.quantity }}</p>
+                <p><strong>Prix d'achat:</strong> {{ '%.2f'|format(product.purchase_price|float) }} €</p>
+                <button type="button" class="btn btn-primary btn-select-product"
+                        data-product-id="{{ product.id }}"
+                        data-product-name="{{ product.name }}"
+                        data-product-sku="{{ product.sku }}"
+                        data-product-size="{{ product.size }}"
+                        data-product-quantity="{{ product.quantity }}"
+                        data-product-purchase-price="{{ product.purchase_price if product.purchase_price else 0 }}">
+                    Vendez ce produit
+                </button>
+            </div>
             {% endfor %}
-        </select>
+        </div>
+        <button type="button" class="btn btn-secondary mt-2" id="clear-product-selection">Effacer la sélection de produit</button>
     </div>
+
+    <input type="hidden" id="product_id_hidden" name="product_id" value="{{ sale.product_id if sale.product_id else '' }}">
+    <input type="hidden" id="selected_product_name_hidden" name="selected_product_name" value="">
+
 
     <div class="mb-3">
         <label for="item_name" class="form-label">Nom de l'article vendu (pour les produits non en stock ou personnalisés):</label>
@@ -82,32 +164,26 @@
     </div>
     <div class="mb-3">
         <label for="sale_price" class="form-label">Prix de vente (€):</label>
-        {# Utilisation de sale.sale_price et filtre float pour le formatage #}
         <input type="number" step="0.01" class="form-control" id="sale_price" name="sale_price" value="{{ '%.2f'|format(sale.sale_price|float) if sale.sale_price and (sale.sale_price|float is not none) else '' }}" required>
     </div>
     <div class="mb-3">
         <label for="sale_date" class="form-label">Date de vente:</label>
-        {# Utilisation de sale.sale_date #}
         <input type="date" class="form-control" id="sale_date" name="sale_date" value="{{ sale.sale_date if sale.sale_date else '' }}" required>
     </div>
     <div class="mb-3">
         <label for="platform" class="form-label">Plateforme de vente (ex: Vinted, StockX):</label>
-        {# Utilisation de sale.platform (anciennement sale_channel) #}
         <input type="text" class="form-control" id="platform" name="platform" value="{{ sale.platform if sale.platform else '' }}">
     </div>
     <div class="mb-3">
         <label for="shipping_cost" class="form-label">Frais de port (€ - Optionnel):</label>
-        {# Utilisation de sale.shipping_cost #}
         <input type="number" step="0.01" class="form-control" id="shipping_cost" name="shipping_cost" value="{{ '%.2f'|format(sale.shipping_cost|float) if sale.shipping_cost and (sale.shipping_cost|float is not none) else '' }}">
     </div>
     <div class="mb-3">
         <label for="fees" class="form-label">Frais de plateforme/commission (€ - Optionnel):</label>
-        {# Utilisation de sale.fees #}
         <input type="number" step="0.01" class="form-control" id="fees" name="fees" value="{{ '%.2f'|format(sale.fees|float) if sale.fees and (sale.fees|float is not none) else '' }}">
     </div>
     <div class="mb-3">
         <label for="notes" class="form-label">Notes (Optionnel):</label>
-        {# Utilisation de sale.notes #}
         <textarea class="form-control" id="notes" name="notes" rows="3">{{ sale.notes if sale.notes else '' }}</textarea>
     </div>
     <button type="submit" class="btn btn-primary">Enregistrer la Vente</button>
@@ -115,52 +191,87 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const productIdSelect = document.getElementById('product_id');
+        const productSelectButtons = document.querySelectorAll('.btn-select-product');
+        const clearProductSelectionButton = document.getElementById('clear-product-selection');
+        const productIdHiddenInput = document.getElementById('product_id_hidden');
+        const selectedProductNameHiddenInput = document.getElementById('selected_product_name_hidden');
         const itemNameInput = document.getElementById('item_name');
         const quantityInput = document.getElementById('quantity');
         const salePriceInput = document.getElementById('sale_price');
-        const shippingCostInput = document.getElementById('shipping_cost'); // Ajouté
-        const feesInput = document.getElementById('fees'); // Ajouté
+        const productCards = document.querySelectorAll('.product-card'); // Récupère toutes les cartes de produit
+        const productSearchInput = document.getElementById('product-search'); // Le nouveau champ de recherche
 
+        function selectProduct(button) {
+            productCards.forEach(card => card.classList.remove('selected'));
+            button.closest('.product-card').classList.add('selected');
 
-        function updateItemDetails() {
-            const selectedOption = productIdSelect.options[productIdSelect.selectedIndex];
-            const productName = selectedOption.dataset.productName;
-            const productSku = selectedOption.dataset.productSku;
-            const productSize = selectedOption.dataset.productSize;
-            const productQuantity = selectedOption.dataset.productQuantity;
-            const productPurchasePrice = selectedOption.dataset.productPurchasePrice;
+            const productId = button.dataset.productId;
+            const productName = button.dataset.productName;
+            const productQuantity = button.dataset.productQuantity;
+            const productPurchasePrice = button.dataset.productPurchasePrice;
 
-            if (productName) {
-                itemNameInput.value = productName;
-                if (parseInt(quantityInput.value) === 1 || !quantityInput.value) {
-                     quantityInput.value = 1;
+            productIdHiddenInput.value = productId;
+            selectedProductNameHiddenInput.value = productName;
+
+            itemNameInput.value = productName;
+            itemNameInput.readOnly = true;
+            itemNameInput.placeholder = "Nom déterminé par le produit sélectionné";
+
+            quantityInput.value = 1;
+            quantityInput.setAttribute('max', productQuantity);
+        }
+
+        function clearProductSelection() {
+            productCards.forEach(card => card.classList.remove('selected'));
+            productIdHiddenInput.value = '';
+            selectedProductNameHiddenInput.value = '';
+
+            itemNameInput.value = '';
+            itemNameInput.readOnly = false;
+            itemNameInput.placeholder = "";
+
+            quantityInput.removeAttribute('max');
+            quantityInput.value = 1;
+        }
+
+        // Fonction de filtrage des cartes
+        function filterProductCards() {
+            const searchTerm = productSearchInput.value.toLowerCase(); // Récupère le terme de recherche en minuscules
+
+            productCards.forEach(card => {
+                const productName = card.dataset.productName || ''; // Récupère le nom du produit de la carte
+                const productSku = card.dataset.productSku || '';   // Récupère le SKU du produit de la carte
+
+                // Vérifie si le terme de recherche est contenu dans le nom ou le SKU
+                if (productName.includes(searchTerm) || productSku.includes(searchTerm)) {
+                    card.style.display = 'flex'; // Affiche la carte
+                } else {
+                    card.style.display = 'none'; // Masque la carte
                 }
-                quantityInput.setAttribute('max', productQuantity);
-                // Si vous voulez pré-remplir le prix de vente basé sur le prix d'achat
-                // if (productPurchasePrice && !salePriceInput.value) { // Seulement si salePrice est vide
-                //      salePriceInput.value = (parseFloat(productPurchasePrice) * 1.2).toFixed(2); // Exemple: 20% de marge
-                // }
-            } else {
-                // Réinitialiser les champs si "Sélectionnez un produit existant" est choisi
-                itemNameInput.value = '';
-                quantityInput.value = 1;
-                quantityInput.removeAttribute('max');
-                // salePriceInput.value = ''; // Optionnel: réinitialiser le prix de vente
-                // shippingCostInput.value = ''; // Optionnel
-                // feesInput.value = ''; // Optionnel
+            });
+        }
+
+        productSelectButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                selectProduct(this);
+            });
+        });
+
+        clearProductSelectionButton.addEventListener('click', clearProductSelection);
+
+        // Ajout de l'écouteur d'événement pour le champ de recherche
+        productSearchInput.addEventListener('input', filterProductCards);
+
+        // Initialisation : si un produit est déjà sélectionné (par exemple, après une erreur de validation)
+        const initialProductId = productIdHiddenInput.value;
+        if (initialProductId) {
+            const initialSelectedButton = document.querySelector(`.btn-select-product[data-product-id="${initialProductId}"]`);
+            if (initialSelectedButton) {
+                selectProduct(initialSelectedButton);
             }
         }
 
-        productIdSelect.addEventListener('change', updateItemDetails);
-        // Appeler au chargement pour initialiser les champs si une option est déjà sélectionnée
-        // (utile après une soumission de formulaire avec des erreurs de validation)
-        if (productIdSelect.value) {
-            updateItemDetails();
-        }
-
         const saleDateInput = document.getElementById('sale_date');
-        // Définir la date du jour si le champ est vide (ex: au premier chargement de la page)
         if (!saleDateInput.value) {
             const today = new Date();
             const year = today.getFullYear();
