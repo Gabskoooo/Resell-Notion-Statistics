@@ -171,6 +171,10 @@
                                 <li><a class="dropdown-item" href="{{ url_for('add_sale') }}">Enregistrer une Vente</a></li>
                             </ul>
                         </li>
+                        {# NOUVEAU LIEN WTS/WTB GEN ICI #}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('wtb_wts_gen') }}"><span style="font-size: 1.2em;">📸</span> WTS/WTB Gen</a>
+                        </li>
                         {# OPÉRATIONS SUPPLÉMENTAIRES (POSITION CONSERVÉE RELATIVEMENT AUX AUTRES) #}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('supplementary_operations') }}"><span style="font-size: 1.2em;">➕</span> Opérations Supplémentaires</a>
@@ -235,6 +239,10 @@
                         <li><a class="dropdown-item" href="{{ url_for('sales') }}">Voir les Ventes</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('add_sale') }}">Enregistrer une Vente</a></li>
                     </ul>
+                </li>
+                {# NOUVEAU LIEN WTS/WTB GEN ICI POUR L'OFFCANVAS #}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('wtb_wts_gen') }}"><span style="font-size: 1.2em;">📸</span> WTS/WTB Gen</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('supplementary_operations') }}"><span style="font-size: 1.2em;">➕</span> Opérations Supplémentaires</a>

@@ -1,0 +1,1100 @@
+{# templates/wtb_wts_gen.html #}
+{% extends 'base.html' %}
+
+{% block title %}WTS/WTB Gen{% endblock %}
+
+{% block content %}
+<style>
+    /* Styles Responsifs */
+    @media (max-width: 768px) {
+        h1 {
+            font-size: 1.8em; /* Réduit la taille du titre */
+        }
+        .mode-selection button {
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
+        .section-content-wrapper h2,
+        .section-content-wrapper p {
+            padding: 0 10px; /* Ajoute un petit padding horizontal aux textes */
+        }
+        .product-card-gen {
+            flex-direction: column; /* Empile les éléments sur petits écrans */
+            align-items: center; /* Centre les éléments */
+            padding: 10px;
+            text-align: center; /* Centre le texte */
+        }
+        .product-card-gen img {
+            max-width: 100%; /* S'assure que l'image ne dépasse pas la largeur de la carte */
+            height: auto; /* Maintient le ratio de l'image */
+            margin-bottom: 5px;
+        }
+        .product-card-gen-info {
+            font-size: 0.85em;
+        }
+        .product-card-gen-actions {
+            margin-top: 10px;
+            width: 100%;
+            text-align: center;
+        }
+        .selection-buttons {
+            flex-direction: column; /* Empile les boutons "Tout sélectionner/désélectionner" */
+            gap: 10px;
+        }
+        .selection-buttons .btn {
+            width: 100%; /* Pleine largeur */
+            max-width: none; /* Supprime la limite de largeur */
+        }
+        .wtb-input-group {
+            flex-direction: column; /* Empile les inputs WTB */
+            align-items: stretch;
+        }
+        .wtb-input-group .form-control, .wtb-input-group button {
+            width: 100%;
+            min-width: unset;
+        }
+        /* Suggestions list styling for smaller screens */
+        .list-group-item {
+            font-size: 0.85em; /* Smaller font for suggestions */
+            padding: 8px 10px;
+        }
+        .list-group-item img {
+            width: 40px; /* Smaller images in suggestions */
+            height: 40px;
+        }
+        .img-thumbnail.wtb-preview { /* Adjust WTB image preview */
+            max-width: 100px;
+            height: auto;
+        }
+    }
+
+    @media (max-width: 480px) {
+        h1 { font-size: 1.5em; }
+        .mode-selection button {
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+        .wtb-input-group input, .wtb-input-group button {
+            font-size: 0.85em;
+        }
+        .product-card-gen-info {
+            font-size: 0.8em;
+        }
+        .list-group-item {
+            font-size: 0.8em;
+            padding: 6px 8px;
+        }
+        .list-group-item img {
+            width: 30px;
+            height: 30px;
+        }
+        .img-thumbnail.wtb-preview { /* Adjust WTB image preview */
+            max-width: 80px;
+        }
+    }
+
+    /* Styles spécifiques pour cette page */
+    body {
+        /* Applique l'image de fond à la page entière et assure qu'elle couvre tout */
+        background-image: url('{{ url_for('static', filename='fond.png') }}');
+        background-size: cover; /* Couvre toute la zone */
+        background-position: center; /* Centre l'image */
+        background-attachment: fixed; /* Fixe l'image de fond lors du défilement */
+        min-height: 100vh; /* Assure que le fond couvre au moins toute la hauteur de la vue */
+        color: white; /* Rendre TOUT le texte par défaut blanc */
+    }
+
+    /* Ajuster la couleur du titre principal h1 */
+    h1 {
+        color: white;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.8); /* Ombre pour meilleure lisibilité */
+    }
+
+    .mode-selection {
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .mode-selection button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        margin: 0 5px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .mode-selection button:hover:not(.active) {
+        background-color: #0056b3;
+    }
+
+    .mode-selection button.active {
+        background-color: #28a745; /* Vert pour le mode actif */
+        cursor: default;
+    }
+
+    .wts-section, .wtb-section {
+        display: none; /* Caché par défaut, affiché via JS */
+        margin-top: 20px;
+        /* Ces sections n'ont plus de fond propre pour laisser voir le fond de la page */
+        background-color: transparent;
+        border: none;
+        padding: 0;
+    }
+
+    /* Le wrapper interne n'a plus de fond ni de bordure visible */
+    .section-content-wrapper {
+        background-color: transparent; /* Suppression du fond blanc */
+        border: none; /* Suppression de la bordure */
+        padding: 0; /* Suppression du padding pour que le contenu s'étale */
+    }
+
+    /* Assurer la lisibilité des titres et paragraphes sur le fond d'image */
+    .section-content-wrapper h2,
+    .section-content-wrapper h3,
+    .section-content-wrapper p {
+        color: white; /* Texte en blanc (hérité du body, mais explicite pour la clarté) */
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.7); /* Ajout d'une ombre pour améliorer la lisibilité */
+        padding: 0 15px; /* Ajoute un petit padding pour les textes des sections */
+    }
+
+    .product-list-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+    }
+
+    .product-card-gen {
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        background-color: rgba(0, 0, 0, 0.6); /* Noir semi-transparent */
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        color: white; /* Texte blanc */
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .product-card-gen:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+    }
+
+    .product-card-gen img {
+        width: auto;
+        height: auto;
+        max-width: 100%;
+        max-height: 200px;
+        object-fit: contain;
+        border-radius: 5px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .product-card-gen-info {
+        flex-grow: 1;
+        text-align: center;
+    }
+    .product-card-gen-info h5 {
+        color: #007bff; /* Couleur du titre dans la carte (peut rester bleu si désiré) */
+        margin-bottom: 5px;
+    }
+    .product-card-gen-info p {
+        margin-bottom: 3px;
+        font-size: 0.9em;
+        color: rgba(255, 255, 255, 0.8); /* Texte info légèrement plus clair */
+    }
+
+    .product-card-gen-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        width: 100%;
+    }
+
+    .product-card-gen button {
+        padding: 8px 15px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .product-card-gen .btn-add-to-gen {
+        background-color: #007bff;
+        color: white;
+    }
+    .product-card-gen .btn-add-to-gen:hover {
+        background-color: #0056b3;
+    }
+
+    .product-card-gen .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+        cursor: default;
+    }
+
+    .product-card-gen .btn-remove-from-gen {
+        background-color: #dc3545;
+        color: white;
+    }
+    .product-card-gen .btn-remove-from-gen:hover {
+        background-color: #c82333;
+    }
+
+    .selection-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        padding: 0 15px; /* Ajoute un padding pour ces boutons */
+    }
+
+    .selection-buttons .btn {
+        background-color: #17a2b8;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        flex-grow: 1;
+        max-width: 200px;
+    }
+    .selection-buttons .btn:hover {
+        background-color: #138496;
+    }
+
+    .wts-search-bar {
+        margin-bottom: 20px;
+        padding: 0 15px; /* Ajoute un padding pour la barre de recherche */
+    }
+    .wts-search-bar .form-control {
+        background-color: rgba(0, 0, 0, 0.7); /* Fond du champ de recherche sombre semi-transparent */
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white; /* Texte de saisie en blanc */
+    }
+    .wts-search-bar .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.7); /* Couleur du placeholder en blanc légèrement transparent */
+    }
+
+
+    .wtb-input-group {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        align-items: flex-end;
+        padding: 0 15px; /* Ajoute un padding pour les champs WTB */
+        position: relative; /* Needed for absolute positioning of suggestion lists */
+        flex-wrap: wrap; /* Allow inputs to wrap on smaller screens */
+    }
+
+    .wtb-input-group > div { /* For product name and SKU input containers */
+        position: relative; /* For absolute positioning of their suggestion lists */
+        flex: 1 1 auto; /* Allow items to grow and shrink */
+        min-width: 150px; /* Minimum width for inputs */
+    }
+
+    .wtb-input-group .form-control {
+        background-color: rgba(0, 0, 0, 0.7); /* Fond du champ de saisie WTB sombre semi-transparent */
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white; /* Texte de saisie en blanc */
+        width: 100%; /* Ensure inputs take full width of their flex item */
+    }
+    .wtb-input-group .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.7); /* Placeholder en blanc légèrement transparent */
+    }
+
+    .wtb-input-group button {
+        flex-shrink: 0;
+        margin-top: 10px; /* Add some margin for the button on wrap */
+    }
+
+    /* Styles for the custom suggestion lists */
+    .list-group.position-absolute {
+        background-color: #343a40; /* Dark background for suggestions */
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        top: 100%; /* Position below the input */
+        left: 0;
+        right: 0;
+        z-index: 1000; /* Ensure it's above other content */
+        border-radius: 0.25rem;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .list-group-item {
+        background-color: rgba(0, 0, 0, 0.8); /* Darker background for individual items */
+        color: #f8f9fa; /* Light text color */
+        border-color: rgba(255, 255, 255, 0.1);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        padding: 10px 15px;
+        transition: background-color 0.2s ease;
+    }
+    .list-group-item:hover {
+        background-color: rgba(255, 255, 255, 0.2); /* Lighter background on hover */
+    }
+    .list-group-item img {
+        width: 50px;
+        height: 50px;
+        margin-right: 10px;
+        object-fit: contain;
+    }
+    .list-group-item small {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+
+    .wtb-added-products-container {
+        border: 1px dashed rgba(255, 255, 255, 0.5); /* Bordure pointillée plus claire */
+        padding: 15px;
+        border-radius: 8px;
+        min-height: 100px;
+        background-color: rgba(0, 0, 0, 0.7); /* Fond sombre semi-transparent */
+        color: white; /* Texte de ce conteneur en blanc */
+    }
+
+    .wtb-added-product-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2); /* Séparateur plus clair */
+        color: white; /* Texte de l'élément en blanc (hérité du conteneur) */
+    }
+    .wtb-added-product-item:last-child {
+        border-bottom: none;
+    }
+    .wtb-added-product-item button {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    /* Styles pour les messages flash (alerts Bootstrap) */
+    .flashes {
+        padding: 0 15px; /* Ajoutez un peu de padding si nécessaire */
+    }
+    .alert {
+        color: inherit; /* Utilise la couleur du body par défaut, mais Bootstrap surchargera */
+        /* Les fonds et couleurs de texte spécifiques des alertes Bootstrap sont généralement bons */
+        /* background-color: #d4edda; color: #155724; */
+    }
+
+    .generated-image-section {
+        margin-top: 30px;
+        text-align: center;
+        border: 2px dashed #007bff;
+        padding: 20px;
+        min-height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(0, 0, 0, 0.5); /* Fond sombre semi-transparent */
+        border-radius: 10px;
+        flex-direction: column;
+        gap: 15px;
+    }
+    .generated-image-section img {
+        max-width: 100%;
+        height: auto;
+        border: 1px solid #ccc;
+    }
+
+    /* WTB Image preview */
+    .img-thumbnail.wtb-preview {
+        max-width: 150px;
+        height: auto;
+        display: block; /* Ensures it takes up its own line if needed */
+        margin-top: 5px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 0.25rem;
+        background-color: rgba(0, 0, 0, 0.3);
+    }
+</style>
+
+<h1 class="mb-4">Générateur WTS/WTB</h1>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flashes">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<div class="mode-selection">
+    <button id="btn-wts-mode" class="active">Mode WTS (Produits en stock)</button>
+    <button id="btn-wtb-mode">Mode WTB (Demande de produits)</button>
+</div>
+
+<div id="wts-section" class="wts-section">
+    <div class="section-content-wrapper">
+        <h2>Sélectionnez les produits à vendre (WTS)</h2>
+        <p>Sélectionnez les produits que vous avez en stock et que vous souhaitez inclure dans l'image générée.</p>
+
+        <div class="wts-search-bar mb-3">
+            <input type="text" id="wts-search-input" class="form-control" placeholder="Rechercher par nom ou SKU..." aria-label="Rechercher des produits WTS">
+        </div>
+
+        <div class="selection-buttons">
+            <button id="select-all-wts-btn" class="btn">Tout sélectionner</button>
+            <button id="deselect-all-wts-btn" class="btn">Tout désélectionner</button>
+        </div>
+
+        <div class="product-list-container">
+            {% for product in products %}
+            <div class="product-card-gen" data-product-id="{{ product.id }}"
+                 data-product-name="{{ product.name }}"
+                 data-product-sku="{{ product.sku if product.sku is not none else '' }}"{# MODIFIÉ ICI #}
+                 data-product-size="{{ product.size if product.size is not none else '' }}"{# MODIFIÉ ICI #}
+                 data-product-image="{{ product.image_url if product.image_url is not none and product.image_url != '' else url_for('static', filename='placeholder.png') }}"{# MODIFIÉ ICI #}
+                 data-original-display="flex">
+                <img src="{{ product.image_url if product.image_url else url_for('static', filename='placeholder.png') }}" alt="{{ product.name }}">
+                <div class="product-card-gen-info">
+                    <h5>{{ product.name }}</h5>
+                    <p>SKU: {{ product.sku }}</p>
+                    <p>Taille: {{ product.size }}</p>
+                    <p>Quantité: {{ product.quantity }}</p>
+                </div>
+                <div class="product-card-gen-actions">
+                    <button type="button" class="btn-add-to-gen" data-product-id="{{ product.id }}">Ajouter à la sélection</button>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-center text-muted">Aucun produit en stock trouvé pour le moment. Ajoutez-en via la page de gestion des produits.</p>
+            {% endfor %}
+        </div>
+
+        <h3 class="mt-4">Produits WTS sélectionnés :</h3>
+        <div id="wts-selected-products-container" class="wtb-added-products-container">
+            <p id="no-wts-selected">Aucun produit WTS sélectionné.</p>
+        </div>
+    </div>
+</div>
+
+<div id="wtb-section" class="wtb-section">
+    <div class="section-content-wrapper">
+        <h2>Ajouter des produits à rechercher (WTB)</h2>
+        <p>Ajoutez les produits que vous recherchez. Vous pourrez spécifier le nom, le SKU et la taille.</p>
+
+        <div class="wtb-input-group">
+            <div style="flex: 1 1 300px;"> {# Container for product name input and suggestions #}
+                <label for="wtb-name" class="form-label">Nom du produit (ex: Jordan 1)</label>
+                <input type="text" id="wtb-name" class="form-control" placeholder="Nom du produit" autocomplete="off">
+                <div id="product-name-suggestions" class="list-group position-absolute w-100" style="max-height: 200px; overflow-y: auto; display: none; z-index: 1000; border-radius: 0.25rem;">
+                    <div id="no-product-name-found-message" class="list-group-item text-center" style="display: none; background-color: rgba(0, 0, 0, 0.8); color: #f8f9fa;">
+                        Aucun produit trouvé avec ce nom.
+                    </div>
+                </div>
+            </div>
+
+            <div style="flex: 1 1 300px;"> {# Container for SKU input and suggestions #}
+                <label for="wtb-sku" class="form-label">SKU (ex: 555088-105)</label>
+                <input type="text" id="wtb-sku" class="form-control" placeholder="SKU" autocomplete="off">
+                <div id="sku-suggestions" class="list-group position-absolute w-100" style="max-height: 200px; overflow-y: auto; display: none; z-index: 1000; border-radius: 0.25rem;">
+                    <div id="no-sku-found-message" class="list-group-item text-center" style="display: none; background-color: rgba(0, 0, 0, 0.8); color: #f8f9fa;">
+                        Aucun SKU trouvé. Veuillez le renseigner manuellement.
+                    </div>
+                </div>
+            </div>
+
+            <div style="flex: 1 1 150px;"> {# Container for Size input #}
+                <label for="wtb-size" class="form-label">Taille (ex: 42 EU)</label>
+                <input type="text" id="wtb-size" class="form-control" placeholder="Taille">
+            </div>
+
+            {# Hidden image_url and preview container - placed outside wtb-input-group for better layout control #}
+            <div style="flex-basis: 100%; margin-top: 10px; position: relative;"> {# Full width for image display #}
+                <input type="hidden" id="wtb-image-url">
+                <div id="image-preview-container-wtb" style="display: none;">
+                    <label class="form-label">Image suggérée:</label>
+                    <img id="wtb-image-preview" src="" alt="Image Produit" class="img-thumbnail wtb-preview">
+                </div>
+            </div>
+
+            <button type="button" id="add-wtb-product" class="btn btn-primary">Ajouter</button>
+        </div>
+
+
+        <h3>Produits WTB ajoutés :</h3>
+        <div id="wtb-added-products-container" class="wtb-added-products-container">
+            <p id="no-wtb-added">Aucun produit WTB ajouté.</p>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4 text-center">
+    <button id="generate-image-btn" class="btn btn-success btn-lg">Générer l'Image</button>
+</div>
+
+<div class="generated-image-section">
+    <p id="generated-image-message">L'image générée apparaîtra ici.</p>
+    <div id="generated-images-container" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;">
+        </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Le script wtb_wts_gen.html est bien chargé et le DOM est prêt !'); // AJOUTÉ POUR LE DÉBOGAGE
+
+        const btnWTSMode = document.getElementById('btn-wts-mode');
+        const btnWTBMode = document.getElementById('btn-wtb-mode');
+        const wtsSection = document.getElementById('wts-section');
+        const wtbSection = document.getElementById('wtb-section');
+
+        const wtsSelectedProductsContainer = document.getElementById('wts-selected-products-container');
+        const noWTSSelectedText = document.getElementById('no-wts-selected');
+        let selectedWTSProducts = []; // Pour stocker les produits WTS sélectionnés
+
+        const wtbNameInput = document.getElementById('wtb-name');
+        const wtbSkuInput = document.getElementById('wtb-sku');
+        const wtbSizeInput = document.getElementById('wtb-size');
+        const wtbImageURLInput = document.getElementById('wtb-image-url'); // Hidden input for image URL
+        const wtbImagePreview = document.getElementById('wtb-image-preview'); // Image tag for preview
+        const wtbImagePreviewContainer = document.getElementById('image-preview-container-wtb'); // Container for preview
+
+        const productNameSuggestionsDiv = document.getElementById('product-name-suggestions');
+        const noProductNameFoundMessage = document.getElementById('no-product-name-found-message');
+        const skuSuggestionsDiv = document.getElementById('sku-suggestions');
+        const noSkuFoundMessage = document.getElementById('no-sku-found-message');
+
+        const addWTBProductBtn = document.getElementById('add-wtb-product');
+        const wtbAddedProductsContainer = document.getElementById('wtb-added-products-container');
+        const noWTBAddedText = document.getElementById('no-wtb-added');
+        let addedWTBProducts = []; // Pour stocker les produits WTB ajoutés manuellement
+
+        const productCardsGen = document.querySelectorAll('.product-card-gen'); // Toutes les cartes WTS
+        const generateImageBtn = document.getElementById('generate-image-btn');
+        // MODIFIÉ ICI : Remplacer generatedImageDisplay par les nouveaux éléments
+        const generatedImageMessage = document.getElementById('generated-image-message');
+        const generatedImagesContainer = document.getElementById('generated-images-container');
+
+        const selectAllWTSBtn = document.getElementById('select-all-wts-btn');
+        const deselectAllWTSBtn = document.getElementById('deselect-all-wts-btn');
+        const wtsSearchInput = document.getElementById('wts-search-input');
+
+        const defaultImageUrl = "{{ url_for('static', filename='sku_not_found.png') }}";
+
+
+        let debounceTimeoutProductName;
+        let debounceTimeoutSku;
+
+
+        // Fonction pour basculer les sections
+        function switchMode(mode) {
+            if (mode === 'wts') {
+                btnWTSMode.classList.add('active');
+                btnWTBMode.classList.remove('active');
+                wtsSection.style.display = 'block';
+                wtbSection.style.display = 'none';
+            } else { // wtb mode
+                btnWTSMode.classList.remove('active');
+                btnWTBMode.classList.add('active');
+                wtsSection.style.display = 'none';
+                wtbSection.style.display = 'block';
+            }
+            // Réinitialiser la zone d'image générée lors du changement de mode
+            generatedImagesContainer.innerHTML = ''; // Vider les anciennes images
+            generatedImagesContainer.style.display = 'none'; // Cacher le conteneur des images
+            generatedImageMessage.style.display = 'block'; // Réafficher le message initial
+            generatedImageMessage.textContent = 'L\'image générée apparaîtra ici.'; // Réinitialiser le message
+
+            // Réinitialiser la recherche lors du changement de mode
+            wtsSearchInput.value = '';
+            filterProductCards(); // Réinitialise l'affichage des cartes
+        }
+
+        // Fonction pour ajouter un produit WTS à la sélection
+function addWTSProductToSelection(card) {
+    const productId = card.dataset.productId;
+    const productData = {
+        id: productId,
+        name: card.dataset.productName || 'Nom Inconnu',
+        sku: card.dataset.productSku || 'N/A', // <-- CHANGEMENT ICI : de .sku à .productSku
+        size: card.dataset.productSize || 'N/A', // <-- CHANGEMENT ICI : de .size à .productSize
+        image_url: card.dataset.productImage || defaultImageUrl // <-- CHANGEMENT ICI : de .image à .productImage pour consistance
+    };
+    console.log("WTS - productData avant ajout:", productData); // AJOUTÉ POUR LE DÉBOGAGE
+
+    if (!selectedWTSProducts.some(p => p.id === productId)) {
+        selectedWTSProducts.push(productData);
+        console.log("WTS - selectedWTSProducts après ajout:", selectedWTSProducts); // AJOUTÉ POUR LE DÉBOGAGE
+        renderWTSSelectedProducts();
+        const addBtn = card.querySelector('.btn-add-to-gen');
+        if (addBtn) {
+            addBtn.textContent = 'Ajouté';
+            addBtn.disabled = true;
+            addBtn.classList.remove('btn-add-to-gen');
+            addBtn.classList.add('btn-secondary');
+        }
+    }
+}
+        // Fonction pour retirer un produit WTS de la sélection
+        function removeWTSProductFromSelection(productId) {
+            selectedWTSProducts = selectedWTSProducts.filter(p => p.id !== productId);
+            console.log("WTS - selectedWTSProducts après suppression:", selectedWTSProducts); // AJOUTÉ POUR LE DÉBOGAGE
+            renderWTSSelectedProducts();
+            // Réactiver le bouton dans la liste des produits en stock
+            const originalCardBtn = document.querySelector(`.product-card-gen button[data-product-id="${productId}"]`);
+            if (originalCardBtn) {
+                originalCardBtn.textContent = 'Ajouter à la sélection';
+                originalCardBtn.disabled = false;
+                originalCardBtn.classList.remove('btn-secondary');
+                originalCardBtn.classList.add('btn-add-to-gen');
+            }
+        }
+
+        // Gestion des produits WTS (sélection depuis la liste en stock)
+        productCardsGen.forEach(card => {
+            const addBtn = card.querySelector('.btn-add-to-gen');
+            if (addBtn) {
+                addBtn.addEventListener('click', function() {
+                    addWTSProductToSelection(card);
+                });
+            }
+        });
+
+        // Gestion du bouton "Tout sélectionner"
+        if (selectAllWTSBtn) {
+            selectAllWTSBtn.addEventListener('click', function() {
+                productCardsGen.forEach(card => {
+                    // Seulement ajouter si la carte est visible (après recherche)
+                    if (card.style.display !== 'none') {
+                        addWTSProductToSelection(card);
+                    }
+                });
+            });
+        }
+
+        // Gestion du bouton "Tout désélectionner"
+        if (deselectAllWTSBtn) {
+            deselectAllWTSBtn.addEventListener('click', function() {
+                // Créer une copie pour itérer pendant que l'original est modifié
+                const productsToDeselect = [...selectedWTSProducts];
+                productsToDeselect.forEach(product => {
+                    removeWTSProductFromSelection(product.id);
+                });
+            });
+        }
+
+
+        function renderWTSSelectedProducts() {
+            wtsSelectedProductsContainer.innerHTML = ''; // Vide le conteneur
+            if (selectedWTSProducts.length === 0) {
+                wtsSelectedProductsContainer.appendChild(noWTSSelectedText);
+            } else {
+                selectedWTSProducts.forEach(product => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.classList.add('wtb-added-product-item');
+                    itemDiv.innerHTML = `
+                        <span>${product.name} (SKU: ${product.sku}, Taille: ${product.size})</span>
+                        <button type="button" data-product-id="${product.id}" class="btn-remove-from-gen">Supprimer</button>
+                    `;
+                    itemDiv.querySelector('button').addEventListener('click', function() {
+                        removeWTSProductFromSelection(product.id);
+                    });
+                    wtsSelectedProductsContainer.appendChild(itemDiv);
+                });
+            }
+        }
+
+
+        // Gestion des produits WTB (ajout manuel)
+        addWTBProductBtn.addEventListener('click', function() {
+            const name = wtbNameInput.value.trim();
+            const sku = wtbSkuInput.value.trim();
+            const size = wtbSizeInput.value.trim();
+            const imageUrl = wtbImageURLInput.value.trim(); // Get from hidden input
+
+            if (name || sku || size || imageUrl) {
+                const newProduct = {
+                    id: 'wtb-' + Date.now(),
+                    name: name || 'Nom Inconnu', // Ajout d'une valeur par défaut
+                    sku: sku || 'N/A',          // Ajout d'une valeur par défaut
+                    size: size || 'N/A',        // Ajout d'une valeur par défaut
+                    image_url: imageUrl || defaultImageUrl // Utilise l'URL de l'image suggérée ou par défaut
+                };
+                console.log("WTB - newProduct avant ajout:", newProduct); // AJOUTÉ POUR LE DÉBOGAGE
+                addedWTBProducts.push(newProduct);
+                console.log("WTB - addedWTBProducts après ajout:", addedWTBProducts); // AJOUTÉ POUR LE DÉBOGAGE
+                renderWTBAddedProducts();
+                // Effacer les champs
+                wtbNameInput.value = '';
+                wtbSkuInput.value = '';
+                wtbSizeInput.value = '';
+                wtbImageURLInput.value = ''; // Clear hidden URL
+                wtbImagePreview.src = defaultImageUrl; // Set preview to default
+                wtbImagePreviewContainer.style.display = 'block'; // Ensure it's visible
+            } else {
+                alert('Veuillez entrer au moins un Nom, SKU, Taille ou URL d\'image pour le produit WTB.');
+            }
+        });
+
+        function renderWTBAddedProducts() {
+            wtbAddedProductsContainer.innerHTML = '';
+            if (addedWTBProducts.length === 0) {
+                wtbAddedProductsContainer.appendChild(noWTBAddedText);
+            } else {
+                addedWTBProducts.forEach(product => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.classList.add('wtb-added-product-item');
+                    itemDiv.innerHTML = `
+                        <span>${product.name || 'N/A'} (SKU: ${product.sku || 'N/A'}, Taille: ${product.size || 'N/A'})</span>
+                        <button type="button" data-product-id="${product.id}" class="btn-remove-from-gen">Supprimer</button>
+                    `;
+                    itemDiv.querySelector('button').addEventListener('click', function() {
+                        addedWTBProducts = addedWTBProducts.filter(p => p.id !== product.id);
+                        console.log("WTB - addedWTBProducts après suppression:", addedWTBProducts); // AJOUTÉ POUR LE DÉBOGAGE
+                        renderWTBAddedProducts();
+                    });
+                    wtbAddedProductsContainer.appendChild(itemDiv);
+                });
+            }
+        }
+
+        // Logique de recherche WTS
+        wtsSearchInput.addEventListener('input', filterProductCards);
+
+        function filterProductCards() {
+            const searchTerm = wtsSearchInput.value.toLowerCase();
+
+            productCardsGen.forEach(card => {
+                const productName = card.dataset.productName ? card.dataset.productName.toLowerCase() : '';
+                const productSku = card.dataset.sku ? card.dataset.sku.toLowerCase() : '';
+
+                if (productName.includes(searchTerm) || productSku.includes(searchTerm)) {
+                    card.style.display = card.dataset.originalDisplay || 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // --- Autocomplétion WTB ---
+
+        // Function to handle Product Name suggestions (adapted from add_product.html)
+        function handleProductNameSuggestions() {
+            clearTimeout(debounceTimeoutProductName);
+            const query = wtbNameInput.value.trim();
+
+            productNameSuggestionsDiv.innerHTML = '';
+            noProductNameFoundMessage.style.display = 'none';
+            productNameSuggestionsDiv.style.display = 'none';
+
+            if (query.length < 2) {
+                return;
+            }
+
+            debounceTimeoutProductName = setTimeout(function() {
+                fetch(`/get_product_name_suggestions?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("Suggestions Nom Produit - Données reçues:", data); // AJOUTÉ POUR LE DÉBOGAGE
+                        productNameSuggestionsDiv.innerHTML = '';
+                        if (data.length > 0) {
+                            data.forEach(item => {
+                                console.log("Suggestion Nom Produit - Item:", item); // AJOUTÉ POUR LE DÉBOGAGE
+                                const div = document.createElement('div');
+                                div.classList.add('list-group-item', 'list-group-item-action', 'd-flex', 'align-items-center');
+                                div.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                                div.style.color = '#f8f9fa';
+                                div.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                div.style.cursor = 'pointer';
+
+                                const img = document.createElement('img');
+                                img.src = item.image_url || defaultImageUrl; // Use default if no image
+                                img.alt = item.name;
+                                img.style.width = '50px';
+                                img.style.height = '50px';
+                                img.style.marginRight = '10px';
+                                img.style.objectFit = 'contain';
+
+                                const textContentDiv = document.createElement('div');
+                                const nameSpan = document.createElement('span');
+                                nameSpan.textContent = item.name;
+                                const skuSpan = document.createElement('small');
+                                skuSpan.textContent = ` (SKU: ${item.sku})`;
+                                skuSpan.style.marginLeft = '5px';
+
+                                textContentDiv.appendChild(nameSpan);
+                                textContentDiv.appendChild(skuSpan);
+
+                                div.appendChild(img);
+                                div.appendChild(textContentDiv);
+
+                                div.addEventListener('click', function() {
+                                    console.log("Suggestion Nom Produit - Item sélectionné:", item); // AJOUTÉ POUR LE DÉBOGAGE
+                                    wtbNameInput.value = item.name;
+                                    wtbSkuInput.value = item.sku;
+                                    wtbImageURLInput.value = item.image_url;
+                                    wtbImagePreview.src = item.image_url || defaultImageUrl; // Use default if no image
+                                    wtbImagePreviewContainer.style.display = 'block';
+                                    productNameSuggestionsDiv.style.display = 'none';
+                                    productNameSuggestionsDiv.innerHTML = '';
+                                });
+                                productNameSuggestionsDiv.appendChild(div);
+                            });
+                            productNameSuggestionsDiv.style.display = 'block';
+                        } else {
+                            noProductNameFoundMessage.style.display = 'block';
+                            productNameSuggestionsDiv.appendChild(noProductNameFoundMessage);
+                            productNameSuggestionsDiv.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur lors de la récupération des suggestions de nom de produit :', error);
+                        productNameSuggestionsDiv.innerHTML = '';
+                        noProductNameFoundMessage.style.display = 'block';
+                        productNameSuggestionsDiv.appendChild(noProductNameFoundMessage);
+                        productNameSuggestionsDiv.style.display = 'block';
+                    });
+            }, 300);
+        }
+
+        // Function to handle SKU suggestions (adapted from add_product.html)
+        function handleSkuSuggestions() {
+            clearTimeout(debounceTimeoutSku);
+            const query = wtbSkuInput.value.trim();
+
+            skuSuggestionsDiv.innerHTML = '';
+            noSkuFoundMessage.style.display = 'none';
+            skuSuggestionsDiv.style.display = 'none';
+
+            if (query.length < 2) {
+                // If SKU input is cleared or too short, revert to default image and clear hidden URL
+                wtbImageURLInput.value = '';
+                wtbImagePreview.src = defaultImageUrl;
+                wtbImagePreviewContainer.style.display = 'block';
+                return;
+            }
+
+            debounceTimeoutSku = setTimeout(function() {
+                fetch(`/get_sku_suggestions?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("Suggestions SKU - Données reçues:", data); // AJOUTÉ POUR LE DÉBOGAGE
+                        skuSuggestionsDiv.innerHTML = '';
+                        if (data.length > 0) {
+                            data.forEach(item => {
+                                console.log("Suggestion SKU - Item:", item); // AJOUTÉ POUR LE DÉBOGAGE
+                                const div = document.createElement('div');
+                                div.classList.add('list-group-item', 'list-group-item-action', 'd-flex', 'align-items-center');
+                                div.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                                div.style.color = '#f8f9fa';
+                                div.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                div.style.cursor = 'pointer';
+
+                                const img = document.createElement('img');
+                                img.src = item.image_url || defaultImageUrl; // Use default if no image
+                                img.alt = item.sku;
+                                img.style.width = '50px';
+                                img.style.height = '50px';
+                                img.style.marginRight = '10px';
+                                img.style.objectFit = 'contain';
+
+                                const textContentDiv = document.createElement('div');
+                                const skuSpan = document.createElement('span');
+                                skuSpan.textContent = item.sku;
+                                const nameSpan = document.createElement('small');
+                                nameSpan.textContent = ` (${item.product_name})`;
+                                nameSpan.style.marginLeft = '5px';
+
+                                textContentDiv.appendChild(skuSpan);
+                                textContentDiv.appendChild(nameSpan);
+
+                                div.appendChild(img);
+                                div.appendChild(textContentDiv);
+
+                                div.addEventListener('click', function() {
+                                    console.log("Suggestion SKU - Item sélectionné:", item); // AJOUTÉ POUR LE DÉBOGAGE
+                                    wtbSkuInput.value = item.sku;
+                                    wtbImageURLInput.value = item.image_url;
+                                    wtbImagePreview.src = item.image_url || defaultImageUrl; // Use default if no image
+                                    wtbImagePreviewContainer.style.display = 'block';
+                                    wtbNameInput.value = item.product_name; // Populate product name as well
+                                    skuSuggestionsDiv.style.display = 'none';
+                                    skuSuggestionsDiv.innerHTML = '';
+                                });
+                                skuSuggestionsDiv.appendChild(div);
+                            });
+                            skuSuggestionsDiv.style.display = 'block';
+                        } else {
+                            noSkuFoundMessage.style.display = 'block';
+                            skuSuggestionsDiv.appendChild(noSkuFoundMessage);
+                            skuSuggestionsDiv.style.display = 'block';
+
+                            // If no SKU found, clear hidden URL and set preview to default
+                            wtbImageURLInput.value = '';
+                            wtbImagePreview.src = defaultImageUrl;
+                            wtbImagePreviewContainer.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur lors de la récupération des suggestions SKU :', error);
+                        skuSuggestionsDiv.innerHTML = '';
+                        noSkuFoundMessage.style.display = 'block';
+                        skuSuggestionsDiv.appendChild(noSkuFoundMessage);
+                        skuSuggestionsDiv.style.display = 'block';
+                        // On error, clear hidden URL and set preview to default
+                        wtbImageURLInput.value = '';
+                        wtbImagePreview.src = defaultImageUrl;
+                        wtbImagePreviewContainer.style.display = 'block';
+                    });
+            }, 300);
+        }
+
+        // Event Listeners
+        wtbNameInput.addEventListener('input', handleProductNameSuggestions);
+        wtbSkuInput.addEventListener('input', handleSkuSuggestions);
+
+        // Close suggestions when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!productNameSuggestionsDiv.contains(event.target) && event.target !== wtbNameInput) {
+                productNameSuggestionsDiv.style.display = 'none';
+                noProductNameFoundMessage.style.display = 'none';
+            }
+            if (!skuSuggestionsDiv.contains(event.target) && event.target !== wtbSkuInput) {
+                skuSuggestionsDiv.style.display = 'none';
+                noSkuFoundMessage.style.display = 'none';
+            }
+        });
+
+        // Initialize default image if no image_url is provided on load
+        // This runs only once on page load
+        if (!wtbImageURLInput.value) {
+            wtbImagePreview.src = defaultImageUrl;
+        }
+        // Always show the container for the image preview
+        wtbImagePreviewContainer.style.display = 'block';
+
+
+        // Initialisation de la page
+        switchMode('wts');
+        renderWTSSelectedProducts();
+        renderWTBAddedProducts();
+        filterProductCards();
+
+        // Événements des boutons de mode
+        btnWTSMode.addEventListener('click', () => switchMode('wts'));
+        btnWTBMode.addEventListener('click', () => switchMode('wtb'));
+
+        // Gestion du bouton de génération d'image (maintenant avec appel AJAX)
+        generateImageBtn.addEventListener('click', function() {
+            let productsToGenerate = [];
+            let mode = '';
+
+            if (btnWTSMode.classList.contains('active')) {
+                mode = 'WTS';
+                productsToGenerate = selectedWTSProducts;
+            } else {
+                mode = 'WTB';
+                productsToGenerate = addedWTBProducts;
+            }
+
+            if (productsToGenerate.length === 0) {
+                alert(`Veuillez sélectionner ou ajouter des produits pour le mode ${mode} avant de générer l'image.`);
+                return;
+            }
+
+            // Afficher un indicateur de chargement
+            generateImageBtn.textContent = 'Génération en cours...';
+            generateImageBtn.disabled = true;
+            // MODIFIÉ ICI : Vider le conteneur d'images et afficher le message de chargement
+            generatedImagesContainer.innerHTML = ''; // Vider les anciennes images
+            generatedImagesContainer.style.display = 'flex'; // S'assurer que le conteneur est visible
+            generatedImageMessage.textContent = 'Génération des images... Veuillez patienter.';
+
+
+            // Envoyer les données au serveur
+            fetch('/generate_wtb_wts_image', { // Cette URL doit pointer vers votre nouvelle route Flask
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    mode: mode,
+                    products: productsToGenerate
+                }),
+            })
+            .then(response => {
+                // Rétablir le bouton et vérifier la réponse
+                generateImageBtn.textContent = 'Générer l\'Image';
+                generateImageBtn.disabled = false;
+                generatedImageMessage.textContent = 'L\'image générée apparaîtra ici.'; // Réinitialiser le message
+
+                if (!response.ok) {
+                    return response.json().then(err => { throw new Error(err.error || 'Erreur inconnue lors de la génération de l\'image.'); });
+                }
+                return response.json();
+            })
+            .then(data => {
+                // MODIFICATION ICI pour gérer une liste d'URLs
+                if (data.image_urls && Array.isArray(data.image_urls) && data.image_urls.length > 0) {
+                    generatedImagesContainer.innerHTML = ''; // Vider le conteneur avant d'ajouter les nouvelles images
+                    generatedImageMessage.style.display = 'none'; // Cacher le message initial
+
+                    data.image_urls.forEach((imageUrl, index) => {
+                        const imageWrapper = document.createElement('div');
+                        imageWrapper.style.display = 'flex';
+                        imageWrapper.style.flexDirection = 'column';
+                        imageWrapper.style.alignItems = 'center';
+                        imageWrapper.style.gap = '10px';
+                        imageWrapper.style.marginBottom = '20px'; // Space between image blocks
+
+                        const imgElement = document.createElement('img');
+                        imgElement.src = imageUrl;
+                        imgElement.alt = `Image ${mode} générée (Page ${index + 1})`;
+                        imgElement.style.maxWidth = '100%';
+                        imgElement.style.height = 'auto';
+                        imgElement.style.border = '1px solid #ccc';
+                        imgElement.style.borderRadius = '5px'; // Add some border radius for aesthetics
+
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = imageUrl;
+                        downloadLink.textContent = `Télécharger l'image (Page ${index + 1})`;
+                        const filename = `wtb_wts_image_${mode}_${new Date().getTime()}_page${index + 1}.png`; // More specific filename
+                        downloadLink.setAttribute('download', filename);
+                        downloadLink.classList.add('btn', 'btn-primary'); // Apply some Bootstrap styling
+                        downloadLink.style.marginTop = '10px'; // Space between image and button
+
+                        imageWrapper.appendChild(imgElement);
+                        imageWrapper.appendChild(downloadLink);
+                        generatedImagesContainer.appendChild(imageWrapper);
+                    });
+                    generatedImagesContainer.style.display = 'flex'; // Ensure the container is visible
+
+                } else {
+                    alert("Erreur: Aucune URL d'image générée n'a été reçue.");
+                    generatedImageMessage.style.display = 'block';
+                    generatedImagesContainer.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Erreur lors de la génération de l\'image :', error);
+                alert('Échec de la génération de l\'image : ' + error.message);
+                generateImageBtn.textContent = 'Générer l\'Image';
+                generateImageBtn.disabled = false;
+                generatedImageMessage.style.display = 'block'; // Réafficher le message si erreur
+                generatedImagesContainer.style.display = 'none'; // Cacher le conteneur
+            });
+        });
+
+    });
+</script>
+{% endblock %}
