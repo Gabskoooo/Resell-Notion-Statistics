@@ -153,6 +153,12 @@
     <input type="hidden" id="product_id_hidden" name="product_id" value="{{ sale.product_id if sale.product_id else '' }}">
     <input type="hidden" id="selected_product_name_hidden" name="selected_product_name" value="">
 
+    {# NOUVEAU: Affichage du produit sélectionné et bouton "Changez de produit" #}
+    <div id="selected-product-display" style="display: none; margin-bottom: 20px; padding: 15px; border: 1px solid #007bff; border-radius: 8px; background-color: rgba(0, 123, 255, 0.1);">
+        <p><strong>Produit sélectionné:</strong> <span id="displayed-product-name" style="color: #ffffff;"></span>
+            <button type="button" class="btn btn-sm btn-warning ms-3" id="change-product-btn">Changez de produit</button>
+        </p>
+    </div>
 
     <div class="mb-3">
         <label for="item_name" class="form-label">Nom de l'article vendu (pour les produits non en stock ou personnalisés):</label>
@@ -201,9 +207,16 @@
         const productCards = document.querySelectorAll('.product-card'); // Récupère toutes les cartes de produit
         const productSearchInput = document.getElementById('product-search'); // Le nouveau champ de recherche
 
+        // NOUVEAU: Éléments pour l'affichage du produit sélectionné et le bouton "Changez de produit"
+        const selectedProductDisplay = document.getElementById('selected-product-display');
+        const displayedProductName = document.getElementById('displayed-product-name');
+        const changeProductBtn = document.getElementById('change-product-btn');
+
+
         function selectProduct(button) {
             productCards.forEach(card => card.classList.remove('selected'));
-            button.closest('.product-card').classList.add('selected');
+            const selectedCard = button.closest('.product-card');
+            selectedCard.classList.add('selected');
 
             const productId = button.dataset.productId;
             const productName = button.dataset.productName;
@@ -219,6 +232,20 @@
 
             quantityInput.value = 1;
             quantityInput.setAttribute('max', productQuantity);
+
+            // NOUVEAU: Masquer toutes les autres cartes de produit
+            productCards.forEach(card => {
+                if (card !== selectedCard) {
+                    card.style.display = 'none';
+                }
+            });
+            // NOUVEAU: Masquer le champ de recherche et le bouton "Effacer la sélection"
+            productSearchInput.style.display = 'none';
+            clearProductSelectionButton.style.display = 'none';
+
+            // NOUVEAU: Afficher le nom du produit sélectionné et le bouton "Changez de produit"
+            displayedProductName.textContent = productName;
+            selectedProductDisplay.style.display = 'block';
         }
 
         function clearProductSelection() {
@@ -232,6 +259,17 @@
 
             quantityInput.removeAttribute('max');
             quantityInput.value = 1;
+
+            // NOUVEAU: Réafficher toutes les cartes de produit
+            productCards.forEach(card => {
+                card.style.display = 'flex'; // ou 'block', selon le style original
+            });
+            // NOUVEAU: Réafficher le champ de recherche et le bouton "Effacer la sélection"
+            productSearchInput.style.display = 'block';
+            clearProductSelectionButton.style.display = 'block';
+
+            // NOUVEAU: Masquer l'affichage du produit sélectionné
+            selectedProductDisplay.style.display = 'none';
         }
 
         // Fonction de filtrage des cartes
@@ -257,7 +295,12 @@
             });
         });
 
+        // MODIFIÉ: Le bouton "Effacer la sélection" existant
         clearProductSelectionButton.addEventListener('click', clearProductSelection);
+
+        // NOUVEAU: Écouteur pour le bouton "Changez de produit"
+        changeProductBtn.addEventListener('click', clearProductSelection);
+
 
         // Ajout de l'écouteur d'événement pour le champ de recherche
         productSearchInput.addEventListener('input', filterProductCards);
@@ -269,7 +312,11 @@
             if (initialSelectedButton) {
                 selectProduct(initialSelectedButton);
             }
+        } else {
+            // Si aucun produit n'est initialement sélectionné, assurez-vous que tout est affiché correctement
+            clearProductSelection();
         }
+
 
         const saleDateInput = document.getElementById('sale_date');
         if (!saleDateInput.value) {
