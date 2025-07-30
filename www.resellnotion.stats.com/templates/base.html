@@ -125,6 +125,24 @@
                 padding-top: 1rem;
             }
         }
+
+        /* Styles pour la nouvelle bannière d'installation PWA */
+        .install-promotion-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #007bff; /* Couleur Bootstrap Primary */
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1060; /* Au-dessus de l'overlay de l'offcanvas */
+            display: none; /* Caché par défaut */
+        }
+        .install-promotion-banner .container {
+            max-width: 960px; /* Adaptez à votre mise en page Bootstrap */
+        }
     </style>
 </head>
 <body>
@@ -176,9 +194,15 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('wtb_wts_gen') }}"><span style="font-size: 1.2em;">📸</span> WTS/WTB Gen</a>
                         </li>
-                        {# OPÉRATIONS SUPPLÉMENTAIRES (POSITION CONSERVÉE RELATIVEMENT AUX AUTRES) #}
+                        {# OPÉRATIONS SUPPLÉMENTAIRES #}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('supplementary_operations') }}"><span style="font-size: 1.2em;">➕</span> Opérations Supplémentaires</a>
+                        </li>
+                        {# BOUTON D'INSTALLATION PWA - APRÈS OPÉRATIONS SUPPLÉMENTAIRES (POUR DESKTOP) #}
+                        <li class="nav-item">
+                            <button id="installButton" class="btn btn-sm btn-info ms-2" style="display: none;">
+                                <i class="bi bi-download"></i> Installer l'app
+                            </button>
                         </li>
                     {% endif %}
                 </ul>
@@ -208,7 +232,6 @@
     </nav>
 
     {# Offcanvas Menu for Mobile #}
-    {# Cet élément et son overlay ne sont stylisés et rendus visibles que sur mobile via CSS #}
     <div class="offcanvas-overlay" id="offcanvasOverlay"></div>
     <div class="offcanvas-menu" id="offcanvasMenu">
         <button type="button" class="btn-close btn-close-white ms-auto" aria-label="Close" id="offcanvasCloseBtn"></button>
@@ -248,6 +271,12 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('supplementary_operations') }}"><span style="font-size: 1.2em;">➕</span> Opérations Supplémentaires</a>
                 </li>
+                {# BOUTON D'INSTALLATION PWA POUR L'OFFCANVAS - APRÈS OPÉRATIONS SUPPLÉMENTAIRES #}
+                <li class="nav-item">
+                    <button id="installButtonOffcanvas" class="btn btn-primary" style="display: none; margin-top: 1rem;">
+                        <i class="bi bi-download"></i> Installer l'application
+                    </button>
+                </li>
             {% endif %}
         </ul>
         <ul class="navbar-nav ms-auto">
@@ -283,6 +312,17 @@
             {% endif %}
         {% endwith %}
         {% block content %}{% endblock %}
+    </div>
+
+    {# Nouvelle Bannière d'installation PWA #}
+    <div id="installPromotion" class="install-promotion-banner" style="display: none;">
+        <div class="container d-flex justify-content-between align-items-center py-2">
+            <span>Profitez d'une meilleure expérience ! Installez notre application pour un accès rapide.</span>
+            <div>
+                <button id="installPromotionBtn" class="btn btn-success me-2">Installer</button>
+                <button id="closePromotionBtn" class="btn btn-outline-light">Non merci</button>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -348,6 +388,112 @@
           });
         }
         // --- FIN DU NOUVEAU SCRIPT POUR L'ENREGISTREMENT DU SERVICE WORKER ---
+
+        // --- DÉBUT DU SCRIPT POUR L'INVITE D'INSTALLATION PWA ---
+        let deferredPrompt; // Variable pour stocker l'événement
+
+        const installButton = document.getElementById('installButton'); // Bouton navbar desktop
+        const installButtonOffcanvas = document.getElementById('installButtonOffcanvas'); // Bouton offcanvas mobile
+        const installPromotion = document.getElementById('installPromotion'); // La nouvelle bannière
+        const installPromotionBtn = document.getElementById('installPromotionBtn'); // Bouton "Installer" de la bannière
+        const closePromotionBtn = document.getElementById('closePromotionBtn'); // Bouton "Non merci" de la bannière
+
+        // Fonction pour cacher tous les éléments d'installation
+        function hideInstallElements() {
+            if (installButton) installButton.style.display = 'none';
+            if (installButtonOffcanvas) installButtonOffcanvas.style.display = 'none';
+            if (installPromotion) installPromotion.style.display = 'none';
+        }
+
+        // Écoute l'événement 'beforeinstallprompt'
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Empêche l'invite par défaut du navigateur d'apparaître immédiatement
+            e.preventDefault();
+            // Stocke l'événement pour qu'il puisse être déclenché plus tard
+            deferredPrompt = e;
+            console.log('[PWA] beforeinstallprompt a été déclenché et stocké.');
+
+            // Affiche la bannière d'installation personnalisée
+            if (installPromotion) {
+                // N'afficher la bannière que si l'utilisateur ne l'a pas déjà refusée
+                if (localStorage.getItem('pwa_install_prompt_dismissed') !== 'true') {
+                    installPromotion.style.display = 'block';
+                }
+            }
+            // Affiche aussi les boutons existants si vous le souhaitez
+            if (installButton) {
+                installButton.style.display = 'block';
+            }
+            if (installButtonOffcanvas) {
+                installButtonOffcanvas.style.display = 'block';
+            }
+        });
+
+        // Fonction générique pour gérer le clic sur le bouton d'installation
+        function handleInstallButtonClick() {
+            if (deferredPrompt) {
+                hideInstallElements(); // Cache tous les éléments d'installation
+                // Déclenche l'invite d'installation du navigateur
+                deferredPrompt.prompt();
+
+                // Attend que l'utilisateur réponde à l'invite
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('[PWA] L\'utilisateur a accepté l\'installation.');
+                    } else {
+                        console.log('[PWA] L\'utilisateur a refusé l\'installation.');
+                        // Si l'utilisateur refuse, on pourrait re-afficher le bouton ou la bannière
+                        // Pour l'exemple, nous les laissons cachés après un refus explicite de l'invite native.
+                    }
+                    deferredPrompt = null; // Réinitialise l'événement
+                });
+            } else {
+                console.log('[PWA] deferredPrompt n\'est pas disponible. L\'invite n\'a pas été stockée.');
+                // Ce cas se produit si l'app est déjà installée ou si le navigateur ne déclenche pas l'événement
+                alert("Pour installer l'application, veuillez utiliser la fonctionnalité 'Ajouter à l'écran d'accueil' ou 'Installer l'application' disponible dans le menu de votre navigateur.");
+                // Si l'app est déjà installée, cachez le bouton
+                if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+                     hideInstallElements();
+                }
+            }
+        }
+
+        // Gère les clics sur les différents boutons d'installation
+        if (installButton) {
+            installButton.addEventListener('click', handleInstallButtonClick);
+        }
+        if (installButtonOffcanvas) {
+            installButtonOffcanvas.addEventListener('click', handleInstallButtonClick);
+        }
+        if (installPromotionBtn) {
+            installPromotionBtn.addEventListener('click', handleInstallButtonClick);
+        }
+
+        // Gère le clic sur le bouton "Non merci" de la bannière
+        if (closePromotionBtn) {
+            closePromotionBtn.addEventListener('click', () => {
+                if (installPromotion) {
+                    installPromotion.style.display = 'none';
+                }
+                // Stocke dans localStorage que l'utilisateur a refusé pour ne plus montrer la bannière
+                localStorage.setItem('pwa_install_prompt_dismissed', 'true');
+            });
+        }
+
+        // Gérer l'état d'installation : si l'app est déjà installée, cacher tous les prompts
+        window.addEventListener('appinstalled', () => {
+            console.log('[PWA] L\'application a été installée !');
+            hideInstallElements();
+            deferredPrompt = null;
+        });
+
+        // Vérifier si l'app est déjà en mode standalone au chargement ou si l'utilisateur a refusé la bannière
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || localStorage.getItem('pwa_install_prompt_dismissed') === 'true') {
+            console.log('[PWA] L\'application est déjà installée ou la bannière a été refusée précédemment.');
+            hideInstallElements();
+        }
+        // --- FIN DU SCRIPT POUR L'INVITE D'INSTALLATION PWA ---
+
     </script>
 </body>
 </html>
