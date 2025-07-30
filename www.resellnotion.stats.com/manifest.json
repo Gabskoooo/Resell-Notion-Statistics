@@ -1,0 +1,51 @@
+{
+  "name": "Resell Notion Statistics",
+  "short_name": "R.N.S",
+  "description": "Resell Notion Statistics est un outil proposant un accompagnement à la gestion d'une légère activité commerciale.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/static/logo.png",
+      "sizes": "500x500",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/fond.png",
+      "sizes": "2000x943",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/sku_not_found.png",
+      "sizes": "2000x889",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/static/success_checkmark.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "static/screen_desktop.png",
+      "sizes": "1877x852",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Screen Desktop"
+    },
+    {
+      "src": "static/screen_mobile.png",
+      "sizes": "492x745",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Screen Mobile"
+    }
+  ]
+}
+
+

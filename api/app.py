@@ -24,7 +24,10 @@ import base64
 from flask_mail import Mail, Message
 from datetime import datetime, date, timedelta
 import matplotlib.ticker as mticker
-
+from PIL import Image, ImageDraw, ImageFont
+import io
+import requests
+import time
 from dateutil.relativedelta import relativedelta
 load_dotenv()
 # Render définit automatiquement DATABASE_URL pour votre base de données liée.
@@ -50,6 +53,7 @@ login_manager.login_view = 'login'
 login_manager.needs_refresh_message = "Votre session a expiré, veuillez vous reconnecter."
 login_manager.needs_refresh_message_category = "info"
 
+TABLE_NAME = "sku_database" # Le nom de la table
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 ASSETS_DIR = os.path.join(PROJECT_ROOT, '..', 'www.resellnotion.stats.com', 'assets')
 
@@ -565,25 +569,55 @@ except Exception as e:
 
 # --- NOUVELLE ROUTE POUR LES SUGGESTIONS SKU ---
 @app.route('/get_sku_suggestions', methods=['GET'])
-@login_required # Ajoutez cette ligne si vous voulez que les suggestions soient disponibles uniquement pour les utilisateurs connectés
+@login_required  # Cette ligne est conservée comme demandé
 def get_sku_suggestions():
-    query = request.args.get('query', '').upper()
+    query = request.args.get('query', '').strip()
     suggestions = []
-    if query:
-        count = 0
-        for item in SKU_DATA:
-            # Vérifie si le query est contenu dans le SKU (insensible à la casse)
-            # ou dans le nom du produit (insensible à la casse)
-            if query in item['sku'].upper() or query in item['product_name'].upper(): #
-                suggestions.append({
-                    'sku': item['sku'],
-                    'image_url': item['image_url'],
-                    'product_name': item['product_name'] # Ajout du nom du produit
-                })
-                count += 1
-                if count >= 10: # Limite à 10 suggestions pour de meilleures performances
-                    break
-    return jsonify(suggestions)
+
+    if not query:
+        return jsonify(suggestions)
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Impossible de se connecter à la base de données."}), 500
+
+        cur = conn.cursor()
+
+        # Le pattern de recherche pour ILIKE
+        search_pattern = f"%{query}%"
+
+        # Requête SQL pour rechercher dans 'sku' ou 'product_name' et limiter les résultats
+        sql_query = f"""
+            SELECT sku, image_url, product_name
+            FROM {TABLE_NAME}
+            WHERE sku ILIKE %s OR product_name ILIKE %s
+            LIMIT 10;
+        """
+
+        cur.execute(sql_query, (search_pattern, search_pattern))
+
+        results = cur.fetchall()
+
+        for row in results:
+            suggestions.append({
+                'sku': row[0],  # Premier élément est le sku
+                'image_url': row[1],  # Deuxième élément est l'image_url
+                'product_name': row[2]  # Troisième élément est le product_name
+            })
+
+        cur.close()
+        conn.close()
+
+        return jsonify(suggestions)
+
+    except Exception as e:
+        print(f"Erreur lors de la récupération des suggestions de SKU : {e}")
+        return jsonify({"error": f"Une erreur est survenue lors de la recherche de SKU: {e}"}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route('/register', methods=('GET', 'POST'))
@@ -983,26 +1017,429 @@ def add_product():
                            description=form_data['description'],
                            error=error)
 
+
+def get_product_name_suggestions():
+    query = request.args.get('query', '').strip()  # .strip() pour enlever les espaces inutiles
+    suggestions = []
+
+    if not query:
+        return jsonify(suggestions)  # Retourne une liste vide si la requête est vide
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Impossible de se connecter à la base de données."}), 500
+
+        cur = conn.cursor()
+
+        # Nous allons utiliser la clause ILIKE pour une recherche insensible à la casse
+        # et le caractère '%' pour les correspondances partielles.
+        # Nous concaténons '%' au début et à la fin de la requête.
+        search_pattern = f"%{query}%"
+
+        # Requête SQL pour rechercher dans product_name ou sku et limiter les résultats
+        sql_query = f"""
+            SELECT sku, product_name, image_url
+            FROM {TABLE_NAME}
+            WHERE product_name ILIKE %s OR sku ILIKE %s
+            LIMIT 10;
+        """
+
+        cur.execute(sql_query, (search_pattern, search_pattern))
+
+        results = cur.fetchall()  # Récupère tous les résultats
+
+        for row in results:
+            suggestions.append({
+                'sku': row[0],  # Premier élément est le sku
+                'name': row[1],  # Deuxième élément est le product_name
+                'image_url': row[2]  # Troisième élément est l'image_url
+            })
+
+        cur.close()
+        conn.close()  # Toujours fermer la connexion
+
+        return jsonify(suggestions)
+
+    except Exception as e:
+        print(f"Erreur lors de la récupération des suggestions : {e}")
+        return jsonify({"error": f"Une erreur est survenue lors de la recherche: {e}"}), 500
+    finally:
+        if conn:
+            # S'assurer que la connexion est fermée même en cas d'erreur non gérée
+            conn.close()
+
 @app.route('/get_product_name_suggestions', methods=['GET'])
 @login_required
 def get_product_name_suggestions():
-    query = request.args.get('query', '').upper()
+    query = request.args.get('query', '').strip()  # .strip() pour enlever les espaces inutiles
     suggestions = []
-    if query:
-        count = 0
-        for item in SKU_DATA:
-            # Vérifie si le query est contenu dans le nom du produit (insensible à la casse)
-            # ou dans le SKU (si vous voulez que la recherche par nom puisse aussi trouver par SKU)
-            if query in item['product_name'].upper() or query in item['sku'].upper():
-                suggestions.append({
-                    'sku': item['sku'],
-                    'name': item['product_name'], # Le nom du produit sera le 'name' pour le frontend
-                    'image_url': item['image_url']
-                })
-                count += 1
-                if count >= 10: # Limite à 10 suggestions pour de meilleures performances
-                    break
-    return jsonify(suggestions)
+
+    if not query:
+        return jsonify(suggestions)  # Retourne une liste vide si la requête est vide
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Impossible de se connecter à la base de données."}), 500
+
+        cur = conn.cursor()
+
+        # Nous allons utiliser la clause ILIKE pour une recherche insensible à la casse
+        # et le caractère '%' pour les correspondances partielles.
+        # Nous concaténons '%' au début et à la fin de la requête.
+        search_pattern = f"%{query}%"
+
+        # Requête SQL pour rechercher dans product_name ou sku et limiter les résultats
+        sql_query = f"""
+            SELECT sku, product_name, image_url
+            FROM {TABLE_NAME}
+            WHERE product_name ILIKE %s OR sku ILIKE %s
+            LIMIT 10;
+        """
+
+        cur.execute(sql_query, (search_pattern, search_pattern))
+
+        results = cur.fetchall()  # Récupère tous les résultats
+
+        for row in results:
+            suggestions.append({
+                'sku': row[0],  # Premier élément est le sku
+                'name': row[1],  # Deuxième élément est le product_name
+                'image_url': row[2]  # Troisième élément est l'image_url
+            })
+
+        cur.close()
+        conn.close()  # Toujours fermer la connexion
+
+        return jsonify(suggestions)
+
+    except Exception as e:
+        print(f"Erreur lors de la récupération des suggestions : {e}")
+        return jsonify({"error": f"Une erreur est survenue lors de la recherche: {e}"}), 500
+    finally:
+        if conn:
+            # S'assurer que la connexion est fermée même en cas d'erreur non gérée
+            conn.close()
+
+
+@app.route('/generate_wtb_wts_image', methods=['POST'])
+@login_required # Si la génération d'image nécessite une connexion, laissez-le. Sinon, retirez-le.
+def generate_wtb_wts_image():
+    try:
+        data = request.json
+        products_to_generate_raw = data.get('products')
+        mode = data.get('mode')
+
+        if not products_to_generate_raw:
+            return jsonify({'error': 'No products provided for image generation'}), 400
+
+        # 1. Regrouper les produits (conserve la logique de regroupement précédente)
+        grouped_products = {}
+        for product in products_to_generate_raw:
+            sku = product.get('sku', 'N/A')
+            # Utilisez defaultImageUrl défini côté client pour correspondre à la logique
+            default_placeholder_url_client = url_for('static', filename='sku_not_found.png', _external=True)
+            image_url = product.get('image_url', default_placeholder_url_client)
+            name = product.get('name', 'Produit Inconnu')
+            size = product.get('size', 'N/A')
+
+            key = (sku, image_url)  # Regroupement par SKU et URL d'image
+            if key not in grouped_products:
+                grouped_products[key] = {
+                    'name': name,
+                    'sku': sku,
+                    'image_url': image_url,
+                    'sizes': []
+                }
+            if size != 'N/A' and size not in grouped_products[key]['sizes']:
+                grouped_products[key]['sizes'].append(size)
+
+        final_products_for_image = list(grouped_products.values())
+        for p in final_products_for_image:
+            p['sizes'] = sorted(p['sizes'])
+
+        # --- NOUVEAU : Pagination des produits ---
+        max_products_per_image = 15  # 5 colonnes * 3 lignes
+        # Divise la liste des produits en lots
+        product_batches = [final_products_for_image[i:i + max_products_per_image]
+                           for i in range(0, len(final_products_for_image), max_products_per_image)]
+
+        generated_image_urls = []
+
+        for batch_index, product_batch in enumerate(product_batches):
+            # Charger l'image de fond
+            base_image_path = os.path.join(current_app.root_path, 'static', 'fond.png')
+            if not os.path.exists(base_image_path):
+                raise FileNotFoundError('Background image fond.png not found at path: ' + base_image_path)
+
+            base_img = Image.open(base_image_path).convert("RGBA")
+            img_width, img_height = base_img.size
+            draw = ImageDraw.Draw(base_img)
+
+            # Définir les polices par défaut (elles seront ajustées plus tard)
+            try:
+                font_path_bold = os.path.join(current_app.root_path, 'static', 'arialbd.ttf')
+                font_path_regular = os.path.join(current_app.root_path, 'static', 'arial.ttf')
+                # Les tailles de base sont des valeurs de référence pour le calcul de getlength
+                font_sku_base_ref = ImageFont.truetype(font_path_bold, 100)
+                font_size_base_ref = ImageFont.truetype(font_path_regular, 80)
+            except IOError:
+                current_app.logger.warning("Warning: Custom fonts not found, using default font.")
+                font_sku_base_ref = ImageFont.load_default()
+                font_size_base_ref = ImageFont.load_default()
+            except Exception as e:
+                current_app.logger.error(f"Error loading custom fonts: {e}, using default font.")
+                font_sku_base_ref = ImageFont.load_default()
+                font_size_base_ref = ImageFont.load_default()
+
+            num_products_in_batch = len(product_batch)
+            if num_products_in_batch == 0:
+                continue  # Passer au lot suivant si vide
+
+            # Définition des paramètres de disposition
+            margin_x = 50  # Marge horizontale totale pour l'image (gauche + droite)
+            margin_y = 50  # Marge verticale totale pour l'image (haut + bas)
+            spacing_x = 30  # Espace entre les colonnes
+            spacing_y = 30  # Espace entre les lignes
+
+            # Calcul du nombre de colonnes et de lignes pour ce lot
+            # Max 5 colonnes, Max 3 lignes par image
+            max_cols_per_image = 5
+            max_rows_per_image = 3
+
+            # Ajustement dynamique du nombre de colonnes pour 1, 2, 3, 4, 5 produits pour optimiser l'espace
+            if num_products_in_batch == 1:
+                cols = 1
+                rows = 1
+            elif num_products_in_batch == 2:
+                cols = 2
+                rows = 1
+            elif num_products_in_batch <= 5:  # 3, 4, 5 produits
+                cols = num_products_in_batch
+                rows = 1
+            elif num_products_in_batch <= 10:  # 6 à 10 produits
+                cols = 5
+                rows = 2
+            else:  # num_products_in_batch > 10 et <= 15 (max par image)
+                cols = 5
+                rows = 3
+
+            # Calcul des dimensions disponibles pour la grille de contenu
+            available_width = img_width - margin_x
+            available_height = img_height - margin_y
+
+            # Calcul de la largeur de cellule et de la hauteur de cellule
+            if cols > 0:
+                cell_width = (available_width - (cols - 1) * spacing_x) / cols
+            else:
+                cell_width = available_width
+
+            if rows > 0:
+                cell_height = (available_height - (rows - 1) * spacing_y) / rows
+            else:
+                cell_height = available_height
+
+            if cell_width <= 0 or cell_height <= 0:
+                current_app.logger.error(
+                    f"Calculated cell dimensions are invalid: cell_width={cell_width}, cell_height={cell_height}")
+                raise ValueError('Calculated cell dimensions are invalid. Not enough space for products.')
+
+            # Facteurs pour la répartition de l'espace dans chaque cellule
+            img_ratio = 0.6  # 60% de la hauteur de la cellule pour l'image
+            text_ratio = 0.4  # 40% de la hauteur de la cellule pour le texte
+            padding_inside_cell = 10  # Petit padding à l'intérieur de chaque cellule
+
+            # MODIFICATIONS ICI POUR LES TAILLES DE POLICE
+            # Définir une taille de police maximale et minimale pour assurer la lisibilité.
+            # J'ai augmenté ces valeurs pour une meilleure visibilité.
+            MIN_FONT_SIZE_PX_SKU = 35  # Augmenté pour une meilleure lisibilité
+            MIN_FONT_SIZE_PX_GENERAL = 30  # Augmenté pour une meilleure lisibilité
+            MAX_FONT_SIZE_PX_SKU = 70  # Nouvelle limite max plus haute
+            MAX_FONT_SIZE_PX_GENERAL = 60  # Nouvelle limite max plus haute
+
+            text_height_available = cell_height * text_ratio - 2 * padding_inside_cell
+
+            # Calcul d'une taille de police suggérée basée sur la hauteur disponible pour une ligne de texte
+            # On considère qu'il y aura 2 lignes de texte (SKU + Tailles) et un petit espacement entre elles.
+            # Diviser par 2.2 donne un peu plus d'espace pour chaque ligne et le padding.
+            suggested_font_size_height_sku = int(text_height_available / 2.1)  # Ajustement pour plus d'espace
+            suggested_font_size_height_general = int(text_height_available / 2.1)  # Ajustement pour plus d'espace
+
+            # Suggérer une taille de police basée sur la largeur de la cellule
+            # Pour que le texte ne dépasse pas la largeur de la cellule.
+            # On utilise getlength pour estimer la largeur du texte avec une taille de référence
+            # et on scale proportionnellement pour qu'il rentre dans la largeur disponible.
+            # On prend un facteur de 0.9 pour laisser un peu de marge.
+            avg_char_width_sku = font_sku_base_ref.getlength("M")  # Largeur moyenne d'un caractère
+            avg_char_width_general = font_size_base_ref.getlength("M")
+
+            # Estimer la largeur d'une chaîne typique (ex: SKU le plus long, liste de tailles)
+            # On prend un exemple de texte assez long pour le SKU et les tailles
+            sample_sku_text = "555088-105"  # Exemple de SKU typique
+            sample_sizes_text = "42 EU, 9 US, 8 UK"  # Exemple de tailles typiques
+
+            # Calcul basé sur la largeur disponible et une estimation de la longueur du texte
+            # On divise la largeur disponible par la "largeur relative" d'un texte de référence à sa taille de base
+            if font_sku_base_ref.getlength(sample_sku_text) > 0:
+                suggested_font_size_width_sku = int((cell_width - 2 * padding_inside_cell) / (
+                            font_sku_base_ref.getlength(sample_sku_text) / font_sku_base_ref.size) * 0.9)
+            else:
+                suggested_font_size_width_sku = MAX_FONT_SIZE_PX_SKU  # Fallback si le calcul échoue
+
+            if font_size_base_ref.getlength(sample_sizes_text) > 0:
+                suggested_font_size_width_general = int((cell_width - 2 * padding_inside_cell) / (
+                            font_size_base_ref.getlength(sample_sizes_text) / font_size_base_ref.size) * 0.9)
+            else:
+                suggested_font_size_width_general = MAX_FONT_SIZE_PX_GENERAL  # Fallback
+
+            # Prendre le minimum des suggestions de largeur et de hauteur pour chaque police
+            final_font_size_sku = min(suggested_font_size_height_sku, suggested_font_size_width_sku)
+            final_font_size_general = min(suggested_font_size_height_general, suggested_font_size_width_general)
+
+            # Appliquer les tailles minimales et maximales
+            final_font_size_sku = max(MIN_FONT_SIZE_PX_SKU, min(final_font_size_sku, MAX_FONT_SIZE_PX_SKU))
+            final_font_size_general = max(MIN_FONT_SIZE_PX_GENERAL,
+                                          min(final_font_size_general, MAX_FONT_SIZE_PX_GENERAL))
+
+            # Charger les polices avec les tailles adaptées
+            if font_path_bold and os.path.exists(font_path_bold):
+                font_sku_adapted = ImageFont.truetype(font_path_bold, final_font_size_sku)
+            else:
+                font_sku_adapted = ImageFont.load_default()
+
+            if font_path_regular and os.path.exists(font_path_regular):
+                font_size_adapted = ImageFont.truetype(font_path_regular, final_font_size_general)
+            else:
+                font_size_adapted = ImageFont.load_default()
+
+            for i, product in enumerate(product_batch):
+                col_index = i % cols
+                row_index = i // cols
+
+                # Calcul des coordonnées de départ pour chaque cellule
+                start_x = (margin_x // 2) + col_index * (cell_width + spacing_x)
+                start_y = (margin_y // 2) + row_index * (cell_height + spacing_y)
+
+                # Dessiner la carte noire semi-transparente
+                card_color = (0, 0, 0, 128)  # Noir avec 50% d'opacité (RGBA)
+                draw.rectangle([int(start_x), int(start_y), int(start_x + cell_width), int(start_y + cell_height)],
+                               fill=card_color)
+
+                # Zone allouée pour l'image dans la cellule
+                allocated_img_height = cell_height * img_ratio
+
+                # Charger et placer l'image du produit
+                max_img_width = cell_width - 2 * padding_inside_cell
+
+                try:
+                    product_image_url = product.get('image_url')
+                    sku_not_found_local_path = os.path.join(current_app.root_path, 'static', 'sku_not_found.png')
+
+                    if not product_image_url or \
+                            product_image_url == url_for('static', filename='placeholder.png', _external=True) or \
+                            product_image_url == url_for('static', filename='sku_not_found.png', _external=True):
+                        image_to_load_path = sku_not_found_local_path
+                        if os.path.exists(image_to_load_path):
+                            product_img = Image.open(image_to_load_path).convert("RGBA")
+                        else:
+                            raise FileNotFoundError(f"Default image sku_not_found.png not found: {image_to_load_path}")
+                    elif product_image_url.startswith('/static/'):
+                        local_path_from_static = os.path.join(current_app.root_path, product_image_url.lstrip('/'))
+                        if os.path.exists(local_path_from_static):
+                            product_img = Image.open(local_path_from_static).convert("RGBA")
+                        else:
+                            raise FileNotFoundError(f"Local static image not found: {local_path_from_static}")
+                    else:
+                        response = requests.get(product_image_url, timeout=5)
+                        response.raise_for_status()
+                        product_img_data = response.content
+                        product_img = Image.open(io.BytesIO(product_img_data)).convert("RGBA")
+
+                    product_img.thumbnail((max_img_width, allocated_img_height), Image.Resampling.LANCZOS)
+
+                    img_x_centered = start_x + (cell_width - product_img.width) // 2
+                    img_y_centered = start_y + padding_inside_cell + (allocated_img_height - product_img.height) // 2
+
+                    base_img.paste(product_img, (int(img_x_centered), int(img_y_centered)), product_img)
+
+                except (requests.exceptions.RequestException, FileNotFoundError, ValueError) as e:
+                    current_app.logger.error(
+                        f"Error fetching/processing image for product {product.get('name', 'N/A')} ({product.get('sku', 'N/A')}): {e}")
+                    error_text = "Image Indisponible"
+                    # Utiliser la police adaptée pour le message d'erreur également
+                    bbox_error = font_size_adapted.getbbox(error_text)
+                    text_width_error, text_height_error = bbox_error[2], bbox_error[3]
+                    text_x_error_centered = start_x + (cell_width - text_width_error) // 2
+                    text_y_error_centered = start_y + padding_inside_cell + (
+                                allocated_img_height - text_height_error) / 2
+                    draw.text((int(text_x_error_centered), int(text_y_error_centered)),
+                              error_text, font=font_size_adapted, fill=(255, 0, 0, 255))
+
+                except Exception as e:
+                    current_app.logger.error(
+                        f"Unexpected error processing image for product {product.get('name', 'N/A')} ({product.get('sku', 'N/A')}): {e}")
+                    error_text = "Erreur Image"
+                    bbox_error = font_size_adapted.getbbox(error_text)
+                    text_width_error, text_height_error = bbox_error[2], bbox_error[3]
+                    text_x_error_centered = start_x + (cell_width - text_width_error) // 2
+                    text_y_error_centered = start_y + padding_inside_cell + (
+                                allocated_img_height - text_height_error) / 2
+                    draw.text((int(text_x_error_centered), int(text_y_error_centered)),
+                              error_text, font=font_size_adapted, fill=(255, 0, 0, 255))
+
+                # Placer le SKU
+                sku_text = f"{product['sku']}"
+                actual_img_height_in_cell = product_img.height if 'product_img' in locals() else allocated_img_height
+
+                text_area_start_y = start_y + allocated_img_height
+                text_area_height = cell_height * text_ratio
+
+                bbox_sku = font_sku_adapted.getbbox(sku_text)
+                text_width_sku, text_height_sku = bbox_sku[2], bbox_sku[3]
+
+                sizes_text = f"{', '.join(product['sizes'])}"
+                bbox_sizes = font_size_adapted.getbbox(sizes_text)
+                text_width_size, text_height_size = bbox_sizes[2], bbox_sizes[3]
+
+                total_text_content_height = text_height_sku + text_height_size + padding_inside_cell / 2
+
+                text_block_y_offset_in_area = (text_area_height - total_text_content_height) / 2
+
+                text_y_sku = text_area_start_y + text_block_y_offset_in_area
+
+                text_x_sku_centered = start_x + (cell_width - text_width_sku) // 2
+                draw.text((int(text_x_sku_centered), int(text_y_sku)), sku_text, font=font_sku_adapted,
+                          fill=(255, 255, 255, 255))
+
+                # Placer les tailles
+                text_y_size = text_y_sku + text_height_sku + padding_inside_cell / 2
+
+                text_x_size_centered = start_x + (cell_width - text_width_size) // 2
+                draw.text((int(text_x_size_centered), int(text_y_size)), sizes_text, font=font_size_adapted,
+                          fill=(255, 255, 255, 255))
+
+            # Enregistrer l'image générée temporairement et ajouter son URL
+            output_dir = os.path.join(current_app.root_path, 'static', 'generated_images')
+            os.makedirs(output_dir, exist_ok=True)
+
+            timestamp = int(time.time())
+            output_filename = f'generated_image_{mode}_{timestamp}_batch{batch_index + 1}.png'
+            output_path = os.path.join(output_dir, output_filename)
+
+            base_img.save(output_path)
+            generated_image_urls.append(
+                url_for('static', filename=f'generated_images/{output_filename}', _external=True))
+
+        return jsonify({'image_urls': generated_image_urls})
+
+    except Exception as e:
+        current_app.logger.error(f"Error in generate_wtb_wts_image: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/products/<int:id>/edit', methods=('GET', 'POST'))
 @login_required
 @key_active_required
@@ -1539,6 +1976,33 @@ def edit_sale(id):
     # Pour la requête GET (affichage initial du formulaire d'édition)
     return render_template('edit_sale.html', sale=sale, products=products_for_dropdown)
 
+@app.route('/wtb_wts_gen', methods=('GET', 'POST'))
+@login_required
+@key_active_required
+def wtb_wts_gen():
+    conn = g.db
+    cur = None
+    products = [] # Liste pour les produits en stock (WTS)
+
+    try:
+        # Récupérer tous les produits en stock de l'utilisateur pour le mode WTS
+        # Nous avons besoin de l'image_url, sku, size pour la génération d'image
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute('SELECT id, name, sku, size, image_url, quantity FROM products WHERE user_id = %s ORDER BY name',
+                    (current_user.id,))
+        products = cur.fetchall()
+        cur.close()
+
+    except Exception as e:
+        flash(f"Une erreur est survenue lors du chargement des produits : {e}", 'danger')
+        print(f"Error loading products for WTS/WTB Gen: {e}")
+    finally:
+        if cur and not cur.closed:
+            cur.close()
+
+    # Le mode initial sera 'WTS' par défaut ou selon le paramètre de la requête si implémenté plus tard
+    # Pour l'instant, on ne gère pas de POST pour le choix du mode, juste l'affichage GET.
+    return render_template('wtb_wts_gen.html', products=products)
 
 @app.route('/statistics')
 @login_required # Décommentez si ces décorateurs sont nécessaires
@@ -2237,9 +2701,33 @@ def view_report(report_id):
     finally:
         if cur and not cur.closed:
             cur.close()
+
+from flask import Flask, render_template, send_from_directory
+
+@app.route('/manifest.json')
+def serve_manifest():
+    """
+    Sert le fichier manifest.json depuis la racine du projet.
+    """
+    return send_from_directory(app.root_path, 'manifest.json', mimetype='application/manifest+json')
+
+@app.route('/service-worker.js')
+def serve_service_worker():
+    """
+    Sert le fichier service-worker.js depuis la racine du projet.
+    """
+    return send_from_directory(app.root_path, 'service-worker.js', mimetype='application/javascript')
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
+
+@app.route('/offline.html')
+def offline_page():
+    # Si offline.html est dans le dossier 'templates':
+    return render_template('offline.html')
+    # Si offline.html est à la racine de votre projet Flask:
+    # return send_from_directory(app.root_path, 'offline.html')
 
 def init_db():
     conn = get_db()

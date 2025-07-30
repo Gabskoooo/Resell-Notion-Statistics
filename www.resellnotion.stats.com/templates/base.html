@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="manifest" href="/manifest.json">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Mon Application{% endblock %}</title>
@@ -335,6 +336,18 @@
             `;
             document.head.appendChild(style);
         });
+
+        // --- DÉBUT DU NOUVEAU SCRIPT POUR L'ENREGISTREMENT DU SERVICE WORKER ---
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
+              console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            }, function(err) {
+              console.log('ServiceWorker registration failed: ', err);
+            });
+          });
+        }
+        // --- FIN DU NOUVEAU SCRIPT POUR L'ENREGISTREMENT DU SERVICE WORKER ---
     </script>
 </body>
 </html>

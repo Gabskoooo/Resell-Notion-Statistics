@@ -2701,9 +2701,33 @@ def view_report(report_id):
     finally:
         if cur and not cur.closed:
             cur.close()
+
+from flask import Flask, render_template, send_from_directory
+
+@app.route('/manifest.json')
+def serve_manifest():
+    """
+    Sert le fichier manifest.json depuis la racine du projet.
+    """
+    return send_from_directory(app.root_path, 'manifest.json', mimetype='application/manifest+json')
+
+@app.route('/service-worker.js')
+def serve_service_worker():
+    """
+    Sert le fichier service-worker.js depuis la racine du projet.
+    """
+    return send_from_directory(app.root_path, 'service-worker.js', mimetype='application/javascript')
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
+
+@app.route('/offline.html')
+def offline_page():
+    # Si offline.html est dans le dossier 'templates':
+    return render_template('offline.html')
+    # Si offline.html est à la racine de votre projet Flask:
+    # return send_from_directory(app.root_path, 'offline.html')
 
 def init_db():
     conn = get_db()
