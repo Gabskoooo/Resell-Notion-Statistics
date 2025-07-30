@@ -200,7 +200,7 @@
                         </li>
                         {# BOUTON D'INSTALLATION PWA - APRÈS OPÉRATIONS SUPPLÉMENTAIRES (POUR DESKTOP) #}
                         <li class="nav-item">
-                            <button id="installButton" class="btn btn-sm btn-info ms-2">
+                            <button id="installButton" class="btn btn-sm btn-info ms-2" style="display: none;"> {# AJOUTÉ style="display: none;" #}
                                 <i class="bi bi-download"></i> <span id="installButtonText">Installer l'app</span>
                             </button>
                         </li>
@@ -273,7 +273,7 @@
                 </li>
                 {# BOUTON D'INSTALLATION PWA POUR L'OFFCANVAS #}
                 <li class="nav-item">
-                    <button id="installButtonOffcanvas" class="btn btn-primary" style="margin-top: 1rem;">
+                    <button id="installButtonOffcanvas" class="btn btn-primary" style="display: none; margin-top: 1rem;"> {# AJOUTÉ style="display: none;" #}
                         <i class="bi bi-download"></i> <span id="installButtonOffcanvasText">Installer l'application</span>
                     </button>
                 </li>
@@ -403,12 +403,18 @@
         // Fonction pour configurer les boutons en mode "Installer"
         function setInstallMode() {
             console.log('[PWA] Mode: Installer l\'application');
-            if (installButtonText) {
-                installButtonText.textContent = 'Installer l\'app';
+            if (installButton) { // Vérifier l'existence avant de manipuler
+                installButton.style.display = 'block'; // Rendre visible
+                if (installButtonText) {
+                    installButtonText.textContent = 'Installer l\'app';
+                }
                 installButton.onclick = handleInstallClick;
             }
-            if (installButtonOffcanvasText) {
-                installButtonOffcanvasText.textContent = 'Installer l\'application';
+            if (installButtonOffcanvas) { // Vérifier l'existence avant de manipuler
+                installButtonOffcanvas.style.display = 'block'; // Rendre visible
+                if (installButtonOffcanvasText) {
+                    installButtonOffcanvasText.textContent = 'Installer l\'application';
+                }
                 installButtonOffcanvas.onclick = handleInstallClick;
             }
             // Afficher la bannière uniquement si elle n'a pas été précédemment refusée
@@ -420,12 +426,19 @@
         // Fonction pour configurer les boutons en mode "Ouvrir"
         function setOpenAppMode() {
             console.log('[PWA] Mode: Ouvrir l\'application');
-            if (installButtonText) {
-                installButtonText.textContent = 'Ouvrir dans l\'application';
+            // Ces boutons doivent toujours être visibles quand l'app est installée
+            if (installButton) {
+                installButton.style.display = 'block';
+                if (installButtonText) {
+                    installButtonText.textContent = 'Ouvrir dans l\'application';
+                }
                 installButton.onclick = handleOpenAppClick;
             }
-            if (installButtonOffcanvasText) {
-                installButtonOffcanvasText.textContent = 'Ouvrir dans l\'application';
+            if (installButtonOffcanvas) {
+                installButtonOffcanvas.style.display = 'block';
+                if (installButtonOffcanvasText) {
+                    installButtonOffcanvasText.textContent = 'Ouvrir dans l\'application';
+                }
                 installButtonOffcanvas.onclick = handleOpenAppClick;
             }
             // Cacher la bannière si l'app est installée
@@ -437,22 +450,35 @@
         // Gestion du clic pour l'installation
         function handleInstallClick() {
             if (deferredPrompt) {
-                installPromotion.style.display = 'none'; // Cacher la bannière après le clic
+                // Cacher tous les éléments d'installation quand l'invite est déclenchée
+                if (installPromotion) installPromotion.style.display = 'none';
+                if (installButton) installButton.style.display = 'none'; // Masquer après le clic
+                if (installButtonOffcanvas) installButtonOffcanvas.style.display = 'none'; // Masquer après le clic
+
                 deferredPrompt.prompt();
                 deferredPrompt.userChoice.then((choiceResult) => {
                     if (choiceResult.outcome === 'accepted') {
                         console.log('[PWA] L\'utilisateur a accepté l\'installation.');
                     } else {
                         console.log('[PWA] L\'utilisateur a refusé l\'installation.');
-                        // Si l'utilisateur refuse, on peut décider de réafficher la bannière ou non.
-                        // Pour l'instant, on la laisse cachée et le bouton revient à "Installer"
-                        // si l'événement `beforeinstallprompt` se redéclenche.
+                        // Optionnel: Si l'utilisateur refuse, on peut choisir de ré-afficher les boutons "Installer"
+                        // setInstallMode(); // Décommenter si vous voulez ré-afficher après un refus
                     }
                     deferredPrompt = null; // Réinitialise l'événement après l'invite
                 });
             } else {
-                console.log('[PWA] deferredPrompt non disponible. L\'invite n\'a pas été stockée.');
-                alert("Pour installer l'application, veuillez utiliser la fonctionnalité 'Ajouter à l'écran d'accueil' ou 'Installer l'application' disponible dans le menu de votre navigateur.");
+                console.log('[PWA] deferredPrompt non disponible. L\'invite n\'a pas été stockée. L\'application est peut-être déjà installée ou le navigateur n\'est pas prêt.');
+                // L'alerte est supprimée ici !
+                // alert("Pour installer l'application, veuillez utiliser la fonctionnalité 'Ajouter à l'écran d'accueil' ou 'Installer l'application' disponible dans le menu de votre navigateur.');
+
+                // Si l'app est déjà installée, s'assurer que les boutons sont en mode "Ouvrir"
+                if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+                     setOpenAppMode();
+                } else {
+                    // Si l'app n'est pas installée ET deferredPrompt est null, on pourrait informer l'utilisateur autrement
+                    // ou simplement ne rien faire et attendre que le navigateur déclenche beforeinstallprompt.
+                    // Pour l'instant, les boutons restent cachés s'ils étaient cachés initialement.
+                }
             }
         }
 
@@ -501,11 +527,9 @@
                 setOpenAppMode();
             } else {
                 // L'application n'est pas en mode standalone
-                // Si deferredPrompt a été stocké, setInstallMode sera appelé par l'écouteur beforeinstallprompt
-                // Sinon, les boutons resteront par défaut jusqu'à ce que l'événement se déclenche.
-                // On s'assure que les boutons sont au moins visibles en mode "Installer" si l'app n'est pas installée
-                // et que l'événement beforeinstallprompt n'a pas encore eu lieu ou n'a pas été géré
-                setInstallMode(); // Initialise les boutons à "Installer l'app" et gère la bannière
+                // On n'appelle PAS setInstallMode() ici.
+                // L'affichage des boutons "Installer" et de la bannière sera géré par l'événement 'beforeinstallprompt'
+                // qui se déclenchera lorsque le navigateur sera prêt.
             }
         });
         // --- FIN DU SCRIPT POUR L'INVITE D'INSTALLATION PWA ---
