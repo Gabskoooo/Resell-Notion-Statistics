@@ -1,4 +1,3 @@
-{# templates/sales.html #}
 {% extends 'base.html' %}
 
 {% block title %}Historique des Ventes{% endblock %}
@@ -45,6 +44,11 @@
             box-shadow: 0 -2px 10px rgba(0,0,0,0.5);
             z-index: 1000;
             display: none; /* Masqué par défaut */
+            transform: translateY(100%); /* Caché par défaut */
+            transition: transform 0.3s ease-in-out;
+        }
+        #actionPanel.show {
+            transform: translateY(0); /* Affiche le panneau */
         }
         #actionPanel .btn {
             width: 100%;
@@ -66,6 +70,7 @@
     .sale-header-label {
         font-weight: bold;
         white-space: nowrap;
+        color: #dcddde;
     }
     /* S'assurer que les textes des produits ne wrap pas à moins que la colonne ne le permette */
     .sale-info-text {
@@ -76,14 +81,51 @@
     }
     /* Style pour la surbrillance de la carte sélectionnée */
     .sale-card.selected-sale-card {
-        border: 2px solid #007bff; /* Couleur de surbrillance Bootstrap primary */
-        box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+        border: 2px solid #7289da; /* Nouvelle couleur de surbrillance */
+        box-shadow: 0 0 10px rgba(114, 137, 218, 0.5);
     }
     .badge {
         font-size: 0.9em; /* Ajuste la taille du badge de profit */
     }
+
+    /* NOUVEAUX STYLES POUR LES ANIMATIONS */
+    .animated-card {
+        opacity: 0;
+        animation: fadeIn 0.5s ease-in-out forwards;
+        animation-delay: var(--animation-delay);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .sale-card {
+        background-color: #2c2f33; /* Fond gris foncé */
+        border: none;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        color: #dcddde;
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    .sale-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+    .card-header-bg {
+        background-color: #23272a; /* Encore plus sombre pour l'en-tête */
+        border: none;
+        color: #dcddde;
+    }
 </style>
-<h1 class="mb-4">Historique des Ventes</h1>
+<h1 class="mb-4 text-white">Historique des Ventes</h1>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -98,28 +140,28 @@
 <a href="{{ url_for('add_sale') }}" class="btn btn-primary mb-3">Enregistrer une nouvelle vente</a>
 
 {# Carte d'en-tête flottante - Visible sur desktop seulement #}
-<div class="card text-white mb-3 d-none d-md-block" style="background-color: rgba(0, 0, 0, 0.7);">
-    <div class="card-body py-2"> {# Padding vertical réduit #}
-        <div class="row align-items-center g-2"> {# g-2 pour un petit espacement entre les colonnes #}
-            <div class="col-md-3"> {# Nom #}
+<div class="card card-header-bg mb-3 d-none d-md-block">
+    <div class="card-body py-2">
+        <div class="row align-items-center g-2">
+            <div class="col-md-3">
                 <span class="sale-header-label">Nom</span>
             </div>
-            <div class="col-md-2"> {# SKU #}
+            <div class="col-md-2">
                 <span class="sale-header-label">SKU</span>
             </div>
-            <div class="col-md-1 text-center"> {# Taille #}
+            <div class="col-md-1 text-center">
                 <span class="sale-header-label">Taille</span>
             </div>
-            <div class="col-md-2 text-center"> {# Prix Vente #}
+            <div class="col-md-2 text-center">
                 <span class="sale-header-label">Prix Vente (€)</span>
             </div>
-            <div class="col-md-1 text-center"> {# Bénéfice #}
+            <div class="col-md-1 text-center">
                 <span class="sale-header-label">Bénéfice (€)</span>
             </div>
-            <div class="col-md-2 text-center"> {# Date Vente #}
+            <div class="col-md-2 text-center">
                 <span class="sale-header-label">Date Vente</span>
             </div>
-            <div class="col-md-1 text-md-end"> {# Options #}
+            <div class="col-md-1 text-md-end">
                 <span class="sale-header-label">Options</span>
             </div>
         </div>
@@ -129,34 +171,34 @@
 {% if sales %}
 <div class="row">
     {% for sale in sales %}
-    <div class="col-12 mb-3">
-        <div class="card text-white sale-card" style="background-color: rgba(0, 0, 0, 0.7); font-size: 0.9em;" data-sale-id="{{ sale.id }}" data-sale-name="{{ sale.item_name }}">
+    <div class="col-12 mb-3 animated-card" style="--animation-delay: {{ loop.index0 * 0.1 }}s;">
+        <div class="card text-white sale-card" data-sale-id="{{ sale.id }}" data-sale-name="{{ sale.item_name }}">
             <div class="card-body">
                 <div class="row align-items-center card-sale-row g-2">
-                    <div class="col-12 col-md-3"> {# Nom #}
+                    <div class="col-12 col-md-3">
                         <span class="d-inline d-md-none sale-header-label">Nom: </span><span class="sale-info-text">{{ sale.item_name }}</span>
                     </div>
-                    <div class="col-12 col-md-2"> {# SKU #}
+                    <div class="col-12 col-md-2">
                         <span class="d-inline d-md-none sale-header-label">SKU: </span><span class="sale-info-text">{{ sale.sku }}</span>
                     </div>
-                    <div class="col-12 col-md-1 text-center text-md-start"> {# Taille #}
+                    <div class="col-12 col-md-1 text-center text-md-start">
                         <span class="d-inline d-md-none sale-header-label">Taille: </span><span class="sale-info-text">{{ sale.size if sale.size else 'N/A' }}</span>
                     </div>
-                    <div class="col-12 col-md-2 text-center text-md-start"> {# Prix Vente #}
+                    <div class="col-12 col-md-2 text-center text-md-start">
                         <span class="d-inline d-md-none sale-header-label">Prix Vente (€): </span><span class="sale-info-text">{{ sale.sale_price_formatted }}</span>
                     </div>
-                    <div class="col-12 col-md-1 text-center text-md-start"> {# Bénéfice #}
+                    <div class="col-12 col-md-1 text-center text-md-start">
                         <span class="d-inline d-md-none sale-header-label">Bénéfice (€): </span>
                         <span class="badge {% if sale.profit > 0 %}bg-success{% elif sale.profit < 0 %}bg-danger{% else %}bg-secondary{% endif %}">
                             {{ sale.profit_formatted }}
                         </span>
                     </div>
-                    <div class="col-12 col-md-2 text-center text-md-start"> {# Date Vente #}
+                    <div class="col-12 col-md-2 text-center text-md-start">
                         <span class="d-inline d-md-none sale-header-label">Date Vente: </span><span class="sale-info-text">{{ sale.sale_date }}</span>
                     </div>
 
-                    <div class="col-12 col-md-1 mt-3 mt-md-0 text-md-end"> {# Options button #}
-                        <button type="button" class="btn btn-sm btn-secondary toggle-action-panel">...</button>
+                    <div class="col-12 col-md-1 mt-3 mt-md-0 text-md-end">
+                        <button type="button" class="btn btn-sm btn-secondary toggle-action-panel" data-no-overlay>...</button>
                     </div>
                 </div>
             </div>
@@ -165,18 +207,18 @@
     {% endfor %}
 </div>
 {% else %}
-    <p>Aucune vente enregistrée pour le moment.</p>
+    <p class="text-white">Aucune vente enregistrée pour le moment.</p>
 {% endif %}
 
 {# Panneau d'actions flottant #}
-<div id="actionPanel" class="text-white bg-dark p-3 rounded" style="display:none; position:fixed; bottom:20px; right:20px; z-index:100;">
+<div id="actionPanel" class="text-white bg-dark p-3 rounded">
     <h5>Actions pour : <span id="selectedSaleNameDisplay"></span></h5>
     <div class="d-flex flex-column">
         <a id="editSaleLink" href="#" class="btn btn-info mb-2">Modifier</a>
         <form id="deleteSaleForm" method="post" action="#" style="display:inline;">
             <button type="submit" class="btn btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette vente ?');">Supprimer</button>
         </form>
-        <button id="hideActionPanelBtn" class="btn btn-secondary mt-3">Masquer les actions</button>
+        <button id="hideActionPanelBtn" class="btn btn-secondary mt-3" data-no-overlay>Masquer les actions</button>
     </div>
 </div>
 
@@ -189,23 +231,24 @@
         const deleteSaleForm = document.getElementById('deleteSaleForm');
         const hideActionPanelBtn = document.getElementById('hideActionPanelBtn');
 
-        const baseUrl = "{{ url_for('sales') }}"; // Base URL for sales routes
+        const baseUrl = "{{ url_for('sales') }}";
 
         salesCards.forEach(card => {
             card.addEventListener('click', function(event) {
-                // Check if the click originated from the '...' button or anywhere else on the card
                 if (event.target.closest('.toggle-action-panel')) {
                     const saleId = this.dataset.saleId;
                     const saleName = this.dataset.saleName;
 
-                    // Update action panel content
-                    selectedSaleNameDisplay.innerText = `Article: ${saleName}`;
+                    selectedSaleNameDisplay.innerText = `${saleName}`;
                     editSaleLink.href = `${baseUrl}/${saleId}/edit`;
                     deleteSaleForm.action = `${baseUrl}/${saleId}/delete`;
 
                     actionPanel.style.display = 'block';
+                    // Ajout d'une classe pour déclencher l'animation sur mobile
+                    if (window.innerWidth < 768) {
+                        actionPanel.classList.add('show');
+                    }
 
-                    // Handle selected card highlighting
                     document.querySelectorAll('.sale-card').forEach(c => c.classList.remove('selected-sale-card'));
                     this.classList.add('selected-sale-card');
                 }
@@ -214,6 +257,9 @@
 
         hideActionPanelBtn.addEventListener('click', function() {
             actionPanel.style.display = 'none';
+            if (window.innerWidth < 768) {
+                actionPanel.classList.remove('show');
+            }
             document.querySelectorAll('.sale-card').forEach(c => c.classList.remove('selected-sale-card'));
         });
     });

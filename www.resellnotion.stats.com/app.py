@@ -935,87 +935,71 @@ def products():
         if cur and not cur.closed:
             cur.close()
 
+
 @app.route('/products/add', methods=('GET', 'POST'))
 @login_required
 def add_product():
-    print(f"DEBUG: Accès à /products/add. Utilisateur authentifié : {current_user.is_authenticated}")
-    if current_user.is_authenticated:
-        print(f"DEBUG: ID de l'utilisateur : {current_user.id}, Nom d'utilisateur : {current_user.username}")
-    else:
-        print("DEBUG: current_user n'est PAS authentifié malgré @login_required.")
-
-    error = None
-    form_data = {
-        'sku': request.form.get('sku', ''),
-        'name': request.form.get('name', ''),
-        'size': request.form.get('size', ''),
-        'purchase_price': request.form.get('purchase_price', ''),
-        'quantity': request.form.get('quantity', ''),
-        'image_url': request.form.get('image_url', ''),
-        'description': request.form.get('description', '')
-    }
-
     if request.method == 'POST':
-        if not form_data['sku']:
-            error = 'La référence SKU est requise !'
-        elif not form_data['name']:
-            error = 'Le nom est requis !'
-        elif not form_data['purchase_price'] or not (form_data['purchase_price'].replace('.', '', 1).isdigit()):
-            error = 'Le prix d\'achat est requis et doit être un nombre valide !'
-        elif not form_data['quantity'] or not form_data['quantity'].isdigit() or int(form_data['quantity']) <= 0:
-            error = 'La quantité doit être un nombre entier positif !'
+        sku = request.form.get('sku', '')
+        name = request.form.get('name', '')
+        image_url = request.form.get('image_url', '')
+        description = request.form.get('description', '')
 
-        if error is None:
-            conn = g.db
-            cur = None # Initialisation du curseur
+        # Récupération des listes de tailles et de prix
+        sizes = request.form.getlist('sizes[]')
+        prices_str = request.form.getlist('prices[]')
 
-            try:
-                current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                purchase_price_float = float(form_data['purchase_price'])
-                quantity_int = int(form_data['quantity'])
-                selling_price_float = purchase_price_float
+        if not sku or not name:
+            flash('La référence SKU et le nom sont requis.', 'danger')
+            return redirect(url_for('add_product'))
 
-                cur = conn.cursor() # Crée un curseur pour l'insertion
+        if not sizes or not prices_str:
+            flash('Veuillez ajouter au moins une taille et un prix.', 'danger')
+            return redirect(url_for('add_product'))
+
+        if len(sizes) != len(prices_str):
+            flash('Erreur de formulaire: le nombre de tailles et de prix ne correspond pas.', 'danger')
+            return redirect(url_for('add_product'))
+
+        conn = g.db
+        cur = conn.cursor()
+        try:
+            current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            for size, price_str in zip(sizes, prices_str):
+                try:
+                    purchase_price = float(price_str)
+                    # Quantité par défaut à 1, car le champ a été supprimé
+                    quantity = 1
+                except ValueError:
+                    flash(f'Erreur de format pour le prix "{price_str}". Veuillez entrer un nombre valide.', 'danger')
+                    conn.rollback()
+                    return redirect(url_for('add_product'))
+
                 cur.execute(
-                    'INSERT INTO products (user_id, sku, name, size, purchase_price, quantity, price, description, image_url, date_added) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)', # Placeholders %s
-                    (current_user.id,
-                     form_data['sku'], form_data['name'], form_data['size'],
-                     purchase_price_float, quantity_int, selling_price_float, form_data['description'],
-                     form_data['image_url'],
+                    'INSERT INTO products (user_id, sku, name, size, purchase_price, quantity, price, description, image_url, date_added) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
+                    (current_user.id, sku, name, size, purchase_price, quantity, purchase_price, description, image_url,
                      current_date)
                 )
-                conn.commit()
-                flash('Produit ajouté avec succès !', 'success')
-                return redirect(url_for('products'))
-            except ValueError:
-                conn.rollback() # Annuler la transaction en cas d'erreur de valeur
-                error = "Erreur de format pour le prix ou la quantité. Veuillez entrer des nombres valides."
-                flash(error, 'danger')
-            except Exception as e:
-                conn.rollback() # Annuler la transaction pour toute autre erreur
-                error = f'Une erreur est survenue lors de l\'ajout du produit : {e}'
-                print(f"DEBUG: Erreur détaillée dans le bloc try/except : {e}")
-                flash(error, 'danger')
-            finally:
-                if cur and not cur.closed: # S'assurer que le curseur est fermé
-                    cur.close()
 
-    display_purchase_price = form_data['purchase_price']
-    if display_purchase_price:
-        try:
-            display_purchase_price = float(display_purchase_price)
-        except ValueError:
-            display_purchase_price = ''
+            conn.commit()
+            flash(f'{len(sizes)} produit(s) ajouté(s) avec succès !', 'success')
+            return redirect(url_for('products'))
 
+        except Exception as e:
+            conn.rollback()
+            flash(f'Une erreur est survenue lors de l\'ajout des produits : {e}', 'danger')
+            return redirect(url_for('add_product'))
+        finally:
+            cur.close()
+
+    # Pour les requêtes GET, on s'assure que toutes les variables sont définies
+    # avec des valeurs par défaut pour éviter l'erreur Jinja2.
     return render_template('add_product.html',
-                           sku=form_data['sku'],
-                           name=form_data['name'],
-                           size=form_data['size'],
-                           purchase_price=display_purchase_price,
-                           quantity=form_data['quantity'],
-                           image_url=form_data['image_url'],
-                           description=form_data['description'],
-                           error=error)
+                           sku='',
+                           name='',
+                           image_url='',
+                           description='')
 
 
 def get_product_name_suggestions():
@@ -2835,4 +2819,4 @@ if __name__ == '__main__':
     #    et que votre fonction 'get_db()' utilise bien 'psycopg2' et 'DATABASE_URL'.
     #    (Comme discuté précédemment)
 
-    app.run(debug=True, port=8000)
+    app.run(debug=False, port=8000)

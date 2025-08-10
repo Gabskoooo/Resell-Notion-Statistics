@@ -143,16 +143,55 @@
         .install-promotion-banner .container {
             max-width: 960px; /* Adaptez à votre mise en page Bootstrap */
         }
+
+        /* Styles pour l'écran de chargement */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Classe pour cacher l'overlay */
+        .hidden {
+            opacity: 0 !important;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
+    <div id="loading-overlay">
+      <div class="spinner"></div>
+    </div>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
            {# LOGO - TAILLE GROSSIE #}
            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
                <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" style="height: 40px; margin-right: 10px;"> {# Hauteur augmentée #}
            </a>
-            <button class="navbar-toggler" type="button" aria-controls="offcanvasMenu" aria-expanded="false" aria-label="Toggle navigation">
+            <button class="navbar-toggler" type="button" aria-controls="offcanvasMenu" aria-expanded="false" aria-label="Toggle navigation" data-no-overlay>
                 <span class="navbar-toggler-icon"></span>
             </button>
             {# Le collapse original reste pour les écrans non-mobiles#}
@@ -173,7 +212,7 @@
                         </li>
                         {# BOUTONS PRODUITS ET VENTES DÉPLACÉS APRÈS LES EMOJIS #}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownProducts" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownProducts" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-no-overlay>
                                 <span style="font-size: 1.2em;">📦</span> Produits
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="navbarDropdownProducts">
@@ -182,7 +221,7 @@
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownSales" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownSales" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-no-overlay>
                                 <span style="font-size: 1.2em;">🎫</span> Ventes
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="navbarDropdownSales">
@@ -200,7 +239,7 @@
                         </li>
                         {# BOUTON D'INSTALLATION PWA - APRÈS OPÉRATIONS SUPPLÉMENTAIRES (POUR DESKTOP) #}
                         <li class="nav-item">
-                            <button id="installButton" class="btn btn-sm btn-info ms-2" style="display: none;"> {# AJOUTÉ style="display: none;" #}
+                            <button id="installButton" class="btn btn-sm btn-info ms-2" style="display: none;" data-no-overlay> {# AJOUTÉ style="display: none;" #}
                                 <i class="bi bi-download"></i> <span id="installButtonText">Installer l'app</span>
                             </button>
                         </li>
@@ -209,7 +248,7 @@
                 <ul class="navbar-nav ms-auto">
                     {% if current_user.is_authenticated %}
                      <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownUser" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownUser" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-no-overlay>
                                 👤 {# EMOJI PROFIL - TAILLE GROSSIE #}
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="navbarDropdownUser">
@@ -234,7 +273,7 @@
     {# Offcanvas Menu for Mobile #}
     <div class="offcanvas-overlay" id="offcanvasOverlay"></div>
     <div class="offcanvas-menu" id="offcanvasMenu">
-        <button type="button" class="btn-close btn-close-white ms-auto" aria-label="Close" id="offcanvasCloseBtn"></button>
+        <button type="button" class="btn-close btn-close-white ms-auto" aria-label="Close" id="offcanvasCloseBtn" data-no-overlay></button>
         <ul class="navbar-nav">
             {% if current_user.is_authenticated %}
                 <li class="nav-item">
@@ -247,7 +286,7 @@
                     <a class="nav-link" href="{{ url_for('leaderboard') }}"><span style="font-size: 1.5em;">🏆</span> Classement</a>
                 </li>
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="offcanvasDropdownProducts" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <a class="nav-link dropdown-toggle" href="#" id="offcanvasDropdownProducts" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-no-overlay>
                         <span style="font-size: 1.2em;">📦</span> Produits
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="offcanvasDropdownProducts">
@@ -256,7 +295,7 @@
                     </ul>
                 </li>
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="offcanvasDropdownSales" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <a class="nav-link dropdown-toggle" href="#" id="offcanvasDropdownSales" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-no-overlay>
                         <span style="font-size: 1.2em;">🎫</span> Ventes
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="offcanvasDropdownSales">
@@ -273,7 +312,7 @@
                 </li>
                 {# BOUTON D'INSTALLATION PWA POUR L'OFFCANVAS #}
                 <li class="nav-item">
-                    <button id="installButtonOffcanvas" class="btn btn-primary" style="display: none; margin-top: 1rem;"> {# AJOUTÉ style="display: none;" #}
+                    <button id="installButtonOffcanvas" class="btn btn-primary" style="display: none; margin-top: 1rem;" data-no-overlay> {# AJOUTÉ style="display: none;" #}
                         <i class="bi bi-download"></i> <span id="installButtonOffcanvasText">Installer l'application</span>
                     </button>
                 </li>
@@ -282,7 +321,7 @@
         <ul class="navbar-nav ms-auto">
             {% if current_user.is_authenticated %}
              <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="offcanvasDropdownUser" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <a class="nav-link dropdown-toggle" href="#" id="offcanvasDropdownUser" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-no-overlay>
                         👤 Mon Profil
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="offcanvasDropdownUser">
@@ -319,8 +358,8 @@
         <div class="container d-flex justify-content-between align-items-center py-2">
             <span>Profitez d'une meilleure expérience ! Installez notre application pour un accès rapide.</span>
             <div>
-                <button id="installPromotionBtn" class="btn btn-success me-2">Installer</button>
-                <button id="closePromotionBtn" class="btn btn-outline-light">Non merci</button>
+                <button id="installPromotionBtn" class="btn btn-success me-2" data-no-overlay>Installer</button>
+                <button id="closePromotionBtn" class="btn btn-outline-light" data-no-overlay>Non merci</button>
             </div>
         </div>
     </div>
@@ -534,6 +573,38 @@
         });
         // --- FIN DU SCRIPT POUR L'INVITE D'INSTALLATION PWA ---
 
+        // Script pour l'écran de chargement
+        document.addEventListener('DOMContentLoaded', function() {
+            const overlay = document.getElementById('loading-overlay');
+
+            // Cacher l'overlay lorsque la page est complètement chargée
+            window.addEventListener('load', function() {
+                overlay.classList.add('hidden');
+            });
+
+            // Afficher l'overlay au début d'un lien de navigation
+            document.querySelectorAll('a').forEach(link => {
+                // Ne s'applique qu'aux liens internes qui ne sont pas explicitement exclus
+                if (link.hostname === window.location.hostname && !link.hasAttribute('data-no-overlay') && link.href) {
+                    link.addEventListener('click', function(event) {
+                        // Éviter l'overlay si l'URL ne change pas (par exemple, si c'est une ancre interne)
+                        if (link.href !== window.location.href + '#') {
+                            overlay.classList.remove('hidden');
+                        }
+                    });
+                }
+            });
+
+            // Gérer également les soumissions de formulaires qui rechargent la page
+            document.querySelectorAll('form').forEach(form => {
+                // Ne pas appliquer sur les formulaires qui utilisent AJAX ou qui sont explicitement exclus
+                if (!form.hasAttribute('data-no-overlay')) {
+                    form.addEventListener('submit', function() {
+                        overlay.classList.remove('hidden');
+                    });
+                }
+            });
+        });
     </script>
 </body>
 </html>
