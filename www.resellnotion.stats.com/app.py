@@ -29,6 +29,7 @@ import io
 import requests
 import time
 from dateutil.relativedelta import relativedelta
+from discord_webhook import DiscordWebhook, DiscordEmbed
 load_dotenv()
 # Render définit automatiquement DATABASE_URL pour votre base de données liée.
 
@@ -1521,6 +1522,7 @@ def delete_product(id):
             cur.close()
 
 
+# --- Route add_sale() modifiée ---
 @app.route('/sales/add', methods=('GET', 'POST'))
 @login_required
 @key_active_required
@@ -1528,7 +1530,6 @@ def add_sale():
     conn = g.db
     cur = None
 
-    # Récupérer l'ID du produit depuis l'URL si c'est une requête GET
     preselected_product_id = request.args.get('product_id', None)
 
     try:
@@ -1543,7 +1544,6 @@ def add_sale():
         print(f"DEBUG: Erreur de chargement produits_for_dropdown : {e}")
         products_for_dropdown = []
 
-    # Initialisation du dictionnaire form_data
     form_data = {
         'product_id': None,
         'item_name': '',
@@ -1556,10 +1556,8 @@ def add_sale():
         'notes': ''
     }
 
-    # Si la requête est en GET et qu'un product_id est passé
     if request.method == 'GET' and preselected_product_id:
         try:
-            # On vérifie que le produit existe et appartient à l'utilisateur
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             cur.execute(
                 'SELECT id, name, purchase_price FROM products WHERE id = %s AND user_id = %s',
@@ -1570,12 +1568,9 @@ def add_sale():
             if preselected_product:
                 form_data['product_id'] = preselected_product['id']
                 form_data['item_name'] = preselected_product['name']
-                # Vous pouvez aussi pré-remplir d'autres champs si nécessaire
-                # par exemple: form_data['purchase_price'] = preselected_product['purchase_price']
         except Exception as e:
             flash("Produit pré-sélectionné introuvable.", "warning")
             print(f"DEBUG: Erreur de pré-sélection du produit : {e}")
-    # Si la requête est un POST, on utilise les données du formulaire
     elif request.method == 'POST':
         form_data = {
             'product_id': request.form.get('product_id', ''),
@@ -1589,7 +1584,6 @@ def add_sale():
             'notes': request.form.get('notes', '').strip()
         }
 
-    # Logique de traitement du formulaire POST
     if request.method == 'POST':
         product_id = form_data['product_id'] if form_data['product_id'] else None
         item_name = form_data['item_name']
@@ -1625,34 +1619,32 @@ def add_sale():
                 fees_float = float(fees_str) if fees_str else 0.0
 
                 purchase_price_at_sale = 0.0
+                product_sku = "N/A"
+                product_image_url = None  # Initialisation de l'URL de l'image
+
                 if product_id:
                     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                    # Modification de la requête pour inclure image_url
                     cur.execute(
-                        'SELECT purchase_price FROM products WHERE id = %s AND user_id = %s',
+                        'SELECT purchase_price, sku, image_url FROM products WHERE id = %s AND user_id = %s',
                         (product_id, current_user.id))
                     product_data_for_sale = cur.fetchone()
                     cur.close()
                     if product_data_for_sale:
                         purchase_price_at_sale = float(product_data_for_sale['purchase_price'])
+                        product_sku = product_data_for_sale['sku']
+                        product_image_url = product_data_for_sale['image_url']  # Récupération de l'URL de l'image
 
-                # Calcul du bénéfice par vente (profit) et du chiffre d'affaires (CA) de cette vente
-                # Le profit est déjà calculé
                 profit = sale_price_float - purchase_price_at_sale - shipping_cost_float - fees_float
-
-                # Le CA pour cette vente est simplement le prix de vente
-                # Si tu veux inclure les frais de port dans le CA, tu peux faire:
-                # sale_ca = sale_price_float + shipping_cost_float
-                # Pour l'instant, je considère le CA comme le prix de vente du produit
                 sale_ca = sale_price_float
 
                 cur = conn.cursor()
-                # MODIFICATION ESSENTIELLE ICI : Ajout de RETURNING id pour récupérer l'ID de la nouvelle vente
                 cur.execute(
                     'INSERT INTO sales (user_id, product_id, item_name, quantity, sale_price, purchase_price_at_sale, sale_date, notes, sale_channel, shipping_cost, fees, profit) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id',
                     (current_user.id, product_id, item_name, quantity_sold, sale_price_float, purchase_price_at_sale,
                      sale_date, notes, platform, shipping_cost_float, fees_float, profit)
                 )
-                new_sale_id = cur.fetchone()[0]  # Récupère l'ID de la vente nouvellement insérée
+                new_sale_id = cur.fetchone()[0]
                 cur.close()
 
                 if product_id:
@@ -1684,6 +1676,38 @@ def add_sale():
                             'Avertissement: Le produit lié à la vente n\'a pas été trouvé pour la mise à jour du stock.',
                             'warning')
 
+                # --- DÉBUT DE L'AJOUT DE LA NOTIFICATION DISCORD (mise à jour) ---
+                DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1404523543512748035/teqgeczafL9-rViNAysRP-EPViALok9DGfH1v19Kvekvk2mbACbNzB9ltqv7ZxRV6gW5'
+
+                if DISCORD_WEBHOOK_URL:
+                    try:
+                        webhook = DiscordWebhook(url=DISCORD_WEBHOOK_URL)
+
+                        embed = DiscordEmbed(
+                            title="Nouvelle Vente Enregistrée ! 💰",
+                            color=2067276
+                        )
+
+                        embed.add_embed_field(name="Article Vendu", value=item_name, inline=False)
+                        embed.add_embed_field(name="SKU", value=product_sku, inline=False)
+                        embed.add_embed_field(name="Prix de Vente", value=f"{sale_price_float:.2f} €", inline=False)
+                        embed.add_embed_field(name="Plateforme", value=platform if platform else 'Non spécifié',
+                                              inline=False)
+
+                        # Ajout de l'image si l'URL existe
+                        if product_image_url:
+                            embed.set_image(url=product_image_url)
+
+                        current_date_time = datetime.now().strftime("%d-%m-%Y à %H:%M:%S")
+                        embed.set_footer(text=f"Resell Notion Statistics | {current_date_time}")
+
+                        webhook.add_embed(embed)
+                        webhook.execute()
+
+                    except Exception as discord_e:
+                        print(f"Erreur lors de l'envoi de la notification Discord: {discord_e}")
+                # --- FIN DE L'AJOUT DE LA NOTIFICATION DISCORD ---
+
                 # --- DÉBUT DE LA LOGIQUE D'INTÉGRATION DU CLASSEMENT ---
                 cur = conn.cursor()
                 cur.execute(
@@ -1696,13 +1720,11 @@ def add_sale():
                         last_updated = NOW();
                     """,
                     (current_user.id, sale_ca, profit)
-                    # Utilise current_user.id, le CA de la vente et le profit de la vente
                 )
                 cur.close()
                 # --- FIN DE LA LOGIQUE D'INTÉGRATION DU CLASSEMENT ---
 
                 conn.commit()
-                # MODIFICATION ESSENTIELLE ICI : Redirection vers la nouvelle page de succès
                 return redirect(url_for('sale_success', sale_id=new_sale_id))
 
             except ValueError:
@@ -1720,7 +1742,6 @@ def add_sale():
         else:
             flash(error, 'danger')
 
-    # Rendu du template, en s'assurant que les valeurs initiales sont correctement passées
     display_sale_price = '{:.2f}'.format(float(form_data['sale_price'])) if form_data['sale_price'] and form_data[
         'sale_price'].replace('.', '', 1).isdigit() else ''
     display_shipping_cost = '{:.2f}'.format(float(form_data['shipping_cost'])) if form_data['shipping_cost'] and \
@@ -1742,7 +1763,6 @@ def add_sale():
                                'fees': display_fees,
                                'notes': form_data['notes']
                            })
-
 @app.route('/leaderboard')
 @login_required # Pour que seuls les utilisateurs connectés puissent voir le classement
 def leaderboard():
