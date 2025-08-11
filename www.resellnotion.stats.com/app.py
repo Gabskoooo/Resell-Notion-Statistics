@@ -1988,9 +1988,10 @@ def wtb_wts_gen():
     # Pour l'instant, on ne gère pas de POST pour le choix du mode, juste l'affichage GET.
     return render_template('wtb_wts_gen.html', products=products)
 
+
 @app.route('/statistics')
-@login_required # Décommentez si ces décorateurs sont nécessaires
-@key_active_required # Décommentez si ces décorateurs sont nécessaires
+@login_required  # Décommentez si ces décorateurs sont nécessaires
+@key_active_required  # Décommentez si ces décorateurs sont nécessaires
 def statistics():
     conn = g.db
     user_id = current_user.id
@@ -2004,52 +2005,49 @@ def statistics():
     current_end_date = None
     previous_start_date = None
     previous_end_date = None
-    graph_granularity = 'month'  # Default graph granularity
+
+    # MODIFICATION DÉBUT : On force la granularité du graphique à 'jour' pour toutes les périodes
+    graph_granularity = 'day'
 
     if selected_period == 'this_week':
         current_start_date = today - timedelta(days=today.weekday())
         current_end_date = current_start_date + timedelta(days=6)
         previous_start_date = current_start_date - timedelta(days=7)
         previous_end_date = current_end_date - timedelta(days=7)
-        graph_granularity = 'day'
     elif selected_period == 'last_week':
         current_start_date = today - timedelta(days=today.weekday() + 7)
         current_end_date = current_start_date + timedelta(days=6)
         previous_start_date = current_start_date - timedelta(days=7)
         previous_end_date = current_end_date - timedelta(days=7)
-        graph_granularity = 'day'
     elif selected_period == 'this_month':
         current_start_date = today.replace(day=1)
         next_month_first_day = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
         current_end_date = next_month_first_day - timedelta(days=1)
         previous_end_date = current_start_date - timedelta(days=1)
         previous_start_date = previous_end_date.replace(day=1)
-        graph_granularity = 'month'
     elif selected_period == 'last_month':
         current_start_date = (today.replace(day=1) - timedelta(days=1)).replace(day=1)
         current_end_date = today.replace(day=1) - timedelta(days=1)
         previous_end_date = current_start_date - timedelta(days=1)
         previous_start_date = previous_end_date.replace(day=1)
-        graph_granularity = 'month'
     elif selected_period == 'this_year':
         current_start_date = today.replace(month=1, day=1)
         current_end_date = today.replace(month=12, day=31)
         previous_start_date = current_start_date.replace(year=current_start_date.year - 1)
         previous_end_date = current_end_date.replace(year=current_end_date.year - 1)
-        graph_granularity = 'month'
     elif selected_period == 'last_year':
         current_start_date = today.replace(year=today.year - 1, month=1, day=1)
         current_end_date = today.replace(year=today.year - 1, month=12, day=31)
         previous_start_date = current_start_date.replace(year=current_start_date.year - 1)
         previous_end_date = current_end_date.replace(year=current_end_date.year - 1)
-        graph_granularity = 'month'
     else:  # Fallback to 'this_month'
         current_start_date = today.replace(day=1)
         next_month_first_day = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
         current_end_date = next_month_first_day - timedelta(days=1)
         previous_end_date = current_start_date - timedelta(days=1)
         previous_start_date = previous_end_date.replace(day=1)
-        graph_granularity = 'month'
+
+    # FIN DE MODIFICATION
 
     current_start_date_str = current_start_date.strftime('%Y-%m-%d')
     current_end_date_str = current_end_date.strftime('%Y-%m-%d')
@@ -2119,66 +2117,35 @@ def statistics():
         graph_cogs_values = []
         graph_profit_values = []
 
-        if graph_granularity == 'day':
-            graph_query = '''
-                SELECT
-                    TO_CHAR(sale_date, 'YYYY-MM-DD') AS period_label, -- MODIFICATION ICI
-                    SUM(sale_price * quantity) AS revenue,
-                    SUM(purchase_price_at_sale * quantity) AS cogs,
-                    SUM((sale_price - purchase_price_at_sale) * quantity) AS profit
-                FROM sales
-                WHERE user_id = %s AND sale_date BETWEEN %s AND %s
-                GROUP BY period_label
-                ORDER BY period_label
-            '''
-            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            cur.execute(graph_query, (user_id, current_start_date_str, current_end_date_str))
-            graph_data = cur.fetchall()
-            cur.close()
+        # DÉBUT DE LA MODIFICATION PRINCIPALE : L'ensemble du code de génération de graphique est maintenant inconditionnel
+        # et utilise toujours la granularité 'jour'.
+        graph_query = '''
+            SELECT
+                TO_CHAR(sale_date, 'YYYY-MM-DD') AS period_label,
+                SUM(sale_price * quantity) AS revenue,
+                SUM(purchase_price_at_sale * quantity) AS cogs,
+                SUM((sale_price - purchase_price_at_sale) * quantity) AS profit
+            FROM sales
+            WHERE user_id = %s AND sale_date BETWEEN %s AND %s
+            GROUP BY period_label
+            ORDER BY period_label
+        '''
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(graph_query, (user_id, current_start_date_str, current_end_date_str))
+        graph_data = cur.fetchall()
+        cur.close()
 
-            current_day_iter = current_start_date
-            while current_day_iter <= current_end_date:
-                day_str = current_day_iter.strftime('%Y-%m-%d')
-                found_data = next((row for row in graph_data if row['period_label'] == day_str), None)
+        current_day_iter = current_start_date
+        while current_day_iter <= current_end_date:
+            day_str = current_day_iter.strftime('%Y-%m-%d')
+            found_data = next((row for row in graph_data if row['period_label'] == day_str), None)
 
-                graph_labels.append(day_str)
-                graph_revenue_values.append(found_data['revenue'] if found_data else 0)
-                graph_cogs_values.append(found_data['cogs'] if found_data else 0)
-                graph_profit_values.append(found_data['profit'] if found_data else 0)
-                current_day_iter += timedelta(days=1)
-        else:  # graph_granularity == 'month'
-            graph_query = '''
-                SELECT
-                    TO_CHAR(sale_date, 'YYYY-MM') AS period_label, -- MODIFICATION ICI
-                    SUM(sale_price * quantity) AS revenue,
-                    SUM(purchase_price_at_sale * quantity) AS cogs,
-                    SUM((sale_price - purchase_price_at_sale) * quantity) AS profit
-                FROM sales
-                WHERE user_id = %s AND sale_date BETWEEN %s AND %s
-                GROUP BY period_label
-                ORDER BY period_label
-            '''
-            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            cur.execute(graph_query, (user_id, current_start_date_str, current_end_date_str))
-            graph_data = cur.fetchall()
-            cur.close()
-
-            current_month_iter = current_start_date.replace(day=1)
-            while current_month_iter <= current_end_date:
-                month_str = current_month_iter.strftime('%Y-%m')
-                found_data = next((row for row in graph_data if row['period_label'] == month_str), None)
-
-                month_name = calendar.month_abbr[current_month_iter.month]
-                formatted_month_label = f"{month_name} {current_month_iter.year}"
-                graph_labels.append(formatted_month_label)
-                graph_revenue_values.append(found_data['revenue'] if found_data else 0)
-                graph_cogs_values.append(found_data['cogs'] if found_data else 0)
-                graph_profit_values.append(found_data['profit'] if found_data else 0)
-
-                if current_month_iter.month == 12:
-                    current_month_iter = current_month_iter.replace(year=current_month_iter.year + 1, month=1)
-                else:
-                    current_month_iter = current_month_iter.replace(month=current_month_iter.month + 1)
+            graph_labels.append(day_str)
+            graph_revenue_values.append(found_data['revenue'] if found_data else 0)
+            graph_cogs_values.append(found_data['cogs'] if found_data else 0)
+            graph_profit_values.append(found_data['profit'] if found_data else 0)
+            current_day_iter += timedelta(days=1)
+        # FIN DE LA MODIFICATION PRINCIPALE
 
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
@@ -2228,7 +2195,8 @@ def statistics():
 
             # Titres et étiquettes avec couleur pour le thème sombre
             ax.set_title('Évolution des Ventes et Bénéfices (Période Actuelle)', color='#f8f9fa')
-            ax.set_xlabel('Jour' if graph_granularity == 'day' else 'Mois', color='#f8f9fa')
+            # MODIFICATION ICI pour l'étiquette de l'axe X
+            ax.set_xlabel('Jour', color='#f8f9fa')
             ax.set_ylabel('Montant (€)', color='#f8f9fa')
 
             # Couleur des ticks des axes
@@ -2288,9 +2256,6 @@ def statistics():
     finally:
         if cur and not cur.closed:  # S'assurer que le curseur est fermé
             cur.close()
-
-from datetime import datetime, date
-
 
 
 

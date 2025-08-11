@@ -45,6 +45,22 @@
             font-size: 0.85em;
         }
     }
+
+    /* Animation de fondu pour le formulaire */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animated-form {
+        animation: fadeIn 0.5s ease-in-out forwards;
+    }
 </style>
 <h1 class="mb-4">Ajouter une {% if operation_type == 'charge' %}Charge{% else %}Bonus{% endif %}</h1>
 
@@ -58,7 +74,7 @@
     {% endif %}
 {% endwith %}
 
-<form method="post">
+<form method="post" class="animated-form">
     <input type="hidden" name="type" value="{{ operation_type }}">
 
     <div class="mb-3">

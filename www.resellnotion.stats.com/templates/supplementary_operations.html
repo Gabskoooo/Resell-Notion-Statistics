@@ -4,7 +4,104 @@
 {% block title %}Opérations Supplémentaires{% endblock %}
 
 {% block content %}
-<h1 class="mb-4">Opérations Supplémentaires</h1>
+<style>
+    /* Styles Responsifs */
+    @media (max-width: 768px) {
+        h1 {
+            font-size: 1.8em;
+        }
+        .btn-add {
+            width: 100%;
+        }
+        .operation-card .card-body {
+            padding: 15px;
+        }
+        .operation-info-item {
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+    }
+
+    @media (max-width: 576px) {
+        h1 {
+            font-size: 1.5em;
+        }
+        .operation-card .card-body {
+            padding: 10px;
+        }
+        .operation-info-item {
+            font-size: 0.85em;
+        }
+    }
+
+    /* Animation de fondu pour les cartes */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animated-card {
+        animation: fadeIn 0.5s ease-in-out forwards;
+        animation-delay: var(--animation-delay);
+    }
+
+    /* Style général des cartes d'opération */
+    .operation-card {
+        background-color: rgba(44, 47, 51, 0.9); /* Gris foncé semi-transparent */
+        border: 1px solid #4f545c;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        color: #dcddde;
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    .operation-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Style spécifique pour les cartes "Charge" */
+    .charge-card {
+        border-left: 5px solid #dc3545;
+    }
+
+    /* Style spécifique pour les cartes "Bonus" */
+    .bonus-card {
+        border-left: 5px solid #28a745;
+    }
+
+    .operation-info-item strong {
+        color: #fff;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+    .btn-danger:hover {
+        background-color: #c82333;
+        border-color: #bd2130;
+    }
+    .btn-secondary {
+        background-color: #4f545c;
+        border-color: #4f545c;
+    }
+    .btn-secondary:hover {
+        background-color: #42464d;
+        border-color: #42464d;
+    }
+
+    .flashes .alert {
+        border-radius: 8px;
+    }
+</style>
+<h1 class="mb-4 text-white">Historique des Opérations Supplémentaires</h1>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -16,36 +113,44 @@
     {% endif %}
 {% endwith %}
 
-<div class="mb-3">
-    <a href="{{ url_for('add_supplementary_operation', type='charge') }}" class="btn btn-danger me-2">Ajouter une Charge</a>
-    <a href="{{ url_for('add_supplementary_operation', type='bonus') }}" class="btn btn-success">Ajouter un Bonus</a>
+<div class="mb-4 d-flex flex-wrap gap-2">
+    <a href="{{ url_for('add_supplementary_operation', operation_type='bonus') }}" class="btn btn-success btn-add">Ajouter un Bonus</a>
+    <a href="{{ url_for('add_supplementary_operation', operation_type='charge') }}" class="btn btn-danger btn-add">Ajouter une Charge</a>
 </div>
 
-<h2>Opérations Récentes</h2>
 {% if operations %}
-<div class="table-responsive">
-    <table class="table table-dark table-hover">
-        <thead>
-            <tr>
-                <th>Type</th>
-                <th>Montant</th>
-                <th>Description</th>
-                <th>Date</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for op in operations %}
-            <tr class="{% if op.type == 'bonus' %}table-success{% else %}table-danger{% endif %}">
-                <td>{{ op.type.capitalize() }}</td>
-                <td>{{ "%.2f"|format(op.amount) }} €</td>
-                <td>{{ op.description if op.description else 'N/A' }}</td>
-                <td>{{ op.operation_date.strftime('%Y-%m-%d') }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+    <div class="row g-3">
+        {% for operation in operations %}
+        <div class="col-12 animated-card" style="--animation-delay: {{ loop.index0 * 0.1 }}s;">
+            <div class="card operation-card {% if operation.type == 'charge' %}charge-card{% else %}bonus-card{% endif %}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="operation-info-item">
+                                <strong>Montant:</strong>
+                                <span class="fw-bold {% if operation.type == 'charge' %}text-danger{% else %}text-success{% endif %}">
+                                    {{ '%.2f'|format(operation.amount|float) }} €
+                                </span>
+                            </div>
+                            <div class="operation-info-item">
+                                <strong>Type:</strong> {{ 'Charge' if operation.type == 'charge' else 'Bonus' }}
+                            </div>
+                            {% if operation.description %}
+                            <div class="operation-info-item">
+                                <strong>Description:</strong> {{ operation.description }}
+                            </div>
+                            {% endif %}
+                            <div class="operation-info-item">
+                                <strong>Date:</strong> {{ operation.operation_date }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
 {% else %}
-<p>Aucune opération supplémentaire enregistrée pour le moment.</p>
+    <p class="text-white">Aucune opération supplémentaire enregistrée pour le moment.</p>
 {% endif %}
 {% endblock %}

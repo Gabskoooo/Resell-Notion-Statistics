@@ -5,12 +5,12 @@
 
 {% block content %}
 <style>
-    /* Vos styles responsifs existants */
+    /* Styles Responsifs */
     @media (max-width: 768px) {
         h1 {
             font-size: 1.8em;
         }
-        .form-label {
+        .form-label, .col-form-label {
             font-size: 0.9em;
         }
         .form-control, .form-select {
@@ -27,7 +27,7 @@
         h1 {
             font-size: 1.5em;
         }
-        .form-label {
+        .form-label, .col-form-label {
             font-size: 0.85em;
         }
         .form-control, .form-select {
@@ -40,160 +40,279 @@
         }
         /* Styles spécifiques pour les cartes sur très petits écrans */
         .product-cards-container {
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Force au moins 3 cartes (100px*3=300px min) */
-            gap: 8px; /* Réduit l'espacement entre les cartes */
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 8px;
         }
         .product-card {
-            padding: 10px; /* Réduit le rembourrage interne de la carte */
-            font-size: 0.8em; /* Réduit la taille de la police dans les cartes */
+            padding: 10px;
+            font-size: 0.8em;
         }
         .product-card h5 {
-            font-size: 1em; /* Ajuste la taille du titre de la carte */
+            font-size: 1em;
             margin-bottom: 5px;
         }
         .product-card p {
-            font-size: 0.75em; /* Ajuste la taille des paragraphes dans la carte */
+            font-size: 0.75em;
         }
         .product-card .btn-select-product {
-            padding: 6px 10px; /* Réduit le padding du bouton */
-            font-size: 0.75em; /* Réduit la taille du texte du bouton */
+            padding: 6px 10px;
+            font-size: 0.75em;
         }
+    }
+
+    /* Animation de fondu pour les éléments */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animated-form {
+        animation: fadeIn 0.5s ease-in-out forwards;
+    }
+
+    /* Styles du conteneur principal */
+    .form-container {
+        background-color: #2c2f33; /* Gris foncé */
+        border-radius: 10px;
+        padding: 30px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        color: #dcddde;
+    }
+
+    /* Styles pour le titre */
+    h1 {
+        color: #fff;
+    }
+
+    /* Styles pour les champs de formulaire */
+    .form-control, .form-select {
+        background-color: #36393f;
+        border: 1px solid #4f545c;
+        color: #dcddde;
+        transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    .form-control:focus, .form-select:focus {
+        background-color: #36393f;
+        border-color: #7289da;
+        box-shadow: 0 0 0 0.25rem rgba(114, 137, 218, 0.25);
+        color: #dcddde;
+    }
+
+    .form-label, .col-form-label {
+        color: #dcddde;
+        font-weight: 500;
+    }
+
+    /* Styles pour les boutons */
+    .btn-primary {
+        background-color: #7289da;
+        border-color: #7289da;
+        transition: background-color 0.2s ease-in-out;
+    }
+    .btn-primary:hover {
+        background-color: #677bc4;
+        border-color: #677bc4;
+    }
+    .btn-secondary {
+        background-color: #4f545c;
+        border-color: #4f545c;
+    }
+    .btn-secondary:hover {
+        background-color: #42464d;
+        border-color: #42464d;
+    }
+    .btn-warning {
+        background-color: #faa61a;
+        border-color: #faa61a;
+    }
+    .btn-warning:hover {
+        background-color: #e69512;
+        border-color: #e69512;
+    }
+
+    /* Styles pour les messages flash */
+    .flashes .alert {
+        border-radius: 8px;
+    }
+
+    .alert-success {
+        background-color: #43b581;
+        color: #fff;
+        border-color: #43b581;
+    }
+    .alert-danger {
+        background-color: #f04747;
+        color: #fff;
+        border-color: #f04747;
     }
 
     /* Styles par défaut pour les cartes de produit (écrans plus larges) */
     .product-cards-container {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Au moins 250px par carte par défaut */
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
         gap: 15px;
         margin-bottom: 20px;
     }
 
     .product-card {
-        border: 1px solid #333; /* Bordure plus foncée */
+        border: 1px solid #4f545c;
         border-radius: 8px;
         padding: 15px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.3); /* Ombre plus prononcée */
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        background-color: rgba(0, 0, 0, 0.7); /* Fond noir semi-transparent */
-        color: #f8f9fa; /* Texte clair pour contraste */
+        background-color: #36393f;
+        color: #dcddde;
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
+        animation: fadeIn 0.5s ease-in-out forwards;
+        opacity: 0;
+    }
+
+    .product-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     }
 
     .product-card.selected {
-        border-color: #007bff; /* Mettre en évidence la carte sélectionnée avec une couleur vive */
-        box-shadow: 0 0 10px rgba(0, 123, 255, 0.7);
+        border-color: #7289da;
+        box-shadow: 0 0 10px rgba(114, 137, 218, 0.7);
+        background-color: #42464d;
     }
 
     .product-card h5 {
         margin-top: 0;
         margin-bottom: 10px;
-        color: #ffffff; /* Titre blanc */
+        color: #ffffff;
     }
 
     .product-card p {
         margin-bottom: 5px;
         font-size: 0.9em;
-        color: #e2e6ea; /* Texte gris clair */
+        color: #b9bbbe;
     }
 
     .product-card .btn-select-product {
         margin-top: 10px;
         width: 100%;
-        background-color: #28a745; /* Vert */
-        border-color: #28a745;     /* Vert */
+        background-color: #43b581;
+        border-color: #43b581;
         color: #fff;
+        transition: background-color 0.2s ease-in-out;
+    }
+    .product-card .btn-select-product:hover {
+        background-color: #389568;
+        border-color: #389568;
+    }
+
+    /* Style du display du produit sélectionné */
+    #selected-product-display {
+        background-color: #42464d;
+        border: 1px solid #7289da;
+        color: #dcddde;
+        border-radius: 8px;
+        padding: 15px;
     }
 </style>
-<h1 class="mb-4">Enregistrer une nouvelle Vente</h1>
+<div class="form-container animated-form">
+    <h1 class="mb-4">Enregistrer une nouvelle Vente</h1>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        <div class="flashes">
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flashes">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <form method="post">
+        <div class="mb-3">
+            <label class="form-label">Sélectionner un Produit en Stock (Optionnel - pour les produits en stock):</label>
+
+            <div class="mb-3">
+                <input type="text" class="form-control" id="product-search" placeholder="Rechercher par nom ou SKU...">
+            </div>
+
+            <div class="product-cards-container">
+                {% for product in products %}
+                <div class="product-card" data-product-id="{{ product.id }}"
+                     data-product-name="{{ product.name | lower }}"
+                     data-product-sku="{{ product.sku | lower }}"
+                     style="--animation-delay: {{ loop.index0 * 0.1 }}s;">
+                    <h5>{{ product.name }}</h5>
+                    <p><strong>SKU:</strong> {{ product.sku }}</p>
+                    <p><strong>Taille:</strong> {{ product.size }}</p>
+                    <p><strong>Quantité disponible:</strong> {{ product.quantity }}</p>
+                    <p><strong>Prix d'achat:</strong> {{ '%.2f'|format(product.purchase_price|float) }} €</p>
+                    <button type="button" class="btn btn-primary btn-select-product"
+                            data-product-id="{{ product.id }}"
+                            data-product-name="{{ product.name }}"
+                            data-product-sku="{{ product.sku }}"
+                            data-product-size="{{ product.size }}"
+                            data-product-quantity="{{ product.quantity }}"
+                            data-product-purchase-price="{{ product.purchase_price if product.purchase_price else 0 }}">
+                        Vendez ce produit
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="button" class="btn btn-secondary mt-2" id="clear-product-selection">Effacer la sélection de produit</button>
         </div>
-    {% endif %}
-{% endwith %}
 
-<form method="post">
-    <div class="mb-3">
-        <label class="form-label">Sélectionner un Produit en Stock (Optionnel - pour les produits en stock):</label>
+        <input type="hidden" id="product_id_hidden" name="product_id" value="{{ sale.product_id if sale.product_id else '' }}">
+        <input type="hidden" id="selected_product_name_hidden" name="selected_product_name" value="">
+
+        {# NOUVEAU: Affichage du produit sélectionné et bouton "Changez de produit" #}
+        <div id="selected-product-display" style="display: none; margin-bottom: 20px;">
+            <p class="text-white"><strong>Produit sélectionné:</strong> <span id="displayed-product-name"></span>
+                <button type="button" class="btn btn-sm btn-warning ms-3" id="change-product-btn">Changez de produit</button>
+            </p>
+        </div>
 
         <div class="mb-3">
-            <input type="text" class="form-control" id="product-search" placeholder="Rechercher par nom ou SKU...">
+            <label for="item_name" class="form-label">Nom de l'article vendu (pour les produits non en stock ou personnalisés):</label>
+            <input type="text" class="form-control" id="item_name" name="item_name" value="{{ sale.item_name if sale.item_name else '' }}">
         </div>
-
-        <div class="product-cards-container">
-            {% for product in products %}
-            <div class="product-card" data-product-id="{{ product.id }}"
-                 data-product-name="{{ product.name | lower }}"
-                 data-product-sku="{{ product.sku | lower }}"> {# Ajout data-product-name et data-product-sku pour la recherche #}
-                <h5>{{ product.name }}</h5>
-                <p><strong>SKU:</strong> {{ product.sku }}</p>
-                <p><strong>Taille:</strong> {{ product.size }}</p>
-                <p><strong>Quantité disponible:</strong> {{ product.quantity }}</p>
-                <p><strong>Prix d'achat:</strong> {{ '%.2f'|format(product.purchase_price|float) }} €</p>
-                <button type="button" class="btn btn-primary btn-select-product"
-                        data-product-id="{{ product.id }}"
-                        data-product-name="{{ product.name }}"
-                        data-product-sku="{{ product.sku }}"
-                        data-product-size="{{ product.size }}"
-                        data-product-quantity="{{ product.quantity }}"
-                        data-product-purchase-price="{{ product.purchase_price if product.purchase_price else 0 }}">
-                    Vendez ce produit
-                </button>
-            </div>
-            {% endfor %}
+        <div class="mb-3">
+            <label for="quantity" class="form-label">Quantité vendue:</label>
+            <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="{{ sale.quantity if sale.quantity else 1 }}" required>
         </div>
-        <button type="button" class="btn btn-secondary mt-2" id="clear-product-selection">Effacer la sélection de produit</button>
-    </div>
-
-    <input type="hidden" id="product_id_hidden" name="product_id" value="{{ sale.product_id if sale.product_id else '' }}">
-    <input type="hidden" id="selected_product_name_hidden" name="selected_product_name" value="">
-
-    {# NOUVEAU: Affichage du produit sélectionné et bouton "Changez de produit" #}
-    <div id="selected-product-display" style="display: none; margin-bottom: 20px; padding: 15px; border: 1px solid #007bff; border-radius: 8px; background-color: rgba(0, 123, 255, 0.1);">
-        <p><strong>Produit sélectionné:</strong> <span id="displayed-product-name" style="color: #ffffff;"></span>
-            <button type="button" class="btn btn-sm btn-warning ms-3" id="change-product-btn">Changez de produit</button>
-        </p>
-    </div>
-
-    <div class="mb-3">
-        <label for="item_name" class="form-label">Nom de l'article vendu (pour les produits non en stock ou personnalisés):</label>
-        <input type="text" class="form-control" id="item_name" name="item_name" value="{{ sale.item_name if sale.item_name else '' }}">
-    </div>
-    <div class="mb-3">
-        <label for="quantity" class="form-label">Quantité vendue:</label>
-        <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="{{ sale.quantity if sale.quantity else 1 }}" required>
-    </div>
-    <div class="mb-3">
-        <label for="sale_price" class="form-label">Prix de vente (€):</label>
-        <input type="number" step="0.01" class="form-control" id="sale_price" name="sale_price" value="{{ '%.2f'|format(sale.sale_price|float) if sale.sale_price and (sale.sale_price|float is not none) else '' }}" required>
-    </div>
-    <div class="mb-3">
-        <label for="sale_date" class="form-label">Date de vente:</label>
-        <input type="date" class="form-control" id="sale_date" name="sale_date" value="{{ sale.sale_date if sale.sale_date else '' }}" required>
-    </div>
-    <div class="mb-3">
-        <label for="platform" class="form-label">Plateforme de vente (ex: Vinted, StockX):</label>
-        <input type="text" class="form-control" id="platform" name="platform" value="{{ sale.platform if sale.platform else '' }}">
-    </div>
-    <div class="mb-3">
-        <label for="shipping_cost" class="form-label">Frais de port (€ - Optionnel):</label>
-        <input type="number" step="0.01" class="form-control" id="shipping_cost" name="shipping_cost" value="{{ '%.2f'|format(sale.shipping_cost|float) if sale.shipping_cost and (sale.shipping_cost|float is not none) else '' }}">
-    </div>
-    <div class="mb-3">
-        <label for="fees" class="form-label">Frais de plateforme/commission (€ - Optionnel):</label>
-        <input type="number" step="0.01" class="form-control" id="fees" name="fees" value="{{ '%.2f'|format(sale.fees|float) if sale.fees and (sale.fees|float is not none) else '' }}">
-    </div>
-    <div class="mb-3">
-        <label for="notes" class="form-label">Notes (Optionnel):</label>
-        <textarea class="form-control" id="notes" name="notes" rows="3">{{ sale.notes if sale.notes else '' }}</textarea>
-    </div>
-    <button type="submit" class="btn btn-primary">Enregistrer la Vente</button>
-</form>
+        <div class="mb-3">
+            <label for="sale_price" class="form-label">Prix de vente (€):</label>
+            <input type="number" step="0.01" class="form-control" id="sale_price" name="sale_price" value="{{ '%.2f'|format(sale.sale_price|float) if sale.sale_price and (sale.sale_price|float is not none) else '' }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="sale_date" class="form-label">Date de vente:</label>
+            <input type="date" class="form-control" id="sale_date" name="sale_date" value="{{ sale.sale_date if sale.sale_date else '' }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="platform" class="form-label">Plateforme de vente (ex: Vinted, StockX):</label>
+            <input type="text" class="form-control" id="platform" name="platform" value="{{ sale.platform if sale.platform else '' }}">
+        </div>
+        <div class="mb-3">
+            <label for="shipping_cost" class="form-label">Frais de port (€ - Optionnel):</label>
+            <input type="number" step="0.01" class="form-control" id="shipping_cost" name="shipping_cost" value="{{ '%.2f'|format(sale.shipping_cost|float) if sale.shipping_cost and (sale.shipping_cost|float is not none) else '' }}">
+        </div>
+        <div class="mb-3">
+            <label for="fees" class="form-label">Frais de plateforme/commission (€ - Optionnel):</label>
+            <input type="number" step="0.01" class="form-control" id="fees" name="fees" value="{{ '%.2f'|format(sale.fees|float) if sale.fees and (sale.fees|float is not none) else '' }}">
+        </div>
+        <div class="mb-3">
+            <label for="notes" class="form-label">Notes (Optionnel):</label>
+            <textarea class="form-control" id="notes" name="notes" rows="3">{{ sale.notes if sale.notes else '' }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Enregistrer la Vente</button>
+    </form>
+</div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -204,14 +323,12 @@
         const itemNameInput = document.getElementById('item_name');
         const quantityInput = document.getElementById('quantity');
         const salePriceInput = document.getElementById('sale_price');
-        const productCards = document.querySelectorAll('.product-card'); // Récupère toutes les cartes de produit
-        const productSearchInput = document.getElementById('product-search'); // Le nouveau champ de recherche
+        const productCards = document.querySelectorAll('.product-card');
+        const productSearchInput = document.getElementById('product-search');
 
-        // NOUVEAU: Éléments pour l'affichage du produit sélectionné et le bouton "Changez de produit"
         const selectedProductDisplay = document.getElementById('selected-product-display');
         const displayedProductName = document.getElementById('displayed-product-name');
         const changeProductBtn = document.getElementById('change-product-btn');
-
 
         function selectProduct(button) {
             productCards.forEach(card => card.classList.remove('selected'));
@@ -233,17 +350,14 @@
             quantityInput.value = 1;
             quantityInput.setAttribute('max', productQuantity);
 
-            // NOUVEAU: Masquer toutes les autres cartes de produit
             productCards.forEach(card => {
                 if (card !== selectedCard) {
                     card.style.display = 'none';
                 }
             });
-            // NOUVEAU: Masquer le champ de recherche et le bouton "Effacer la sélection"
             productSearchInput.style.display = 'none';
             clearProductSelectionButton.style.display = 'none';
 
-            // NOUVEAU: Afficher le nom du produit sélectionné et le bouton "Changez de produit"
             displayedProductName.textContent = productName;
             selectedProductDisplay.style.display = 'block';
         }
@@ -260,31 +374,25 @@
             quantityInput.removeAttribute('max');
             quantityInput.value = 1;
 
-            // NOUVEAU: Réafficher toutes les cartes de produit
             productCards.forEach(card => {
-                card.style.display = 'flex'; // ou 'block', selon le style original
+                card.style.display = 'flex';
             });
-            // NOUVEAU: Réafficher le champ de recherche et le bouton "Effacer la sélection"
             productSearchInput.style.display = 'block';
             clearProductSelectionButton.style.display = 'block';
 
-            // NOUVEAU: Masquer l'affichage du produit sélectionné
             selectedProductDisplay.style.display = 'none';
         }
 
-        // Fonction de filtrage des cartes
         function filterProductCards() {
-            const searchTerm = productSearchInput.value.toLowerCase(); // Récupère le terme de recherche en minuscules
-
+            const searchTerm = productSearchInput.value.toLowerCase();
             productCards.forEach(card => {
-                const productName = card.dataset.productName || ''; // Récupère le nom du produit de la carte
-                const productSku = card.dataset.productSku || '';   // Récupère le SKU du produit de la carte
+                const productName = card.dataset.productName || '';
+                const productSku = card.dataset.productSku || '';
 
-                // Vérifie si le terme de recherche est contenu dans le nom ou le SKU
                 if (productName.includes(searchTerm) || productSku.includes(searchTerm)) {
-                    card.style.display = 'flex'; // Affiche la carte
+                    card.style.display = 'flex';
                 } else {
-                    card.style.display = 'none'; // Masque la carte
+                    card.style.display = 'none';
                 }
             });
         }
@@ -295,17 +403,12 @@
             });
         });
 
-        // MODIFIÉ: Le bouton "Effacer la sélection" existant
         clearProductSelectionButton.addEventListener('click', clearProductSelection);
 
-        // NOUVEAU: Écouteur pour le bouton "Changez de produit"
         changeProductBtn.addEventListener('click', clearProductSelection);
 
-
-        // Ajout de l'écouteur d'événement pour le champ de recherche
         productSearchInput.addEventListener('input', filterProductCards);
 
-        // Initialisation : si un produit est déjà sélectionné (par exemple, après une erreur de validation)
         const initialProductId = productIdHiddenInput.value;
         if (initialProductId) {
             const initialSelectedButton = document.querySelector(`.btn-select-product[data-product-id="${initialProductId}"]`);
@@ -313,10 +416,8 @@
                 selectProduct(initialSelectedButton);
             }
         } else {
-            // Si aucun produit n'est initialement sélectionné, assurez-vous que tout est affiché correctement
             clearProductSelection();
         }
-
 
         const saleDateInput = document.getElementById('sale_date');
         if (!saleDateInput.value) {
