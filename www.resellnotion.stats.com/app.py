@@ -1528,6 +1528,9 @@ def add_sale():
     conn = g.db
     cur = None
 
+    # Récupérer l'ID du produit depuis l'URL si c'est une requête GET
+    preselected_product_id = request.args.get('product_id', None)
+
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
@@ -1540,18 +1543,53 @@ def add_sale():
         print(f"DEBUG: Erreur de chargement produits_for_dropdown : {e}")
         products_for_dropdown = []
 
+    # Initialisation du dictionnaire form_data
     form_data = {
-        'product_id': request.form.get('product_id', ''),
-        'item_name': request.form.get('item_name', '').strip(),
-        'quantity': request.form.get('quantity', 1),
-        'sale_price': request.form.get('sale_price', '').replace(',', '.'),
-        'sale_date': request.form.get('sale_date', datetime.now().strftime('%Y-%m-%d')),
-        'platform': request.form.get('platform', '').strip(),
-        'shipping_cost': request.form.get('shipping_cost', '').replace(',', '.'),
-        'fees': request.form.get('fees', '').replace(',', '.'),
-        'notes': request.form.get('notes', '').strip()
+        'product_id': None,
+        'item_name': '',
+        'quantity': 1,
+        'sale_price': '',
+        'sale_date': datetime.now().strftime('%Y-%m-%d'),
+        'platform': '',
+        'shipping_cost': '',
+        'fees': '',
+        'notes': ''
     }
 
+    # Si la requête est en GET et qu'un product_id est passé
+    if request.method == 'GET' and preselected_product_id:
+        try:
+            # On vérifie que le produit existe et appartient à l'utilisateur
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                'SELECT id, name, purchase_price FROM products WHERE id = %s AND user_id = %s',
+                (preselected_product_id, current_user.id))
+            preselected_product = cur.fetchone()
+            cur.close()
+
+            if preselected_product:
+                form_data['product_id'] = preselected_product['id']
+                form_data['item_name'] = preselected_product['name']
+                # Vous pouvez aussi pré-remplir d'autres champs si nécessaire
+                # par exemple: form_data['purchase_price'] = preselected_product['purchase_price']
+        except Exception as e:
+            flash("Produit pré-sélectionné introuvable.", "warning")
+            print(f"DEBUG: Erreur de pré-sélection du produit : {e}")
+    # Si la requête est un POST, on utilise les données du formulaire
+    elif request.method == 'POST':
+        form_data = {
+            'product_id': request.form.get('product_id', ''),
+            'item_name': request.form.get('item_name', '').strip(),
+            'quantity': request.form.get('quantity', 1),
+            'sale_price': request.form.get('sale_price', '').replace(',', '.'),
+            'sale_date': request.form.get('sale_date', datetime.now().strftime('%Y-%m-%d')),
+            'platform': request.form.get('platform', '').strip(),
+            'shipping_cost': request.form.get('shipping_cost', '').replace(',', '.'),
+            'fees': request.form.get('fees', '').replace(',', '.'),
+            'notes': request.form.get('notes', '').strip()
+        }
+
+    # Logique de traitement du formulaire POST
     if request.method == 'POST':
         product_id = form_data['product_id'] if form_data['product_id'] else None
         item_name = form_data['item_name']
@@ -1682,6 +1720,7 @@ def add_sale():
         else:
             flash(error, 'danger')
 
+    # Rendu du template, en s'assurant que les valeurs initiales sont correctement passées
     display_sale_price = '{:.2f}'.format(float(form_data['sale_price'])) if form_data['sale_price'] and form_data[
         'sale_price'].replace('.', '', 1).isdigit() else ''
     display_shipping_cost = '{:.2f}'.format(float(form_data['shipping_cost'])) if form_data['shipping_cost'] and \
