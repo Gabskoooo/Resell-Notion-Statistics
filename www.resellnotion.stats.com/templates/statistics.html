@@ -4,192 +4,12 @@
 <title>Statistiques</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-<style>
-    :root {
-        --primary-color: #6a11cb;
-        --secondary-color: #2575fc;
-        --dark-bg: #1a1a2e;
-        --card-bg: rgba(26, 26, 46, 0.9);
-        --text-color: #f0f0f0;
-        --border-color: rgba(255, 255, 255, 0.1);
-        --glow-color: rgba(106, 17, 203, 0.3);
-    }
-
-    body {
-        background: var(--dark-bg);
-        color: var(--text-color);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    }
-
-    .container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-    }
-
-    h1, h2, h3 {
-        color: var(--text-color);
-        font-weight: 300;
-        animation-duration: 1s;
-    }
-
-    .dark-card {
-        background-color: var(--card-bg);
-        color: var(--text-color);
-        border: 1px solid var(--border-color);
-        border-radius: 0.75rem;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        position: relative;
-        overflow: hidden;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .dark-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 20px var(--glow-color);
-    }
-
-    .dark-card::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
-        transform: rotate(45deg);
-        opacity: 0;
-        transition: opacity 0.5s ease;
-    }
-
-    .dark-card:hover::before {
-        opacity: 1;
-    }
-
-    .form-group {
-        width: 100%;
-        max-width: 400px;
-        margin: 0 auto 2rem auto;
-    }
-
-    #periodSelect {
-        background-color: var(--card-bg);
-        color: var(--text-color);
-        border: 1px solid var(--border-color);
-        border-radius: 0.5rem;
-        padding: 0.75rem 1rem;
-        transition: all 0.3s ease;
-    }
-
-    #periodSelect:focus {
-        outline: none;
-        border-color: var(--secondary-color);
-        box-shadow: 0 0 0 0.2rem rgba(37, 117, 252, 0.25);
-    }
-
-    .stats-card-content {
-        padding: 1.5rem;
-        text-align: center;
-        flex-grow: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-    }
-
-    .stats-card-content h5 {
-        font-size: 1rem;
-        margin-bottom: 0.5rem;
-        color: rgba(248, 249, 250, 0.7);
-        font-weight: 400;
-    }
-
-    .stats-card-content p {
-        font-size: 2.2rem;
-        font-weight: 600;
-        line-height: 1.2;
-        margin: 0;
-        color: var(--text-color);
-    }
-
-    .chart-section {
-        background: var(--card-bg);
-        border: 1px solid var(--border-color);
-        border-radius: 0.75rem;
-        padding: 1.5rem;
-        margin-top: 2rem;
-    }
-
-    .chart-section h3 {
-        font-weight: 400;
-        margin-bottom: 1.5rem;
-        color: var(--text-color);
-    }
-
-    .blurred-chart-container {
-        position: relative;
-        text-align: center;
-        padding: 50px 0;
-        background-color: var(--card-bg);
-        border: 1px dashed var(--border-color);
-        border-radius: 0.75rem;
-        min-height: 300px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-    }
-
-    .blurred-chart {
-        filter: blur(5px);
-        opacity: 0.3;
-        pointer-events: none;
-        width: 100%;
-        height: 250px;
-        background: linear-gradient(90deg, var(--card-bg) 0%, rgba(255,255,255,0.1) 25%, var(--card-bg) 50%, rgba(255,255,255,0.1) 75%, var(--card-bg) 100%);
-        background-size: 200% 100%;
-        animation: loading-gradient 2s infinite linear;
-    }
-
-    @keyframes loading-gradient {
-        0% { background-position: -200% 0; }
-        100% { background-position: 200% 0; }
-    }
-
-    .blurred-message {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 1.2rem;
-        font-weight: 500;
-        color: rgba(240, 240, 240, 0.8);
-        background-color: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(5px);
-        padding: 15px 30px;
-        border-radius: 10px;
-        z-index: 10;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
-    }
-
-    .evolution-positive {
-        color: #28a745;
-    }
-    .evolution-negative {
-        color: #dc3545;
-    }
-    .evolution-neutral {
-        color: #6c757d;
-    }
-
-</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 {% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="text-center mb-5 animate__animated animate__fadeInDown">Statistiques Détaillées</h1>
+    <h1 class="text-center mb-5 animate__animated animate__fadeInDown">Tableau de Bord des Statistiques</h1>
 
     <div class="d-flex justify-content-center">
         <div class="form-group animate__animated animate__fadeInUp">
@@ -207,54 +27,30 @@
     </div>
 
     <h2 class="mb-4 text-center animate__animated animate__fadeIn">Résumé des Performances de la Période</h2>
-    <div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
-        <div class="col">
-            <div class="dark-card animate__animated animate__zoomIn animate__delay-1s">
-                <div class="stats-card-content">
-                    <h5>Nb Ventes</h5>
-                    <p>{{ total_sales_count }}</p>
-                </div>
-            </div>
+    <div class="stat-container mb-5">
+        <div class="stat-block-v4 animate__animated animate__fadeIn">
+            <h5 class="stat-block-title-v4">Nb Ventes</h5>
+            <p class="stat-block-value-v4">{{ total_sales_count }}</p>
         </div>
-        <div class="col">
-            <div class="dark-card animate__animated animate__zoomIn animate__delay-1s">
-                <div class="stats-card-content">
-                    <h5>Prix Vente Total</h5>
-                    <p>{{ "%.2f"|format(total_sales_revenue) }}€</p>
-                </div>
-            </div>
+        <div class="stat-block-v4 animate__animated animate__fadeIn">
+            <h5 class="stat-block-title-v4">Prix Vente Total</h5>
+            <p class="stat-block-value-v4">{{ "%.2f"|format(total_sales_revenue) }}€</p>
         </div>
-        <div class="col">
-            <div class="dark-card animate__animated animate__zoomIn animate__delay-1s">
-                <div class="stats-card-content">
-                    <h5>Bénéfice Total</h5>
-                    <p>{{ "%.2f"|format(total_sales_profit) }}€</p>
-                </div>
-            </div>
+        <div class="stat-block-v4 animate__animated animate__fadeIn">
+            <h5 class="stat-block-title-v4">Bénéfice Total</h5>
+            <p class="stat-block-value-v4">{{ "%.2f"|format(total_sales_profit) }}€</p>
         </div>
-        <div class="col">
-            <div class="dark-card animate__animated animate__zoomIn animate__delay-1s">
-                <div class="stats-card-content">
-                    <h5>Taux Marge (%)</h5>
-                    <p>{{ "%.2f"|format(margin_rate) }}%</p>
-                </div>
-            </div>
+        <div class="stat-block-v4 animate__animated animate__fadeIn">
+            <h5 class="stat-block-title-v4">Taux Marge (%)</h5>
+            <p class="stat-block-value-v4">{{ "%.2f"|format(margin_rate) }}%</p>
         </div>
-        <div class="col">
-            <div class="dark-card animate__animated animate__zoomIn animate__delay-1s">
-                <div class="stats-card-content">
-                    <h5>Jours Moy. Vente</h5>
-                    <p>{{ "%.2f"|format(average_days_to_sell) }} jours</p>
-                </div>
-            </div>
+        <div class="stat-block-v4 animate__animated animate__fadeIn">
+            <h5 class="stat-block-title-v4">Jours Moy. Vente</h5>
+            <p class="stat-block-value-v4">{{ "%.2f"|format(average_days_to_sell) }} jours</p>
         </div>
-        <div class="col">
-            <div class="dark-card animate__animated animate__zoomIn animate__delay-1s">
-                <div class="stats-card-content">
-                    <h5>Évolution Taux</h5>
-                    <p>N/A</p>
-                </div>
-            </div>
+        <div class="stat-block-v4 animate__animated animate__fadeIn">
+            <h5 class="stat-block-title-v4">Évolution Taux</h5>
+            <p class="stat-block-value-v4">N/A</p>
         </div>
     </div>
 
@@ -275,62 +71,50 @@
     </div>
 
     <h2 class="mt-5 mb-4 text-center animate__animated animate__fadeIn">Taux d'Évolution vs. Période Précédente</h2>
-    <div class="row row-cols-1 row-cols-md-3 g-4">
-        <div class="col">
-            <div class="dark-card animate__animated animate__fadeInUp animate__delay-1s">
-                <div class="stats-card-content">
-                    <h5 class="evolution-card-title">Évolution Coût d'achat (PA)</h5>
-                    <p>
-                        {% if evolution_rate_cogs is string and evolution_rate_cogs == 'infinity' %}
-                            N/A (croissance infinie)
-                        {% elif evolution_rate_cogs is not string and evolution_rate_cogs == 0.0 %}
-                            <span class="evolution-neutral">0.00%</span>
-                        {% elif evolution_rate_cogs is not string and evolution_rate_cogs is defined %}
-                            <span class="{% if evolution_rate_cogs > 0 %}evolution-negative{% elif evolution_rate_cogs < 0 %}evolution-positive{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_cogs) }}%</span>
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
+    <div class="stat-container">
+        <div class="stat-block-v4 animate__animated animate__fadeIn">
+            <h5 class="stat-block-title-v4">Évolution Coût d'achat (PA)</h5>
+            <p class="stat-block-value-v4">
+                {% if evolution_rate_cogs is string and evolution_rate_cogs == 'infinity' %}
+                    N/A (croissance infinie)
+                {% elif evolution_rate_cogs is not string and evolution_rate_cogs == 0.0 %}
+                    <span class="evolution-neutral">0.00%</span>
+                {% elif evolution_rate_cogs is not string and evolution_rate_cogs is defined %}
+                    <span class="{% if evolution_rate_cogs > 0 %}evolution-negative{% elif evolution_rate_cogs < 0 %}evolution-positive{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_cogs) }}%</span>
+                {% else %}
+                    N/A
+                {% endif %}
+            </p>
         </div>
 
-        <div class="col">
-            <div class="dark-card animate__animated animate__fadeInUp animate__delay-1s">
-                <div class="stats-card-content">
-                    <h5 class="evolution-card-title">Évolution Prix de Vente (PV)</h5>
-                    <p>
-                        {% if evolution_rate_revenue is string and evolution_rate_revenue == 'infinity' %}
-                            N/A (croissance infinie)
-                        {% elif evolution_rate_revenue is not string and evolution_rate_revenue == 0.0 %}
-                            <span class="evolution-neutral">0.00%</span>
-                        {% elif evolution_rate_revenue is not string and evolution_rate_revenue is defined %}
-                            <span class="{% if evolution_rate_revenue > 0 %}evolution-positive{% elif evolution_rate_revenue < 0 %}evolution-negative{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_revenue) }}%</span>
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
+        <div class="stat-block-v4 animate__animated animate__fadeIn">
+            <h5 class="stat-block-title-v4">Évolution Prix de Vente (PV)</h5>
+            <p class="stat-block-value-v4">
+                {% if evolution_rate_revenue is string and evolution_rate_revenue == 'infinity' %}
+                    N/A (croissance infinie)
+                {% elif evolution_rate_revenue is not string and evolution_rate_revenue == 0.0 %}
+                    <span class="evolution-neutral">0.00%</span>
+                {% elif evolution_rate_revenue is not string and evolution_rate_revenue is defined %}
+                    <span class="{% if evolution_rate_revenue > 0 %}evolution-positive{% elif evolution_rate_revenue < 0 %}evolution-negative{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_revenue) }}%</span>
+                {% else %}
+                    N/A
+                {% endif %}
+            </p>
         </div>
 
-        <div class="col">
-            <div class="dark-card animate__animated animate__fadeInUp animate__delay-1s">
-                <div class="stats-card-content">
-                    <h5 class="evolution-card-title">Évolution Bénéfice</h5>
-                    <p>
-                        {% if evolution_rate_profit is string and evolution_rate_profit == 'infinity' %}
-                            N/A (croissance infinie)
-                        {% elif evolution_rate_profit is not string and evolution_rate_profit == 0.0 %}
-                            <span class="evolution-neutral">0.00%</span>
-                        {% elif evolution_rate_profit is not string and evolution_rate_profit is defined %}
-                            <span class="{% if evolution_rate_profit > 0 %}evolution-positive{% elif evolution_rate_profit < 0 %}evolution-negative{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_profit) }}%</span>
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
+        <div class="stat-block-v4 animate__animated animate__fadeIn">
+            <h5 class="stat-block-title-v4">Évolution Bénéfice</h5>
+            <p class="stat-block-value-v4">
+                {% if evolution_rate_profit is string and evolution_rate_profit == 'infinity' %}
+                    N/A (croissance infinie)
+                {% elif evolution_rate_profit is not string and evolution_rate_profit == 0.0 %}
+                    <span class="evolution-neutral">0.00%</span>
+                {% elif evolution_rate_profit is not string and evolution_rate_profit is defined %}
+                    <span class="{% if evolution_rate_profit > 0 %}evolution-positive{% elif evolution_rate_profit < 0 %}evolution-negative{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_profit) }}%</span>
+                {% else %}
+                    N/A
+                {% endif %}
+            </p>
         </div>
     </div>
 </div>

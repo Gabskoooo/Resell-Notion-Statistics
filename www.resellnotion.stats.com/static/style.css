@@ -75,3 +75,72 @@ body {
     background-color: #3a3f45; /* Couleur de fond pour les options */
     color: #f8f9fa; /* Couleur du texte pour les options */
 }
+
+/* Styles Spécifiques pour la page de Statistiques */
+.stat-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem; /* Espace plus grand entre les blocs */
+    width: 100%;
+    margin: 0 auto;
+}
+
+.stat-block-v4 {
+    background-color: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f8f9fa;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    aspect-ratio: 1 / 1; /* Force le format carré */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 1rem; /* Réduction du rembourrage interne */
+
+    /* Définition de la largeur pour 3 cartes par ligne */
+    flex: 1 1 25%;
+    max-width: 25%;
+}
+
+.stat-block-v4:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 20px rgba(106, 17, 203, 0.3);
+}
+
+.stat-block-title-v4 {
+    font-size: 0.9rem; /* Taille du titre ajustée */
+    color: rgba(248, 249, 250, 0.7);
+    font-weight: 400;
+    border-bottom: 2px solid rgba(74, 35, 127);
+    padding-bottom: 0.2rem; /* Espace réduit sous le titre */
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+.stat-block-value-v4 {
+    font-size: 2rem; /* Augmente la taille de la police de la donnée */
+    font-weight: 600;
+    line-height: 1.2;
+    margin: 0;
+    color: #f0f0f0;
+    margin-top: 0.5rem;
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 991px) { /* Pour les tablettes (2 par ligne) */
+    .stat-block-v4 {
+        flex: 1 1 40%;
+        max-width: 40%;
+    }
+}
+
+@media (max-width: 767px) { /* Pour les mobiles (1 par ligne) */
+    .stat-block-v4 {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+}
