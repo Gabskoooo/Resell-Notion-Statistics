@@ -1,0 +1,153 @@
+{% extends 'marketplace_base.html' %}
+
+{% block title %}Marché d'annonces{% endblock %}
+
+{% block content %}
+<style>
+    /* Styles généraux */
+    .row {
+        margin-top: 2rem;
+    }
+    .text-center h1 {
+        font-weight: 700;
+        color: #333;
+    }
+
+    /* Styles de la carte de produit */
+    .listing-card {
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .listing-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .listing-card .card-img-container {
+        position: relative;
+        overflow: hidden;
+        height: 250px;
+    }
+
+    .listing-card .card-img-top {
+        height: 100%;
+        width: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease-in-out;
+    }
+
+    .listing-card:hover .card-img-top {
+        transform: scale(1.05);
+    }
+
+    .card-body {
+        padding: 1.5rem;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 0.25rem;
+    }
+
+    .card-subtitle {
+        font-size: 0.95rem;
+        color: #666;
+        margin-bottom: 1rem;
+    }
+
+    .price-text {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #007bff;
+        margin-top: auto;
+    }
+
+    a.text-decoration-none:hover {
+        text-decoration: underline !important;
+    }
+
+    /* Styles pour le carrousel sur la page d'accueil */
+    .listing-card .carousel-inner {
+        height: 250px;
+        background-color: #f8f9fa;
+    }
+
+</style>
+
+<div class="container mt-5">
+    <h1 class="text-center mb-5">Découvrez les dernières annonces</h1>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-4">
+        {% for listing in listings %}
+        <div class="col">
+            <div class="card h-100 listing-card">
+                {% set images = listing.image_urls.split(',') %}
+                {% if images|length > 1 %}
+                <div id="carousel-{{ listing.id }}" class="carousel slide card-img-container" data-bs-interval="false">
+                    <div class="carousel-inner">
+                        {% for image in images %}
+                        <div class="carousel-item {% if loop.first %}active{% endif %}">
+                            <a href="{{ url_for('listing_details', listing_id=listing.id) }}">
+                                <img src="{{ image }}" class="d-block w-100 card-img-top" alt="{{ listing.name }}">
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if images|length > 1 %}
+                    <button class="carousel-control-prev" type="button" data-bs-target="#carousel-{{ listing.id }}" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Précédent</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#carousel-{{ listing.id }}" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Suivant</span>
+                    </button>
+                    {% endif %}
+                </div>
+                {% elif images and images[0] %}
+                <a href="{{ url_for('listing_details', listing_id=listing.id) }}">
+                    <div class="card-img-container">
+                        <img src="{{ images[0] }}" class="card-img-top" alt="{{ listing.name }}">
+                    </div>
+                </a>
+                {% else %}
+                <a href="{{ url_for('listing_details', listing_id=listing.id) }}">
+                    <div class="card-img-container">
+                        <img src="{{ url_for('static', filename='placeholder.png') }}" class="card-img-top" alt="Image non disponible">
+                    </div>
+                </a>
+                {% endif %}
+
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <a href="{{ url_for('listing_details', listing_id=listing.id) }}" class="text-decoration-none text-dark">{{ listing.name }}</a>
+                    </h5>
+                    <h6 class="card-subtitle mb-2 text-muted">{{ listing.brand }}</h6>
+                    <div class="mt-auto">
+                        <p class="price-text mb-0">{{ "%.2f"|format(listing.price) }} €</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center">
+            <div class="alert alert-info" role="alert">
+                Aucune annonce à afficher pour le moment.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -30,6 +30,8 @@ import requests
 import time
 from dateutil.relativedelta import relativedelta
 from discord_webhook import DiscordWebhook, DiscordEmbed
+from werkzeug.utils import secure_filename # Assurez-vous d'avoir cet import au début du fichier
+import uuid # Pour générer des noms de fichiers uniques
 load_dotenv()
 # Render définit automatiquement DATABASE_URL pour votre base de données liée.
 
@@ -57,6 +59,29 @@ login_manager.needs_refresh_message_category = "info"
 TABLE_NAME = "sku_database" # Le nom de la table
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 ASSETS_DIR = os.path.join(PROJECT_ROOT, '..', 'www.resellnotion.stats.com', 'assets')
+
+# Configuration pour l'upload de fichiers
+UPLOAD_FOLDER = 'static/uploads/listings' # Dossier où les images seront sauvegardées
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Configuration de Flask-Mail
+# Assurez-vous d'avoir les variables d'environnement dans votre fichier .env
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT'))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS').lower() in ('true', '1')
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
+
+mail = Mail(app)
+# Crée le dossier d'upload s'il n'existe pas
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def send_performance_report_email(recipient_email, subject, html_body):
     """
@@ -2726,9 +2751,298 @@ def serve_service_worker():
     """
     return send_from_directory(app.root_path, 'service-worker.js', mimetype='application/javascript')
 
+
+@app.route('/add_listing', methods=['GET', 'POST'])
+@login_required
+def add_listing():
+    if request.method == 'POST':
+        # Vérification si des fichiers ont été uploadés
+        if 'photos' not in request.files:
+            flash('Aucun fichier photo n\'a été sélectionné.', 'danger')
+            return redirect(request.url)
+
+        files = request.files.getlist('photos')
+        image_urls = []
+
+        if len(files) > 10:
+            flash('Vous ne pouvez télécharger que 10 photos maximum.', 'danger')
+            return redirect(request.url)
+
+        for file in files:
+            if file and allowed_file(file.filename):
+                # Générer un nom de fichier unique pour éviter les conflits
+                filename = secure_filename(file.filename)
+                unique_filename = str(uuid.uuid4()) + '_' + filename
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+                file.save(filepath)
+                image_urls.append(url_for('static', filename='uploads/listings/' + unique_filename))
+            elif file.filename != '':  # S'il y a un fichier mais qu'il n'est pas autorisé
+                flash(f'Le fichier {file.filename} n\'est pas une image autorisée (png, jpg, jpeg, gif).', 'danger')
+                return redirect(request.url)
+
+        # Récupération des autres données du formulaire
+        sku = request.form.get('sku')
+        name = request.form.get('name')
+        brand = request.form.get('brand')  # Récupération de la marque
+        sizes = request.form.get('sizes')
+        description = request.form.get('description')
+        price = request.form.get('price')
+
+        # Convertir la liste d'URLs en une chaîne séparée par des virgules pour la base de données
+        image_urls_str = ','.join(image_urls)
+
+        conn = get_db()
+        cur = conn.cursor()
+
+        try:
+            # Insertion dans la nouvelle table marketplace_listings
+            cur.execute("""
+                INSERT INTO marketplace_listings (seller_id, sku, name, brand, sizes, description, price, image_urls)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (current_user.id, sku, name, brand, sizes, description, float(price), image_urls_str))
+            conn.commit()
+            flash('Votre annonce a été publiée avec succès !', 'success')
+            return redirect(url_for('dashboard'))
+
+        except Exception as e:
+            conn.rollback()
+            flash(f'Une erreur est survenue lors de la publication : {e}', 'danger')
+            return redirect(url_for('add_listing'))
+
+        finally:
+            cur.close()
+
+    return render_template('add_listing.html')
+
+
+#MARKETPLACE
+
+@app.route('/marketplace')
+def marketplace():
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT * FROM marketplace_listings ORDER BY date_posted DESC")
+    listings = cur.fetchall()
+    cur.close()
+
+    # Convertir les données pour le rendu dans le template
+    listings_list = []
+    for l in listings:
+        listing = dict(l)
+        if isinstance(listing.get('price'), decimal.Decimal):
+            listing['price'] = float(listing['price'])
+        listings_list.append(listing)
+
+    return render_template('marketplace.html', listings=listings_list)
+
+
+@app.route('/listing/<int:listing_id>')
+def listing_details(listing_id):
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT * FROM marketplace_listings WHERE id = %s", (listing_id,))
+    listing = cur.fetchone()
+    cur.close()
+
+    if listing:
+        # Assurez-vous que le prix est un float
+        if isinstance(listing.get('price'), decimal.Decimal):
+            listing['price'] = float(listing['price'])
+
+        return render_template('listing_details.html', listing=listing)
+    else:
+        flash("Cette annonce n'existe pas.", "danger")
+        return redirect(url_for('marketplace'))
+
+
+@app.route('/my_listings')
+@login_required
+def my_listings():
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    # Récupérer toutes les annonces de l'utilisateur actuellement connecté
+    cur.execute("SELECT * FROM marketplace_listings WHERE seller_id = %s ORDER BY date_posted DESC", (current_user.id,))
+    listings = cur.fetchall()
+    cur.close()
+
+    return render_template('my_listings.html', listings=listings)
+@app.route('/user_profile')
+@login_required
+def user_profile():
+    return "<h1>Page de profil utilisateur en cours de développement...</h1>"
+
+
+@app.route('/closed_requests')
+@login_required
+def closed_requests():
+    return "<h1>Page des demandes closes en cours de construction...</h1>"
+
+# Route pour la page "Ventes conclues"
+@app.route('/sales_history')
+@login_required
+def sales_history():
+    return "<h1>Page de l'historique des ventes en cours de construction...</h1>"
+
+
+@app.route('/send_request', methods=['POST'])
+def send_request():
+    try:
+        # Récupérer les données du formulaire
+        listing_id = request.form.get('listing_id')
+        client_name = request.form.get('name')
+        client_email = request.form.get('email')
+        client_phone = request.form.get('phone_number', '')
+        offer_price_str = request.form.get('offer_price', '')
+        client_message = request.form.get('message')
+
+        # Récupérer les informations de l'annonce et du vendeur
+        conn = get_db()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT seller_id FROM marketplace_listings WHERE id = %s", (listing_id,))
+        listing = cur.fetchone()
+
+        if not listing:
+            cur.close()
+            flash('Annonce non trouvée.', 'danger')
+            return redirect(url_for('marketplace'))
+
+        seller_id = listing['seller_id']
+
+        # Gérer l'offre de prix
+        offer_price = None
+        if offer_price_str:
+            try:
+                offer_price = float(offer_price_str)
+            except ValueError:
+                pass  # Laisse le prix à None si la conversion échoue
+
+        # Insertion de la demande dans la nouvelle table
+        cur.execute("""
+            INSERT INTO marketplace_requests 
+            (listing_id, seller_id, client_name, client_email, client_phone, offer_price, client_message)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (listing_id, seller_id, client_name, client_email, client_phone, offer_price, client_message))
+
+        conn.commit()
+        cur.close()
+
+        # Redirige le client vers la page de succès au lieu de l'annonce
+        return redirect(url_for('request_success'))
+
+    except Exception as e:
+        conn.rollback()
+        flash('Erreur lors de l\'envoi de votre demande. Veuillez réessayer plus tard.', 'danger')
+        print(f"Erreur d'enregistrement de demande: {e}")
+
+        # En cas d'erreur, on redirige toujours vers la page de l'annonce
+        return redirect(url_for('listing_details', listing_id=listing_id))
+
+# Route pour afficher toutes les demandes en cours du vendeur connecté
+@app.route('/pending_requests')
+@login_required
+def pending_requests():
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT mr.*, ml.name as listing_name
+        FROM marketplace_requests mr
+        JOIN marketplace_listings ml ON mr.listing_id = ml.id
+        WHERE mr.seller_id = %s AND mr.status = 'en_attente'
+        ORDER BY mr.request_date DESC
+    """, (current_user.id,))
+    requests = cur.fetchall()
+    cur.close()
+    return render_template('pending_requests.html', requests=requests)
+
+
+@app.route('/request/<int:request_id>')
+@login_required
+def request_details_json(request_id):
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT mr.*, ml.name as listing_name, ml.brand as listing_brand, ml.price as listing_price
+        FROM marketplace_requests mr
+        JOIN marketplace_listings ml ON mr.listing_id = ml.id
+        WHERE mr.id = %s AND mr.seller_id = %s
+    """, (request_id, current_user.id))
+    request_data = cur.fetchone()
+    cur.close()
+
+    if not request_data:
+        # Retourne une erreur 404 si la demande n'existe pas ou n'appartient pas à l'utilisateur
+        return jsonify({"error": "Demande non trouvée ou non autorisée"}), 404
+
+    # Convertir les objets Decimal et datetime en types serialisables
+    request_data['offer_price'] = float(request_data['offer_price']) if request_data[
+                                                                            'offer_price'] is not None else None
+    request_data['request_date'] = request_data['request_date'].isoformat()
+
+    return jsonify(request_data)
+
+@app.route('/request_success')
+def request_success():
+    return render_template('request_success.html')
+
+# Route pour afficher toutes les annonces d'un seul vendeur
+@app.route('/seller_profile/<int:seller_id>')
+def seller_profile(seller_id):
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    # Récupérer les informations du vendeur
+    cur.execute("SELECT name FROM users WHERE id = %s", (seller_id,))
+    seller = cur.fetchone()
+
+    if not seller:
+        cur.close()
+        flash("Vendeur non trouvé.", "danger")
+        return redirect(url_for('marketplace'))
+
+    # Récupérer toutes les annonces du vendeur
+    cur.execute("SELECT * FROM marketplace_listings WHERE seller_id = %s ORDER BY date_posted DESC", (seller_id,))
+    listings = cur.fetchall()
+    cur.close()
+
+    # Rendre le template avec le nom du vendeur et ses annonces
+    return render_template('seller_profile.html', seller=seller, listings=listings)
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
+
+# Route pour supprimer une annonce
+@app.route('/delete_listing/<int:listing_id>', methods=['POST'])
+@login_required
+def delete_listing(listing_id):
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+
+        # Vérifier si l'utilisateur est le propriétaire de l'annonce
+        cur.execute("SELECT seller_id FROM marketplace_listings WHERE id = %s", (listing_id,))
+        listing = cur.fetchone()
+
+        if not listing:
+            cur.close()
+            return jsonify({'success': False, 'message': 'Annonce non trouvée.'})
+
+        if listing[0] != current_user.id:
+            cur.close()
+            return jsonify({'success': False, 'message': 'Action non autorisée.'}), 403
+
+        # Supprimer l'annonce de la base de données
+        cur.execute("DELETE FROM marketplace_listings WHERE id = %s", (listing_id,))
+        conn.commit()
+        cur.close()
+
+        return jsonify({'success': True, 'message': 'Annonce supprimée avec succès.'})
+
+    except Exception as e:
+        conn.rollback()
+        print(f"Erreur lors de la suppression de l'annonce : {e}")
+        return jsonify({'success': False, 'message': 'Erreur interne du serveur.'}), 500
 
 @app.route('/offline.html')
 def offline_page():
@@ -2738,84 +3052,62 @@ def offline_page():
     # return send_from_directory(app.root_path, 'offline.html')
 
 def init_db():
-    conn = get_db()
-    cur = conn.cursor()
-    try:
-        # Suppression des tables existantes (avec CASCADE pour gérer les dépendances)
-        #cur.execute("DROP TABLE IF EXISTS sales CASCADE;")
-        #cur.execute("DROP TABLE IF EXISTS products CASCADE;")
-        #cur.execute("DROP TABLE IF EXISTS users CASCADE;")
-
-        # Table pour les utilisateurs
-        cur.execute('''
+    with app.app_context():
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
-                email VARCHAR(255) UNIQUE NOT NULL,
-                password_hash VARCHAR(255) NOT NULL,
-                username VARCHAR(255),
-                avatar_url TEXT,
-                is_admin BOOLEAN DEFAULT FALSE, -- Converti INTEGER DEFAULT 0 en BOOLEAN
-                discord_id VARCHAR(255) UNIQUE,
-                key_status VARCHAR(20) DEFAULT 'inactive' NOT NULL CHECK(key_status IN ('active', 'inactive')),
-                key_start_date TIMESTAMP, -- Ajout des colonnes de date pour la clé, si absentes de votre schéma d'origine mais implicites dans les fonctions
-                key_end_date TIMESTAMP    -- Ajout des colonnes de date pour la clé
+                username VARCHAR(50) UNIQUE NOT NULL,
+                email VARCHAR(120) UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                is_admin BOOLEAN DEFAULT FALSE
             );
-        ''')
-
-        # Table pour les produits
-        cur.execute('''
             CREATE TABLE IF NOT EXISTS products (
                 id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                sku VARCHAR(255) NOT NULL,
-                name VARCHAR(255) NOT NULL,
-                size VARCHAR(255),
-                purchase_price NUMERIC(10, 2) NOT NULL, -- Converti REAL en NUMERIC pour la précision
-                quantity INTEGER NOT NULL,
-                price NUMERIC(10, 2), -- Converti REAL en NUMERIC
-                description TEXT,
-                image_url TEXT,
-                date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL -- Converti TEXT en TIMESTAMP
+                user_id INTEGER NOT NULL REFERENCES users (id),
+                sku VARCHAR(50) NOT NULL,
+                name VARCHAR(100) NOT NULL,
+                size VARCHAR(50) NOT NULL,
+                purchase_price REAL NOT NULL,
+                selling_price REAL,
+                date_added DATE NOT NULL,
+                date_sold DATE,
+                image_url VARCHAR(500)
             );
-        ''')
-
-        # Table pour les ventes
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS sales (
+            CREATE TABLE IF NOT EXISTS marketplace_listings (
                 id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
-                item_name VARCHAR(255) NOT NULL,
-                quantity INTEGER NOT NULL,
-                sale_price NUMERIC(10, 2) NOT NULL, -- Converti REAL en NUMERIC
-                purchase_price_at_sale NUMERIC(10, 2), -- Converti REAL en NUMERIC
-                sale_date TIMESTAMP NOT NULL, -- Converti TEXT en TIMESTAMP
-                notes TEXT,
-                sale_channel VARCHAR(255),
-                shipping_cost NUMERIC(10, 2) DEFAULT 0.0, -- Converti REAL en NUMERIC
-                fees NUMERIC(10, 2) DEFAULT 0.0,          -- Converti REAL en NUMERIC
-                profit NUMERIC(10, 2) DEFAULT 0.0         -- Converti REAL en NUMERIC
+                seller_id INTEGER NOT NULL REFERENCES users (id),
+                sku VARCHAR(50) NOT NULL,
+                name VARCHAR(100) NOT NULL,
+                brand VARCHAR(100) NOT NULL,
+                sizes VARCHAR(200),
+                description TEXT NOT NULL,
+                price REAL NOT NULL,
+                image_urls TEXT,
+                date_posted TIMESTAMP NOT NULL DEFAULT NOW()
+            
+            
             );
-        ''')
-
-        # Ajout des index pour de meilleures performances sur les clés étrangères
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_users_discord_id ON users (discord_id);")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_products_user_id ON products (user_id);")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_sales_user_id ON sales (user_id);")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_sales_product_id ON sales (product_id);")
-
+           
+            
+            CREATE TABLE IF NOT EXISTS marketplace_requests (
+                id SERIAL PRIMARY KEY,
+                listing_id INTEGER NOT NULL,
+                seller_id INTEGER NOT NULL,
+                client_name TEXT NOT NULL,
+                client_email TEXT NOT NULL,
+                client_phone TEXT,
+                offer_price DECIMAL,
+                client_message TEXT,
+                request_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                status TEXT NOT NULL DEFAULT 'en_attente',
+                FOREIGN KEY (listing_id) REFERENCES marketplace_listings (id) ON DELETE CASCADE,
+                FOREIGN KEY (seller_id) REFERENCES users (id) ON DELETE CASCADE
+            );
+        """)
         conn.commit()
-        print("Schéma de base de données PostgreSQL initialisé avec succès.")
-    except Exception as e:
-        conn.rollback()
-        print(f"Erreur lors de l'initialisation de la base de données PostgreSQL : {e}")
-    finally:
         cur.close()
-
-# ... (votre code app.py existant) ...
-
-# ... (votre code app.py existant) ...
 
 if __name__ == '__main__':
     # --- MODIFICATIONS NÉCESSAIRES ICI ---

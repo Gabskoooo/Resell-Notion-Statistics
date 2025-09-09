@@ -29,28 +29,64 @@
     <h2 class="mb-4 text-center animate__animated animate__fadeIn">Résumé des Performances de la Période</h2>
     <div class="stat-container mb-5">
         <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <h5 class="stat-block-title-v4">Nb Ventes</h5>
-            <p class="stat-block-value-v4">{{ total_sales_count }}</p>
+            <div class="card-inner">
+                <div class="card-front">
+                    <h5 class="stat-block-title-v4">Nb Ventes</h5>
+                </div>
+                <div class="card-back">
+                    <p class="stat-block-value-v4">{{ total_sales_count }}</p>
+                </div>
+            </div>
         </div>
         <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <h5 class="stat-block-title-v4">Prix Vente Total</h5>
-            <p class="stat-block-value-v4">{{ "%.2f"|format(total_sales_revenue) }}€</p>
+            <div class="card-inner">
+                <div class="card-front">
+                    <h5 class="stat-block-title-v4">Prix Vente Total</h5>
+                </div>
+                <div class="card-back">
+                    <p class="stat-block-value-v4">{{ "%.2f"|format(total_sales_revenue) }}€</p>
+                </div>
+            </div>
         </div>
         <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <h5 class="stat-block-title-v4">Bénéfice Total</h5>
-            <p class="stat-block-value-v4">{{ "%.2f"|format(total_sales_profit) }}€</p>
+            <div class="card-inner">
+                <div class="card-front">
+                    <h5 class="stat-block-title-v4">Bénéfice Total</h5>
+                </div>
+                <div class="card-back">
+                    <p class="stat-block-value-v4">{{ "%.2f"|format(total_sales_profit) }}€</p>
+                </div>
+            </div>
         </div>
         <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <h5 class="stat-block-title-v4">Taux Marge (%)</h5>
-            <p class="stat-block-value-v4">{{ "%.2f"|format(margin_rate) }}%</p>
+            <div class="card-inner">
+                <div class="card-front">
+                    <h5 class="stat-block-title-v4">Taux Marge (%)</h5>
+                </div>
+                <div class="card-back">
+                    <p class="stat-block-value-v4">{{ "%.2f"|format(margin_rate) }}%</p>
+                </div>
+            </div>
         </div>
         <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <h5 class="stat-block-title-v4">Jours Moy. Vente</h5>
-            <p class="stat-block-value-v4">{{ "%.2f"|format(average_days_to_sell) }} jours</p>
+            <div class="card-inner">
+                <div class="card-front">
+                    <h5 class="stat-block-title-v4">Jours Moy. Vente</h5>
+                </div>
+                <div class="card-back">
+                    <p class="stat-block-value-v4">{{ "%.2f"|format(average_days_to_sell) }} jours</p>
+                </div>
+            </div>
         </div>
         <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <h5 class="stat-block-title-v4">Évolution Taux</h5>
-            <p class="stat-block-value-v4">N/A</p>
+            <div class="card-inner">
+                <div class="card-front">
+                    <h5 class="stat-block-title-v4">Évolution Taux</h5>
+                </div>
+                <div class="card-back">
+                    <p class="stat-block-value-v4">N/A</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -73,48 +109,66 @@
     <h2 class="mt-5 mb-4 text-center animate__animated animate__fadeIn">Taux d'Évolution vs. Période Précédente</h2>
     <div class="stat-container">
         <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <h5 class="stat-block-title-v4">Évolution Coût d'achat (PA)</h5>
-            <p class="stat-block-value-v4">
-                {% if evolution_rate_cogs is string and evolution_rate_cogs == 'infinity' %}
-                    N/A (croissance infinie)
-                {% elif evolution_rate_cogs is not string and evolution_rate_cogs == 0.0 %}
-                    <span class="evolution-neutral">0.00%</span>
-                {% elif evolution_rate_cogs is not string and evolution_rate_cogs is defined %}
-                    <span class="{% if evolution_rate_cogs > 0 %}evolution-negative{% elif evolution_rate_cogs < 0 %}evolution-positive{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_cogs) }}%</span>
-                {% else %}
-                    N/A
-                {% endif %}
-            </p>
+            <div class="card-inner">
+                <div class="card-front">
+                    <h5 class="stat-block-title-v4">Évolution Coût d'achat (PA)</h5>
+                </div>
+                <div class="card-back">
+                    <p class="stat-block-value-v4">
+                        {% if evolution_rate_cogs is string and evolution_rate_cogs == 'infinity' %}
+                            N/A (croissance infinie)
+                        {% elif evolution_rate_cogs is not string and evolution_rate_cogs == 0.0 %}
+                            <span class="evolution-neutral">0.00%</span>
+                        {% elif evolution_rate_cogs is not string and evolution_rate_cogs is defined %}
+                            <span class="{% if evolution_rate_cogs > 0 %}evolution-negative{% elif evolution_rate_cogs < 0 %}evolution-positive{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_cogs) }}%</span>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
         </div>
 
         <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <h5 class="stat-block-title-v4">Évolution Prix de Vente (PV)</h5>
-            <p class="stat-block-value-v4">
-                {% if evolution_rate_revenue is string and evolution_rate_revenue == 'infinity' %}
-                    N/A (croissance infinie)
-                {% elif evolution_rate_revenue is not string and evolution_rate_revenue == 0.0 %}
-                    <span class="evolution-neutral">0.00%</span>
-                {% elif evolution_rate_revenue is not string and evolution_rate_revenue is defined %}
-                    <span class="{% if evolution_rate_revenue > 0 %}evolution-positive{% elif evolution_rate_revenue < 0 %}evolution-negative{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_revenue) }}%</span>
-                {% else %}
-                    N/A
-                {% endif %}
-            </p>
+            <div class="card-inner">
+                <div class="card-front">
+                    <h5 class="stat-block-title-v4">Évolution Prix de Vente (PV)</h5>
+                </div>
+                <div class="card-back">
+                    <p class="stat-block-value-v4">
+                        {% if evolution_rate_revenue is string and evolution_rate_revenue == 'infinity' %}
+                            N/A (croissance infinie)
+                        {% elif evolution_rate_revenue is not string and evolution_rate_revenue == 0.0 %}
+                            <span class="evolution-neutral">0.00%</span>
+                        {% elif evolution_rate_revenue is not string and evolution_rate_revenue is defined %}
+                            <span class="{% if evolution_rate_revenue > 0 %}evolution-positive{% elif evolution_rate_revenue < 0 %}evolution-negative{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_revenue) }}%</span>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
         </div>
 
         <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <h5 class="stat-block-title-v4">Évolution Bénéfice</h5>
-            <p class="stat-block-value-v4">
-                {% if evolution_rate_profit is string and evolution_rate_profit == 'infinity' %}
-                    N/A (croissance infinie)
-                {% elif evolution_rate_profit is not string and evolution_rate_profit == 0.0 %}
-                    <span class="evolution-neutral">0.00%</span>
-                {% elif evolution_rate_profit is not string and evolution_rate_profit is defined %}
-                    <span class="{% if evolution_rate_profit > 0 %}evolution-positive{% elif evolution_rate_profit < 0 %}evolution-negative{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_profit) }}%</span>
-                {% else %}
-                    N/A
-                {% endif %}
-            </p>
+            <div class="card-inner">
+                <div class="card-front">
+                    <h5 class="stat-block-title-v4">Évolution Bénéfice</h5>
+                </div>
+                <div class="card-back">
+                    <p class="stat-block-value-v4">
+                        {% if evolution_rate_profit is string and evolution_rate_profit == 'infinity' %}
+                            N/A (croissance infinie)
+                        {% elif evolution_rate_profit is not string and evolution_rate_profit == 0.0 %}
+                            <span class="evolution-neutral">0.00%</span>
+                        {% elif evolution_rate_profit is not string and evolution_rate_profit is defined %}
+                            <span class="{% if evolution_rate_profit > 0 %}evolution-positive{% elif evolution_rate_profit < 0 %}evolution-negative{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_profit) }}%</span>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 </div>
