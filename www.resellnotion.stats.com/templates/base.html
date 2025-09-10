@@ -9,162 +9,31 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        /* Par défaut, cacher l'offcanvas et l'overlay sur toutes les tailles d'écran */
-        /* Ils seront rendus visibles et stylisés spécifiquement pour mobile via les media queries ci-dessous */
-        .offcanvas-menu,
-        .offcanvas-overlay {
-            display: none;
-        }
-
-        /* Cache le bouton navbar-toggler sur les écrans larges (lg) et plus */
-        @media (min-width: 992px) { /* Bootstrap's 'lg' breakpoint */
-            .navbar-toggler {
-                display: none !important;
-            }
-        }
-
-        /* Styles pour l'offcanvas personnalisé et l'overlay UNIQUEMENT sur mobile */
-        @media (max-width: 991.98px) { /* Appliquer uniquement sur les écrans plus petits que large (lg)*/
-            .offcanvas-menu {
-                display: flex; /* Rendu visible par flexbox sur mobile */
-                position: fixed;
-                top: 0;
-                right: -300px; /* Caché par défaut, hors de l'écran */
-                width: 250px; /* Largeur du menu */
-                height: 100%;
-                background-color: #212529; /* Couleur de fond sombre de la navbar */
-                color: white;
-                padding: 1rem;
-                transition: right 0.3s ease-in-out; /* Animation de glissement*/
-                z-index: 1050; /* Au-dessus de l'overlay*/
-                box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
-                flex-direction: column;
-            }
-
-            .offcanvas-menu.show {
-                right: 0; /* Affiché */
-            }
-
-            .offcanvas-overlay {
-                display: block; /* Rendu visible par block sur mobile */
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.7); /* Fond noir semi-transparent*/
-                z-index: 1040; /* Entre la page et le menu*/
-                opacity: 0;
-                visibility: hidden;
-                transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
-            }
-
-            .offcanvas-overlay.show {
-                opacity: 1;
-                visibility: visible;
-            }
-
-            /* Cache la navbar par défaut sur mobile (elle sera remplacée par l'offcanvas) */
-            .navbar-collapse {
-                display: none !important;
-            }
-
-            /* Assure que le bouton "toggler" est visible */
-            .navbar-toggler {
-                display: block; /* S'assure qu'il est visible sur mobile */
-            }
-
-            /* Styles pour les éléments de menu dans l'offcanvas */
-            .offcanvas-menu .navbar-nav {
-                flex-direction: column !important; /* Les éléments s'empilent verticalement*/
-                width: 100%;
-            }
-
-            .offcanvas-menu .nav-item {
-                margin-bottom: 0.5rem; /* Espacement entre les éléments*/
-            }
-
-            .offcanvas-menu .nav-link,
-            .offcanvas-menu .dropdown-item {
-                color: rgba(255, 255, 255, 0.75); /* Couleur du texte*/
-                padding: 0.75rem 1rem;
-                border-radius: 0.25rem;
-            }
-
-            .offcanvas-menu .nav-link:hover,
-            .offcanvas-menu .dropdown-item:hover {
-                background-color: rgba(255, 255, 255, 0.1);
-                color: white;
-            }
-
-            .offcanvas-menu .dropdown-menu {
-                position: static !important; /* Garde le menu déroulant dans le flux*/
-                transform: none !important;
-                background-color: rgba(0, 0, 0, 0.3); /* Fond pour les sous-menus*/
-                border: none;
-                margin-top: 0.5rem;
-            }
-
-            .offcanvas-menu .dropdown-divider {
-                border-top-color: rgba(255, 255, 255, 0.1);
-            }
-
-            /* Ajustement pour le logo et le bouton toggler pour qu'ils soient sur une seule ligne*/
-            .navbar .container-fluid {
-                justify-content: space-between; /* Espace le logo et le toggler */
-            }
-
-            .navbar-brand {
-                margin-right: 0; /* Supprime la marge à droite du logo */
-            }
-
-            .offcanvas-menu .ms-auto { /* Pour la section de connexion/profil */
-                margin-left: 0 !important;
-                margin-top: 1rem;
-                border-top: 1px solid rgba(255, 255, 255, 0.1);
-                padding-top: 1rem;
-            }
-        }
-
-        /* Styles pour la nouvelle bannière d'installation PWA */
-        .install-promotion-banner {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background-color: #007bff; /* Couleur Bootstrap Primary */
-            color: white;
-            text-align: center;
-            padding: 10px 0;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            z-index: 1060; /* Au-dessus de l'overlay de l'offcanvas */
-            display: none; /* Caché par défaut */
-        }
-        .install-promotion-banner .container {
-            max-width: 960px; /* Adaptez à votre mise en page Bootstrap */
-        }
-
-        /* Styles pour l'écran de chargement */
-        #loading-overlay {
+        /* Styles pour l'overlay de chargement */
+        .loading-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
+            background-color: rgba(26, 26, 46, 0.95);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 10000;
-            opacity: 1;
-            transition: opacity 0.5s ease;
+            z-index: 9999;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
         }
 
         .spinner {
             width: 50px;
             height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #3498db;
+            border: 5px solid #ccc;
+            border-top: 5px solid var(--primary-color);
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -174,46 +43,138 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Classe pour cacher l'overlay */
-        .hidden {
-            opacity: 0 !important;
-            pointer-events: none;
+        /* Classe pour empêcher le défilement du corps de la page */
+        .offcanvas-open {
+            overflow: hidden;
+        }
+
+        /* --- Styles pour l'Overlay de Carte Agrandie --- */
+        .card-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85); /* Fond semi-transparent sombre */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000; /* Au-dessus de tout le reste */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
+        }
+
+        .card-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .card-overlay-content {
+            background-color: var(--card-bg); /* Utilise la couleur de fond des cartes */
+            border-radius: 1rem;
+            padding: 2.5rem;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto; /* Permet le défilement si le contenu est trop grand */
+            transform: scale(0.8); /* Commence plus petit pour l'animation */
+            opacity: 0;
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+            color: var(--text-color); /* Couleur du texte dans l'overlay */
+            text-align: center;
+        }
+
+        .card-overlay.show .card-overlay-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .card-overlay-content h3 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.5em;
+            color: var(--primary-color); /* Couleur du titre dans l'overlay */
+            margin-bottom: 1.5rem;
+            letter-spacing: 1px;
+        }
+
+        .card-overlay-content p {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.2em;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .card-overlay-content .stat-value-large {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 4em; /* Très grande taille pour la valeur principale */
+            color: #ffffff;
+            letter-spacing: 2px;
+            margin-bottom: 1rem;
+            display: block; /* S'assure qu'il est sur sa propre ligne */
+        }
+
+        .card-overlay-close {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: none;
+            border: none;
+            font-size: 2em;
+            color: #e0e0e0;
+            cursor: pointer;
+            transition: color 0.2s ease-out;
+        }
+
+        .card-overlay-close:hover {
+            color: var(--danger-color); /* Rouge au survol pour la fermeture */
+        }
+
+        .card-overlay-content .evolution-text {
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+        body {
+            padding-bottom: 70px;
         }
     </style>
 </head>
 <body>
-    <div id="loading-overlay">
+    <div id="loading-overlay" class="loading-overlay">
       <div class="spinner"></div>
     </div>
+
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
-           {# LOGO - TAILLE GROSSIE #}
-           <a class="navbar-brand" href="{{ url_for('dashboard') }}">
-               <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" style="height: 40px; margin-right: 10px;"> {# Hauteur augmentée #}
+           <a class="navbar-brand d-flex align-items-center" href="{{ url_for('dashboard') }}">
+               <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo-nav">
            </a>
-            <button class="navbar-toggler" type="button" aria-controls="offcanvasMenu" aria-expanded="false" aria-label="Toggle navigation" data-no-overlay>
+            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            {# Le collapse original reste pour les écrans non-mobiles#}
+
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     {% if current_user.is_authenticated %}
-                        {# EMOJI MAISON - TAILLE GROSSIE - DÉPLACÉ EN PREMIER #}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('dashboard') }}"><span style="font-size: 1.5em;">🏠</span></a>
+                            <a class="nav-link nav-icon" href="{{ url_for('dashboard') }}" title="Tableau de Bord">
+                                <i class="bi bi-house-door-fill"></i> Tableau de Bord
+                            </a>
                         </li>
-                        {# EMOJI GRAPHIQUE - TAILLE GROSSIE - DÉPLACÉ À CÔTÉ DE LA MAISON #}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('statistics') }}"><span style="font-size: 1.5em;">📊</span></a>
+                            <a class="nav-link nav-icon" href="{{ url_for('statistics') }}" title="Statistiques">
+                                <i class="bi bi-bar-chart-fill"></i> Statistiques
+                            </a>
                         </li>
-                        {# EMOJI PODIUM - TAILLE GROSSIE - DÉPLACÉ À CÔTÉ DES STATS #}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('leaderboard') }}"><span style="font-size: 1.5em;">🏆</span></a>
+                            <a class="nav-link nav-icon" href="{{ url_for('leaderboard') }}" title="Classement">
+                                <i class="bi bi-trophy-fill"></i> Classement
+                            </a>
                         </li>
-                        {# BOUTONS PRODUITS ET VENTES DÉPLACÉS APRÈS LES EMOJIS #}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownProducts" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-no-overlay>
-                                <span style="font-size: 1.2em;">📦</span> Produits
+                            <a class="nav-link dropdown-toggle nav-icon" href="#" id="navbarDropdownProducts" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-box-seam-fill"></i> Produits
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="navbarDropdownProducts">
                                <li><a class="dropdown-item" href="{{ url_for('products') }}">Voir les Produits</a></li>
@@ -221,37 +182,38 @@
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownSales" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-no-overlay>
-                                <span style="font-size: 1.2em;">🎫</span> Ventes
+                            <a class="nav-link dropdown-toggle nav-icon" href="#" id="navbarDropdownSales" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-ticket-perforated-fill"></i> Ventes
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="navbarDropdownSales">
                                 <li><a class="dropdown-item" href="{{ url_for('sales') }}">Voir les Ventes</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('add_sale') }}">Enregistrer une Vente</a></li>
                             </ul>
                         </li>
-                        {# NOUVEAU LIEN WTS/WTB GEN ICI #}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('wtb_wts_gen') }}"><span style="font-size: 1.2em;">📸</span> WTS/WTB Gen</a>
+                            <a class="nav-link nav-icon" href="{{ url_for('wtb_wts_gen') }}">
+                                <i class="bi bi-camera-fill"></i> WTS/WTB Gen
+                            </a>
                         </li>
-                        {# OPÉRATIONS SUPPLÉMENTAIRES #}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('supplementary_operations') }}"><span style="font-size: 1.2em;">➕</span> Opérations Supplémentaires</a>
-                        </li>
-                        {# BOUTON D'INSTALLATION PWA - APRÈS OPÉRATIONS SUPPLÉMENTAIRES (POUR DESKTOP) #}
-                        <li class="nav-item">
-                            <button id="installButton" class="btn btn-sm btn-info ms-2" style="display: none;" data-no-overlay> {# AJOUTÉ style="display: none;" #}
-                                <i class="bi bi-download"></i> <span id="installButtonText">Installer l'app</span>
-                            </button>
+                            <a class="nav-link nav-icon" href="{{ url_for('supplementary_operations') }}">
+                                <i class="bi bi-plus-circle-fill"></i> Opérations Supplémentaires
+                            </a>
                         </li>
                     {% endif %}
                 </ul>
                 <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <button id="installButton" class="btn btn-info btn-sm me-2 d-none d-lg-block">
+                            <i class="bi bi-download"></i> Installer
+                        </button>
+                    </li>
                     {% if current_user.is_authenticated %}
                      <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownUser" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-no-overlay>
-                                👤 {# EMOJI PROFIL - TAILLE GROSSIE #}
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownUser" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle"></i>
                             </a>
-                            <ul class="dropdown-menu" aria-labelledby="navbarDropdownUser">
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownUser">
                                 <li><a class="dropdown-item" href="{{ url_for('profile') }}">Mon Profil ({{ current_user.username or current_user.email }})</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{{ url_for('logout') }}">Déconnexion</a></li>
@@ -270,77 +232,84 @@
         </div>
     </nav>
 
-    {# Offcanvas Menu for Mobile #}
-    <div class="offcanvas-overlay" id="offcanvasOverlay"></div>
-    <div class="offcanvas-menu" id="offcanvasMenu">
-        <button type="button" class="btn-close btn-close-white ms-auto" aria-label="Close" id="offcanvasCloseBtn" data-no-overlay></button>
-        <ul class="navbar-nav">
-            {% if current_user.is_authenticated %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('dashboard') }}"><span style="font-size: 1.5em;">🏠</span> Tableau de Bord</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('statistics') }}"><span style="font-size: 1.5em;">📊</span> Statistiques</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('leaderboard') }}"><span style="font-size: 1.5em;">🏆</span> Classement</a>
-                </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="offcanvasDropdownProducts" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-no-overlay>
-                        <span style="font-size: 1.2em;">📦</span> Produits
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="offcanvasDropdownProducts">
-                       <li><a class="dropdown-item" href="{{ url_for('products') }}">Voir les Produits</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('add_product') }}">Ajouter un Produit</a></li>
-                    </ul>
-                </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="offcanvasDropdownSales" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-no-overlay>
-                        <span style="font-size: 1.2em;">🎫</span> Ventes
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="offcanvasDropdownSales">
-                        <li><a class="dropdown-item" href="{{ url_for('sales') }}">Voir les Ventes</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('add_sale') }}">Enregistrer une Vente</a></li>
-                    </ul>
-                </li>
-                {# NOUVEAU LIEN WTS/WTB GEN ICI POUR L'OFFCANVAS #}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('wtb_wts_gen') }}"><span style="font-size: 1.2em;">📸</span> WTS/WTB Gen</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('supplementary_operations') }}"><span style="font-size: 1.2em;">➕</span> Opérations Supplémentaires</a>
-                </li>
-                {# BOUTON D'INSTALLATION PWA POUR L'OFFCANVAS #}
-                <li class="nav-item">
-                    <button id="installButtonOffcanvas" class="btn btn-primary" style="display: none; margin-top: 1rem;" data-no-overlay> {# AJOUTÉ style="display: none;" #}
-                        <i class="bi bi-download"></i> <span id="installButtonOffcanvasText">Installer l'application</span>
-                    </button>
-                </li>
-            {% endif %}
+    {# Offcanvas Navbar for mobile #}
+    <div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="offcanvasNavbarLabel">Menu</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body">
+        <ul class="navbar-nav justify-content-end flex-grow-1 pe-3">
+          {% if current_user.is_authenticated %}
+              <li class="nav-item">
+                  <a class="nav-link nav-icon" href="{{ url_for('dashboard') }}" title="Tableau de Bord">
+                      <i class="bi bi-house-door-fill"></i> Tableau de Bord
+                  </a>
+              </li>
+              <li class="nav-item">
+                  <a class="nav-link nav-icon" href="{{ url_for('statistics') }}" title="Statistiques">
+                      <i class="bi bi-bar-chart-fill"></i> Statistiques
+                  </a>
+              </li>
+              <li class="nav-item">
+                  <a class="nav-link nav-icon" href="{{ url_for('leaderboard') }}" title="Classement">
+                      <i class="bi bi-trophy-fill"></i> Classement
+                  </a>
+              </li>
+              <li class="nav-item dropdown">
+                  <a class="nav-link dropdown-toggle" href="#" id="offcanvasDropdownProducts" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="bi bi-box-seam-fill"></i> Produits
+                  </a>
+                  <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="offcanvasDropdownProducts">
+                     <li><a class="dropdown-item" href="{{ url_for('products') }}">Voir les Produits</a></li>
+                      <li><a class="dropdown-item" href="{{ url_for('add_product') }}">Ajouter un Produit</a></li>
+                  </ul>
+              </li>
+              <li class="nav-item dropdown">
+                  <a class="nav-link dropdown-toggle" href="#" id="offcanvasDropdownSales" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="bi bi-ticket-perforated-fill"></i> Ventes
+                  </a>
+                  <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="offcanvasDropdownSales">
+                      <li><a class="dropdown-item" href="{{ url_for('sales') }}">Voir les Ventes</a></li>
+                      <li><a class="dropdown-item" href="{{ url_for('add_sale') }}">Enregistrer une Vente</a></li>
+                  </ul>
+              </li>
+              <li class="nav-item">
+                  <a class="nav-link" href="{{ url_for('wtb_wts_gen') }}">
+                      <i class="bi bi-camera-fill"></i> WTS/WTB Gen
+                  </a>
+              </li>
+              <li class="nav-item">
+                  <a class="nav-link" href="{{ url_for('supplementary_operations') }}">
+                      <i class="bi bi-plus-circle-fill"></i> Opérations Supplémentaires
+                  </a>
+              </li>
+              <li class="nav-item mt-3">
+                  <button id="installButtonOffcanvas" class="btn btn-info w-100">
+                      <i class="bi bi-download"></i> Installer l'app
+                  </button>
+              </li>
+              <li class="nav-item mt-3">
+                  <a class="nav-link text-white" href="{{ url_for('profile') }}">
+                      <i class="bi bi-person-circle"></i> Mon Profil ({{ current_user.username or current_user.email }})
+                  </a>
+              </li>
+              <li class="nav-item">
+                  <a class="nav-link text-white" href="{{ url_for('logout') }}">
+                      <i class="bi bi-box-arrow-right"></i> Déconnexion
+                  </a>
+              </li>
+          {% else %}
+              <li class="nav-item">
+                  <a class="nav-link" href="{{ url_for('login') }}"><i class="bi bi-box-arrow-in-right"></i> Connexion</a>
+              </li>
+              <li class="nav-item">
+                  <a class="nav-link" href="{{ url_for('register') }}"><i class="bi bi-person-plus-fill"></i> Inscription</a>
+              </li>
+          {% endif %}
         </ul>
-        <ul class="navbar-nav ms-auto">
-            {% if current_user.is_authenticated %}
-             <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="offcanvasDropdownUser" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-no-overlay>
-                        👤 Mon Profil
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="offcanvasDropdownUser">
-                        <li><a class="dropdown-item" href="{{ url_for('profile') }}">Mon Profil ({{ current_user.username or current_user.email }})</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="{{ url_for('logout') }}">Déconnexion</a></li>
-                    </ul>
-                </li>
-            {% else %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('login') }}">Connexion</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('register') }}">Inscription</a>
-                </li>
-            {% endif %}
-        </ul>
+      </div>
     </div>
-
 
     <div class="container mt-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -353,258 +322,145 @@
         {% block content %}{% endblock %}
     </div>
 
-    {# Nouvelle Bannière d'installation PWA #}
-    <div id="installPromotion" class="install-promotion-banner" style="display: none;">
-        <div class="container d-flex justify-content-between align-items-center py-2">
+    <div id="installPromotion" class="install-promotion-banner d-none">
+        <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center py-2">
             <span>Profitez d'une meilleure expérience ! Installez notre application pour un accès rapide.</span>
-            <div>
-                <button id="installPromotionBtn" class="btn btn-success me-2" data-no-overlay>Installer</button>
-                <button id="closePromotionBtn" class="btn btn-outline-light" data-no-overlay>Non merci</button>
+            <div class="mt-2 mt-md-0">
+                <button id="installPromotionBtn" class="btn btn-success me-2">Installer</button>
+                <button id="closePromotionBtn" class="btn btn-outline-light">Non merci</button>
             </div>
+        </div>
+    </div>
+
+    {# --- Nouvelle structure de l'overlay de carte --- #}
+    <div class="card-overlay" id="cardDetailOverlay">
+        <div class="card-overlay-content">
+            <button class="card-overlay-close" id="cardOverlayCloseBtn">&times;</button>
+            <h3 id="overlayTitle"></h3>
+            <span class="stat-value-large" id="overlayValue"></span>
+            <p id="overlayDescription"></p>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const navbarToggler = document.querySelector('.navbar-toggler');
-            const offcanvasMenu = document.getElementById('offcanvasMenu');
-            const offcanvasOverlay = document.getElementById('offcanvasOverlay');
-            const offcanvasCloseBtn = document.getElementById('offcanvasCloseBtn');
-
-            function toggleOffcanvas() {
-                // Seulement basculer si l'écran est suffisamment petit pour l'offcanvas (mobile)
-                if (window.innerWidth < 992) {
-                    offcanvasMenu.classList.toggle('show');
-                    offcanvasOverlay.classList.toggle('show');
-                    document.body.classList.toggle('offcanvas-open'); // Pour désactiver le scroll du body
-                }
+        // Script pour l'écran de chargement
+        window.addEventListener('load', function() {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
             }
-
-            if (navbarToggler) {
-                // L'écouteur est ajouté, mais l'action de toggleOffcanvas est conditionnée par la taille de l'écran.
-                navbarToggler.addEventListener('click', function (event) {
-                    event.stopPropagation();
-                    toggleOffcanvas();
-                });
-            }
-
-            if (offcanvasOverlay) {
-                offcanvasOverlay.addEventListener('click', toggleOffcanvas);
-            }
-
-            if (offcanvasCloseBtn) {
-                offcanvasCloseBtn.addEventListener('click', toggleOffcanvas);
-            }
-
-            // Gestion des clics sur les liens du menu pour fermer l'offcanvas
-            if (offcanvasMenu) {
-                offcanvasMenu.querySelectorAll('.nav-link, .dropdown-item').forEach(item => {
-                    if (!item.classList.contains('dropdown-toggle')) {
-                        item.addEventListener('click', toggleOffcanvas);
-                    }
-                });
-            }
-
-            // Empêcher le scroll du body quand l'offcanvas est ouvert
-            const style = document.createElement('style');
-            style.innerHTML = `
-                body.offcanvas-open {
-                    overflow: hidden;
-                }
-            `;
-            document.head.appendChild(style);
         });
 
-        // --- DÉBUT DU NOUVEAU SCRIPT POUR L'ENREGISTREMENT DU SERVICE WORKER ---
-        if ('serviceWorker' in navigator) {
-          window.addEventListener('load', function() {
-            navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
-              console.log('ServiceWorker registration successful with scope: ', registration.scope);
-            }, function(err) {
-              console.log('ServiceWorker registration failed: ', err);
-            });
-          });
-        }
-        // --- FIN DU NOUVEAU SCRIPT POUR L'ENREGISTREMENT DU SERVICE WORKER ---
+        // --- PWA Installation Script ---
+        let deferredPrompt;
+        const installButton = document.getElementById('installButton');
+        const installButtonOffcanvas = document.getElementById('installButtonOffcanvas');
+        const installPromotion = document.getElementById('installPromotion');
+        const installPromotionBtn = document.getElementById('installPromotionBtn');
+        const closePromotionBtn = document.getElementById('closePromotionBtn');
 
-        // --- DÉBUT DU SCRIPT POUR L'INVITE D'INSTALLATION PWA ---
-        let deferredPrompt; // Variable pour stocker l'événement
-
-        const installButton = document.getElementById('installButton'); // Bouton navbar desktop
-        const installButtonText = document.getElementById('installButtonText');
-        const installButtonOffcanvas = document.getElementById('installButtonOffcanvas'); // Bouton offcanvas mobile
-        const installButtonOffcanvasText = document.getElementById('installButtonOffcanvasText');
-        const installPromotion = document.getElementById('installPromotion'); // La bannière
-        const installPromotionBtn = document.getElementById('installPromotionBtn'); // Bouton "Installer" de la bannière
-        const closePromotionBtn = document.getElementById('closePromotionBtn'); // Bouton "Non merci" de la bannière
-
-        // Fonction pour configurer les boutons en mode "Installer"
-        function setInstallMode() {
-            console.log('[PWA] Mode: Installer l\'application');
-            if (installButton) { // Vérifier l'existence avant de manipuler
-                installButton.style.display = 'block'; // Rendre visible
-                if (installButtonText) {
-                    installButtonText.textContent = 'Installer l\'app';
-                }
-                installButton.onclick = handleInstallClick;
-            }
-            if (installButtonOffcanvas) { // Vérifier l'existence avant de manipuler
-                installButtonOffcanvas.style.display = 'block'; // Rendre visible
-                if (installButtonOffcanvasText) {
-                    installButtonOffcanvasText.textContent = 'Installer l\'application';
-                }
-                installButtonOffcanvas.onclick = handleInstallClick;
-            }
-            // Afficher la bannière uniquement si elle n'a pas été précédemment refusée
+        const showInstallPrompt = () => {
+            if (installButton) installButton.classList.remove('d-none');
+            if (installButtonOffcanvas) installButtonOffcanvas.classList.remove('d-none');
             if (installPromotion && localStorage.getItem('pwa_install_prompt_dismissed') !== 'true') {
-                installPromotion.style.display = 'block';
+                installPromotion.classList.remove('d-none');
             }
-        }
+        };
 
-        // Fonction pour configurer les boutons en mode "Ouvrir"
-        function setOpenAppMode() {
-            console.log('[PWA] Mode: Ouvrir l\'application');
-            // Ces boutons doivent toujours être visibles quand l'app est installée
-            if (installButton) {
-                installButton.style.display = 'block';
-                if (installButtonText) {
-                    installButtonText.textContent = 'Ouvrir dans l\'application';
-                }
-                installButton.onclick = handleOpenAppClick;
-            }
-            if (installButtonOffcanvas) {
-                installButtonOffcanvas.style.display = 'block';
-                if (installButtonOffcanvasText) {
-                    installButtonOffcanvasText.textContent = 'Ouvrir dans l\'application';
-                }
-                installButtonOffcanvas.onclick = handleOpenAppClick;
-            }
-            // Cacher la bannière si l'app est installée
-            if (installPromotion) {
-                installPromotion.style.display = 'none';
-            }
-        }
+        const hideInstallUI = () => {
+            if (installButton) installButton.classList.add('d-none');
+            if (installButtonOffcanvas) installButtonOffcanvas.classList.add('d-none');
+            if (installPromotion) installPromotion.classList.add('d-none');
+        };
 
-        // Gestion du clic pour l'installation
-        function handleInstallClick() {
-            if (deferredPrompt) {
-                // Cacher tous les éléments d'installation quand l'invite est déclenchée
-                if (installPromotion) installPromotion.style.display = 'none';
-                if (installButton) installButton.style.display = 'none'; // Masquer après le clic
-                if (installButtonOffcanvas) installButtonOffcanvas.style.display = 'none'; // Masquer après le clic
-
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('[PWA] L\'utilisateur a accepté l\'installation.');
-                    } else {
-                        console.log('[PWA] L\'utilisateur a refusé l\'installation.');
-                        // Optionnel: Si l'utilisateur refuse, on peut choisir de ré-afficher les boutons "Installer"
-                        // setInstallMode(); // Décommenter si vous voulez ré-afficher après un refus
-                    }
-                    deferredPrompt = null; // Réinitialise l'événement après l'invite
-                });
-            } else {
-                console.log('[PWA] deferredPrompt non disponible. L\'invite n\'a pas été stockée. L\'application est peut-être déjà installée ou le navigateur n\'est pas prêt.');
-                // L'alerte est supprimée ici !
-                // alert("Pour installer l'application, veuillez utiliser la fonctionnalité 'Ajouter à l'écran d'accueil' ou 'Installer l'application' disponible dans le menu de votre navigateur.');
-
-                // Si l'app est déjà installée, s'assurer que les boutons sont en mode "Ouvrir"
-                if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
-                     setOpenAppMode();
-                } else {
-                    // Si l'app n'est pas installée ET deferredPrompt est null, on pourrait informer l'utilisateur autrement
-                    // ou simplement ne rien faire et attendre que le navigateur déclenche beforeinstallprompt.
-                    // Pour l'instant, les boutons restent cachés s'ils étaient cachés initialement.
-                }
-            }
-        }
-
-        // Gestion du clic pour ouvrir l'application installée
-        function handleOpenAppClick() {
-            console.log('[PWA] Tentative d\'ouverture de l\'application installée.');
-            // Redirige vers la page d'accueil de l'application.
-            // Si l'application est installée, le navigateur devrait ouvrir l'instance installée.
-            window.location.href = '/'; // Remplacez par l'URL de départ de votre PWA si différente
-        }
-
-        // Écoute l'événement 'beforeinstallprompt'
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            console.log('[PWA] beforeinstallprompt a été déclenché et stocké.');
-            // Si l'app n'est pas déjà en mode standalone et que la bannière n'a pas été refusée, afficher l'invite
-            if (!(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) &&
-                localStorage.getItem('pwa_install_prompt_dismissed') !== 'true') {
-                setInstallMode(); // Afficher la bannière et les boutons en mode "Installer"
-            }
+            showInstallPrompt();
         });
 
-        // Gère le clic sur le bouton "Non merci" de la bannière
+        const handleInstall = () => {
+            hideInstallUI();
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the PWA install prompt.');
+                    } else {
+                        console.log('User dismissed the PWA install prompt.');
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        };
+
+        if (installButton) installButton.addEventListener('click', handleInstall);
+        if (installButtonOffcanvas) installButtonOffcanvas.addEventListener('click', handleInstall);
+        if (installPromotionBtn) installPromotionBtn.addEventListener('click', handleInstall);
         if (closePromotionBtn) {
             closePromotionBtn.addEventListener('click', () => {
-                if (installPromotion) {
-                    installPromotion.style.display = 'none';
-                }
+                if (installPromotion) installPromotion.classList.add('d-none');
                 localStorage.setItem('pwa_install_prompt_dismissed', 'true');
-                console.log('[PWA] Bannière d\'installation refusée et masquée.');
             });
         }
 
-        // Gérer l'état d'installation : si l'app est installée
-        window.addEventListener('appinstalled', () => {
-            console.log('[PWA] L\'application a été installée !');
-            setOpenAppMode(); // Passer les boutons en mode "Ouvrir" et cacher la bannière
-            deferredPrompt = null; // L'événement n'est plus pertinent
-        });
+        // --- Nouveau script pour l'overlay des cartes ---
+        const cardDetailOverlay = document.getElementById('cardDetailOverlay');
+        const cardOverlayCloseBtn = document.getElementById('cardOverlayCloseBtn');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlayValue = document.getElementById('overlayValue');
+        const overlayDescription = document.getElementById('overlayDescription');
 
-        // Vérification initiale au chargement de la page
-        document.addEventListener('DOMContentLoaded', () => {
-            if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
-                // L'application est déjà en mode standalone (installée)
-                setOpenAppMode();
-            } else {
-                // L'application n'est pas en mode standalone
-                // On n'appelle PAS setInstallMode() ici.
-                // L'affichage des boutons "Installer" et de la bannière sera géré par l'événement 'beforeinstallprompt'
-                // qui se déclenchera lorsque le navigateur sera prêt.
+        function openOverlay(title, value, description) {
+            overlayTitle.textContent = title;
+            overlayValue.innerHTML = value; // Utiliser innerHTML pour permettre des spans colorés
+            overlayDescription.textContent = description;
+            cardDetailOverlay.classList.add('show');
+            document.body.classList.add('offcanvas-open'); // Réutiliser la classe pour empêcher le défilement
+        }
+
+        function closeOverlay() {
+            cardDetailOverlay.classList.remove('show');
+            document.body.classList.remove('offcanvas-open');
+        }
+
+        cardOverlayCloseBtn.addEventListener('click', closeOverlay);
+        cardDetailOverlay.addEventListener('click', function(event) {
+            if (event.target === cardDetailOverlay) { // Fermer si on clique en dehors du contenu
+                closeOverlay();
             }
         });
-        // --- FIN DU SCRIPT POUR L'INVITE D'INSTALLATION PWA ---
 
-        // Script pour l'écran de chargement
-        document.addEventListener('DOMContentLoaded', function() {
-            const overlay = document.getElementById('loading-overlay');
+        // Gérer la touche Échap pour fermer
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && cardDetailOverlay.classList.contains('show')) {
+                closeOverlay();
+            }
+        });
 
-            // Cacher l'overlay lorsque la page est complètement chargée
-            window.addEventListener('load', function() {
-                overlay.classList.add('hidden');
-            });
+        // Attacher les gestionnaires d'événements aux cartes de statistiques
+        document.querySelectorAll('.stat-block-v5').forEach(card => {
+            card.addEventListener('click', function() {
+                const title = this.querySelector('h5').textContent;
+                const valueElement = this.querySelector('.stat-value');
+                const value = valueElement ? valueElement.innerHTML : 'N/A';
 
-            // Afficher l'overlay au début d'un lien de navigation
-            document.querySelectorAll('a').forEach(link => {
-                // Ne s'applique qu'aux liens internes qui ne sont pas explicitement exclus
-                if (link.hostname === window.location.hostname && !link.hasAttribute('data-no-overlay') && link.href) {
-                    link.addEventListener('click', function(event) {
-                        // Éviter l'overlay si l'URL ne change pas (par exemple, si c'est une ancre interne)
-                        if (link.href !== window.location.href + '#') {
-                            overlay.classList.remove('hidden');
-                        }
-                    });
-                }
-            });
+                let description = '';
+                if (title.includes("Nb Ventes")) description = "Nombre total de ventes enregistrées pour la période sélectionnée.";
+                else if (title.includes("Prix Vente Total")) description = "Somme totale des prix de vente de tous les articles pour la période.";
+                else if (title.includes("Bénéfice Total")) description = "Bénéfice net cumulé de toutes les ventes après déduction des coûts et frais.";
+                else if (title.includes("Taux Marge")) description = "Pourcentage de bénéfice par rapport au chiffre d'affaires total.";
+                else if (title.includes("Jours Moy. Vente")) description = "Durée moyenne nécessaire pour vendre un article après son acquisition.";
+                else if (title.includes("Évolution Coût d'achat (PA)")) description = "Changement en pourcentage du coût d'achat par rapport à la période précédente.";
+                else if (title.includes("Évolution Prix de Vente (PV)")) description = "Changement en pourcentage du prix de vente total par rapport à la période précédente.";
+                else if (title.includes("Évolution Bénéfice")) description = "Changement en pourcentage du bénéfice total par rapport à la période précédente.";
+                else description = "Informations détaillées pour " + title;
 
-            // Gérer également les soumissions de formulaires qui rechargent la page
-            document.querySelectorAll('form').forEach(form => {
-                // Ne pas appliquer sur les formulaires qui utilisent AJAX ou qui sont explicitement exclus
-                if (!form.hasAttribute('data-no-overlay')) {
-                    form.addEventListener('submit', function() {
-                        overlay.classList.remove('hidden');
-                    });
-                }
+                openOverlay(title, value, description);
             });
         });
     </script>
+
 </body>
 </html>

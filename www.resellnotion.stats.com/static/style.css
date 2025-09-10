@@ -1,110 +1,290 @@
 /* static/style.css */
 
-@font-face {
-    font-family: 'Police de base'; /* Donnez un nom à votre police */
-    src: url('fonts/SpecialGothicExpandedOne-Regular.ttf') format('truetype'); /* Chemin relatif depuis style.css */
-       font-weight: normal; /* ou 700 pour bold, etc. */
-    font-style: normal;
-    /* Vous pouvez ajouter d'autres formats si vous avez (woff, woff2) pour une meilleure compatibilité */
-    /* src: url('fonts/MaSuperPolice.woff2') format('woff2'),
-            url('fonts/MaSuperPolice.woff') format('woff'); */
+/* --- Import des polices Google Fonts --- */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+
+/* --- Variables pour le thème sombre --- */
+:root {
+    --body-bg: #121212;
+    --card-bg: rgba(30, 30, 30, 0.8);
+    --text-color: #e0e0e0;
+    --link-color: #bb86fc;
+    --link-hover-color: #3700b3;
+    --border-color: #333;
+    --header-bg: rgba(31, 31, 31, 0.9);
+    --shadow-color: rgba(0, 0, 0, 0.5);
+}
+
+/* --- Styles Généraux --- */
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: 'Montserrat', sans-serif;
 }
 
 body {
-    /* L'URL utilise url_for('static', filename='fond.png') dans Jinja2 pour Flask,
-       mais en CSS pur, c'est un chemin relatif au fichier CSS.
-       Si style.css est dans /static/, et fond.png est aussi dans /static/,
-       alors le chemin est juste 'fond.png'. */
-    html {
-    height: 100%;
-    overflow-y: auto; /* Permet le défilement vertical si le contenu dépasse la hauteur de la fenêtre */
-}
     background-image: url('fond.png');
-    background-size: cover; /* Couvre toute la surface sans déformer l'image */
-    background-repeat: no-repeat; /* Empêche l'image de se répéter */
-    background-attachment: fixed; /* L'image de fond reste fixe quand on scroll */
-    background-position: center center; /* Centre l'image de fond */
-
-    /* Gardez vos couleurs de texte claires pour qu'elles ressortent sur un fond sombre */
-    color: #f8f9fa; /* Texte clair */
-    min-height: 100vh; /* Assure que le fond couvre au moins toute la hauteur de la vue */
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-position: center center;
 }
 
-/* Le reste de votre CSS pour les cartes, tableaux, etc. */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--body-bg);
+    opacity: 0.9;
+    z-index: -1;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Bebas Neue', sans-serif;
+    color: #ffffff;
+}
+
+a {
+    color: var(--link-color);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--link-hover-color);
+}
+
+.btn-primary {
+    background-color: var(--link-color);
+    border-color: var(--link-color);
+}
+
+.btn-primary:hover {
+    background-color: var(--link-hover-color);
+    border-color: var(--link-hover-color);
+}
+
 .card {
-    background-color: rgba(0, 0, 0, 0.7); /* Fond semi-transparent pour les cartes */
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+.form-control, .form-select {
+    background-color: rgba(0, 0, 0, 0.5);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+.form-control::placeholder {
+    color: #888;
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: rgba(0, 0, 0, 0.6);
+    color: var(--text-color);
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25);
+}
+
+.form-select option {
+    background-color: #3a3f45;
     color: #f8f9fa;
 }
 
 .table {
-    background-color: rgba(0, 0, 0, 0.6); /* Fond semi-transparent pour les tableaux */
-    color: #f8f9fa;
+    --bs-table-bg: rgba(0, 0, 0, 0.6);
+    --bs-table-color: var(--text-color);
+    --bs-table-border-color: var(--border-color);
 }
 
-.table-striped tbody tr:nth-of-type(odd) {
-    background-color: rgba(255, 255, 255, 0.05);
-}
-
-.table-striped tbody tr:nth-of-type(even) {
-    background-color: rgba(255, 255, 255, 0.02);
-}
-
-.table-bordered {
-    border-color: rgba(255, 255, 255, 0.2);
-}
-
-.table-dark {
-    --bs-table-bg: rgba(0, 0, 0, 0.8);
-    --bs-table-color: #f8f9fa;
-    border-color: rgba(255, 255, 255, 0.2);
-}
-
+/* --- Navigation --- */
 .navbar {
-    background-color: rgba(0, 0, 0, 0.8) !important; /* Fond semi-transparent pour la barre de navigation */
+    background-color: var(--header-bg) !important;
+    border-bottom: 1px solid var(--border-color);
 }
 
-.form-control, .form-select {
-    background-color: rgba(0, 0, 0, 0.5); /* Fond semi-transparent pour les champs de formulaire */
-    color: #f8f9fa;
-    border-color: rgba(255, 255, 255, 0.3);
-}
-.form-control:focus, .form-select:focus {
-    background-color: rgba(0, 0, 0, 0.6);
-    color: #f8f9fa;
-    border-color: rgba(255, 255, 255, 0.5);
-    box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25);
-}
-.form-select option {
-    background-color: #3a3f45; /* Couleur de fond pour les options */
-    color: #f8f9fa; /* Couleur du texte pour les options */
+.navbar-brand {
+    color: var(--text-color);
 }
 
-/* Styles Spécifiques pour la page de Statistiques */
+.nav-link {
+    color: var(--text-color);
+}
+
+.nav-link:hover {
+    color: var(--link-color);
+}
+
+.dropdown-menu {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+}
+
+.dropdown-item {
+    color: var(--text-color);
+}
+
+.dropdown-item:hover {
+    background-color: var(--body-bg);
+}
+
+.logo-nav {
+    height: 40px;
+    margin-right: 10px;
+}
+
+.nav-icon {
+    display: flex;
+    align-items: center;
+}
+
+.nav-icon i {
+    font-size: 1.5rem;
+    margin-right: 0.5rem;
+}
+
+/* Espacement horizontal entre les éléments de la barre de navigation */
+.navbar-nav .nav-item {
+    margin-right: 1.5rem;
+}
+
+@media (min-width: 992px) {
+    .navbar .navbar-nav .nav-link {
+        display: flex;
+        align-items: center;
+    }
+}
+
+/* --- Tableau de bord (dashboard) --- */
+.dashboard-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.7);
+}
+
+.dashboard-card-icon {
+    font-size: 3rem;
+    color: var(--link-color);
+}
+
+/* --- Pagination --- */
+.pagination .page-link {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+.pagination .page-item.active .page-link {
+    background-color: var(--link-color);
+    border-color: var(--link-color);
+    color: #fff;
+}
+
+.pagination .page-link:hover {
+    background-color: var(--link-hover-color);
+    border-color: var(--link-hover-color);
+}
+
+/* --- Alerts --- */
+.alert {
+    --bs-alert-bg: #333;
+    --bs-alert-color: #fff;
+    --bs-alert-border-color: #555;
+}
+
+/* --- Autres --- */
+.leaderboard-table .table-info {
+    --bs-table-bg: #bb86fc;
+    --bs-table-color: #fff;
+    border-color: #3700b3;
+}
+
+.leaderboard-table .table-info a {
+    color: #fff;
+}
+
+/* --- Ecran de chargement --- */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+    pointer-events: all;
+}
+
+.loading-overlay.hidden {
+    opacity: 0 !important;
+    pointer-events: none;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* --- Bannière d'installation PWA --- */
+.install-promotion-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #007bff;
+    color: white;
+    text-align: center;
+    padding: 10px 0;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    z-index: 1060;
+}
+
+/* --- Styles spécifiques pour la page de Statistiques --- */
 .stat-container {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 1rem; /* Espacement entre les blocs */
+    gap: 1rem;
     width: 100%;
     margin: 0 auto;
 }
 
 .stat-block-v4 {
-    background-color: transparent; /* Le fond sera géré par les faces */
-    border: none; /* Plus de bordure directe sur le conteneur */
+    background-color: transparent;
+    border: none;
     border-radius: 0.75rem;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-    aspect-ratio: 1 / 1; /* Force le format carré */
+    aspect-ratio: 1 / 1;
     display: flex;
     justify-content: center;
     align-items: center;
     text-align: center;
     position: relative;
-    perspective: 1000px; /* Pour l'effet 3D de retournement */
-    overflow: hidden; /* Cache le contenu qui dépasse pendant la rotation */
-
+    perspective: 1000px;
+    overflow: hidden;
     flex: 1 1 25%;
     max-width: 25%;
 }
@@ -114,28 +294,25 @@ body {
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 20px rgba(106, 17, 203, 0.3);
 }
 
-/* Conteneur interne pour les faces avant et arrière */
 .card-inner {
     position: relative;
     width: 100%;
     height: 100%;
     text-align: center;
     transition: transform 0.6s;
-    transform-style: preserve-3d; /* Permet la 3D sur les enfants */
-    border-radius: 0.75rem; /* Pour que les coins soient arrondis */
+    transform-style: preserve-3d;
+    border-radius: 0.75rem;
 }
 
-/* Lorsque la carte est survolée, l'intérieur bascule */
 .stat-block-v4:hover .card-inner {
     transform: rotateY(180deg);
 }
 
-/* Styles pour les deux faces de la carte */
 .card-front, .card-back {
     position: absolute;
     width: 100%;
     height: 100%;
-    -webkit-backface-visibility: hidden; /* Cache le dos pendant la rotation */
+    -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     display: flex;
     flex-direction: column;
@@ -143,9 +320,8 @@ body {
     align-items: center;
     padding: 1rem;
     border-radius: 0.75rem;
-    border: 1px solid rgba(255, 255, 255, 0.1); /* Bordure sur les faces */
-    /* Assure que le fond reste opaque */
-    background-color: rgba(0, 0, 0, 0.7); /* Même couleur pour les deux faces */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(0, 0, 0, 0.7);
 }
 
 .card-front {
@@ -154,25 +330,24 @@ body {
 }
 
 .card-back {
-    color: #f8f9fa; /* S'assure que la couleur du texte est visible */
+    color: #f8f9fa;
     transform: rotateY(180deg);
-    z-index: 1; /* S'assure que le dos est en dessous au début */
+    z-index: 1;
 }
 
-/* Styles pour le titre sur la face avant */
 .stat-block-title-v4 {
-    font-size: 2rem; /* Titre en gros */
+    font-size: 2rem;
     color: #f8f9fa;
     font-weight: 600;
     margin: 0;
     padding: 0;
     line-height: 1.2;
     border-bottom: none;
+    font-family: 'Bebas Neue', sans-serif;
 }
 
-/* Styles pour la donnée sur la face arrière */
 .stat-block-value-v4 {
-    font-size: 3rem; /* Donnée en très gros */
+    font-size: 3rem;
     font-weight: 700;
     color: #f8f9fa;
     margin: 0;
@@ -180,9 +355,8 @@ body {
     line-height: 1.2;
 }
 
-
 /* RESPONSIVE DESIGN */
-@media (max-width: 991px) { /* Pour les tablettes (2 par ligne) */
+@media (max-width: 991px) {
     .stat-block-v4 {
         flex: 1 1 40%;
         max-width: 40%;
@@ -195,7 +369,7 @@ body {
     }
 }
 
-@media (max-width: 767px) { /* Pour les mobiles (3 par ligne) */
+@media (max-width: 767px) {
     .stat-block-v4 {
         flex: 1 1 calc(33.333% - 1rem);
         max-width: calc(33.333% - 1rem);
@@ -206,4 +380,1048 @@ body {
     .stat-block-value-v4 {
         font-size: 1.5rem;
     }
+}
+/* --- Ajustements FINAUX pour l'alignement vertical des liens de navigation --- */
+
+.navbar-nav .nav-item .nav-link {
+    /* Assure que l'icône et le texte sont parfaitement centrés verticalement dans le lien */
+    display: flex;
+    align-items: center; /* Centre les éléments enfants (icône et texte) */
+    justify-content: flex-start; /* Aligne le contenu au début du lien */
+
+    /* Ajuste la hauteur de ligne pour un meilleur centrage visuel */
+    line-height: 1.2; /* Réduit la hauteur de ligne par défaut si elle est trop grande */
+
+    /* Supprime ou ajuste le padding vertical si nécessaire pour un positionnement précis */
+    /* Ces valeurs par défaut de Bootstrap peuvent être trop grandes pour certains designs */
+    padding-top: 0.5rem; /* Ajuste finement le padding haut, valeur typique pour des éléments plus petits */
+    padding-bottom: 0.5rem; /* Ajuste finement le padding bas */
+
+    /* Assure un peu d'espace autour du texte lui-même si besoin, mais devrait être géré par l'icône */
+    gap: 0.5rem; /* Ajoute un écart entre l'icône et le texte, remplace margin-right sur i */
+}
+
+/* Retire le margin-right de l'icône car 'gap' gère maintenant l'espacement */
+.navbar-nav .nav-item .nav-link i {
+    margin-right: 0;
+}
+
+/* Ajustement de la hauteur du logo si nécessaire pour qu'il s'aligne mieux */
+.navbar-brand .logo-nav {
+    height: 35px; /* Vous pouvez ajuster cette valeur, ex: 30px, 40px */
+}
+
+/* --- Styles Spécifiques à dashboard.html pour l'Expérience Utilisateur et le Professionnalisme --- */
+
+/* --- Typographie Globale Améliorée --- */
+/* (Assurez-vous que ces imports sont bien en haut de votre fichier style.css si vous les utilisez déjà) */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+
+body {
+    font-family: 'Montserrat', sans-serif;
+    color: var(--text-color); /* Utilise la couleur de texte définie dans les variables */
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Bebas Neue', sans-serif;
+    color: #ffffff; /* Texte blanc pour les titres */
+    letter-spacing: 1px;
+}
+
+/* --- Thème Sombre & Couleurs --- */
+:root {
+    --body-bg: #1a1a2e; /* Fond principal plus sombre */
+    --card-bg: rgba(25, 28, 41, 0.9); /* Fond des cartes légèrement transparent */
+    --text-color: #e0e0e0; /* Texte clair */
+    --link-color: #007bff; /* Bleu Bootstrap pour les liens */
+    --link-hover-color: #0056b3; /* Bleu plus foncé au survol */
+    --border-color: #3a3f4a; /* Bordures subtiles */
+    --header-bg: rgba(25, 28, 41, 0.95); /* Fond de la barre de navigation */
+    --shadow-color: rgba(0, 0, 0, 0.4); /* Ombre des cartes */
+    --primary-color: #6a11cb; /* Couleur principale (violet profond) */
+    --secondary-color: #2575fc; /* Couleur secondaire (bleu vif) */
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --info-color: #17a2b8;
+}
+
+/* Ajustement des couleurs Bootstrap pour coller au thème */
+.bg-primary { background-color: var(--primary-color) !important; }
+.btn-primary {
+    background-image: linear-gradient(to right, var(--primary-color) 0%, var(--secondary-color) 100%) !important;
+    border: none;
+    color: white;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+    background-image: linear-gradient(to right, var(--secondary-color) 0%, var(--primary-color) 100%) !important;
+}
+
+.bg-dark { background-color: var(--header-bg) !important; }
+.text-muted { color: #b0b0b0 !important; } /* Texte discret pour les pieds de carte */
+.card-header {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1em;
+    letter-spacing: 0.5px;
+}
+.card-body .card-title {
+    color: var(--text-color);
+    font-weight: 700;
+}
+.card-body .card-text {
+    color: #c0c0c0;
+}
+
+/* --- Animations d'entrée (Fade-in & Slide-up) --- */
+@keyframes fadeInSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dashboard-section-fadein {
+    animation: fadeInSlideUp 0.8s ease-out forwards;
+    opacity: 0; /* Commence invisible */
+}
+
+/* Délais d'animation pour les cartes du tableau de bord */
+.dashboard-card-delay-1 { animation-delay: 0.1s; }
+.dashboard-card-delay-2 { animation-delay: 0.2s; }
+.dashboard-card-delay-3 { animation-delay: 0.3s; }
+.dashboard-card-delay-4 { animation-delay: 0.4s; }
+.latest-sales-section-delay { animation-delay: 0.6s; }
+.latest-sale-item-delay-1 { animation-delay: 0.7s; }
+.latest-sale-item-delay-2 { animation-delay: 0.8s; }
+.latest-sale-item-delay-3 { animation-delay: 0.9s; }
+/* ... Ajoutez plus de délais si vous avez plus de ventes à afficher ... */
+
+
+/* --- Effets de survol pour les cartes --- */
+.card {
+    border: none; /* Supprime la bordure par défaut de Bootstrap */
+    border-radius: 0.8rem; /* Coins plus arrondis */
+    overflow: hidden; /* Pour de belles ombres */
+    transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+    background-color: var(--card-bg);
+}
+
+.card:hover {
+    transform: translateY(-8px); /* Légère élévation */
+    box-shadow: 0 15px 30px var(--shadow-color), 0 0 20px rgba(106, 17, 203, 0.3); /* Ombre plus prononcée avec glow */
+}
+
+/* --- Cartes du tableau de bord (statistiques) --- */
+.dashboard-stat-card .card-header {
+    background-image: linear-gradient(45deg, var(--primary-color), var(--secondary-color)) !important;
+    color: white;
+    font-weight: 600;
+    padding: 1rem;
+    border-bottom: none;
+}
+.dashboard-stat-card .card-body {
+    padding: 1.5rem;
+}
+.dashboard-stat-card .card-title {
+    font-size: 2.5em; /* Grande taille pour les chiffres clés */
+    margin-bottom: 0.5rem;
+}
+.dashboard-stat-card .card-text {
+    font-size: 0.9em;
+    min-height: 40px; /* Pour éviter les décalages de hauteur si le texte est absent */
+}
+.dashboard-stat-card .card-footer {
+    background-color: rgba(0, 0, 0, 0.2); /* Fond de pied plus sombre */
+    border-top: 1px solid var(--border-color);
+    padding: 0.75rem;
+}
+
+/* --- Cartes des Dernières Ventes --- */
+.latest-sales-card {
+    background-color: var(--card-bg);
+    border-left: 5px solid var(--primary-color); /* Bordure colorée sur le côté */
+    padding: 1rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+}
+.latest-sales-card .card-title {
+    font-size: 1.4em;
+    margin-bottom: 0.75rem;
+    color: var(--link-color); /* Titre de l'article en couleur */
+}
+.latest-sales-card .card-text {
+    font-size: 0.9em;
+    margin-bottom: 0.25rem;
+}
+.latest-sales-card .badge {
+    padding: 0.4em 0.7em;
+    border-radius: 0.3rem;
+    font-weight: 600;
+}
+.latest-sales-card .badge.bg-success { background-color: var(--success-color) !important; }
+.latest-sales-card .badge.bg-danger { background-color: var(--danger-color) !important; }
+.latest-sales-card .badge.bg-secondary { background-color: #6c757d !important; }
+
+
+/* --- Barre de Progression du Profit (Nouveau) --- */
+.profit-progress-bar-container {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    height: 8px; /* Hauteur de la barre */
+    margin-top: 0.75rem;
+    overflow: hidden;
+}
+
+.profit-progress-bar {
+    height: 100%;
+    background-image: linear-gradient(to right, #28a745, #17a2b8); /* Gradient de vert à bleu */
+    width: 0%; /* Initialisé à 0, sera mis à jour par JS ou style in-line */
+    border-radius: 5px;
+    transition: width 0.8s ease-out; /* Animation de la barre */
+}
+
+/* --- Responsive Design (Ajustements pour les petits écrans) --- */
+@media (max-width: 768px) {
+    .dashboard-stat-card .card-title {
+        font-size: 2em;
+    }
+    .dashboard-stat-card .card-text {
+        font-size: 0.8em;
+        min-height: unset; /* Retire la hauteur min sur mobile */
+    }
+    .latest-sales-card {
+        padding: 0.75rem 1rem;
+    }
+    .latest-sales-card .card-title {
+        font-size: 1.2em;
+    }
+    .latest-sales-card .card-text {
+        font-size: 0.8em;
+    }
+}
+
+@media (max-width: 576px) {
+    h1 {
+        font-size: 1.8em;
+        text-align: center;
+    }
+    .row > [class*="col-"] {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .dashboard-stat-card .card-title {
+        font-size: 1.8em;
+    }
+    .dashboard-stat-card .card-header {
+        font-size: 1em;
+    }
+    .btn-primary {
+        font-size: 0.9em;
+        padding: 0.6rem 1rem;
+    }
+}
+
+/* --- Styles spécifiques pour l'écran de chargement (pour qu'il s'harmonise avec le thème) --- */
+#loading-overlay {
+    background-color: rgba(26, 26, 46, 0.95); /* Fond de chargement plus foncé et opaque */
+}
+.spinner {
+    border-top: 5px solid var(--primary-color); /* Couleur du spinner */
+    border-left: 5px solid var(--secondary-color);
+}
+/* --- Styles Spécifiques à statistics.html --- */
+
+/* --- Conteneurs de statistiques (nouvelle version V2) --- */
+.stat-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem; /* Espace entre les cartes */
+    justify-content: center;
+}
+
+.stat-block-v5 { /* Nouveau nom de classe pour le style V5 */
+    background-color: var(--card-bg);
+    border-radius: 0.8rem;
+    padding: 1.5rem;
+    text-align: center;
+    transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+    flex: 1 1 calc(33.333% - 2rem); /* Force 3 cartes par ligne sur grand écran */
+    min-width: 150px;
+    max-width: 250px; /* Limite la largeur des cartes sur les très grands écrans */
+}
+
+.stat-block-v5:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 30px var(--shadow-color), 0 0 20px rgba(106, 17, 203, 0.3);
+}
+
+.stat-block-v5 h5 {
+    color: var(--text-color);
+    font-size: 1.1em;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.stat-block-v5 .stat-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.2em;
+    color: #ffffff;
+    letter-spacing: 1px;
+}
+
+/* --- Centrage du graphique et ajustements --- */
+.chart-section {
+    padding: 1rem;
+    border-radius: 0.8rem;
+    background-color: var(--card-bg);
+    max-width: 900px; /* Limite la largeur du graphique pour une meilleure lisibilité sur grand écran */
+    margin: 0 auto; /* C'est cette ligne qui centre le graphique */
+}
+
+/* --- Taux d'évolution --- */
+.evolution-positive {
+    color: var(--success-color);
+    font-weight: bold;
+}
+.evolution-negative {
+    color: var(--danger-color);
+    font-weight: bold;
+}
+.evolution-neutral {
+    color: #b0b0b0;
+    font-weight: bold;
+}
+
+/* --- Styles pour l'Overlay de Carte Agrandie --- */
+
+.card-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85); /* Fond semi-transparent sombre */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000; /* Au-dessus de tout le reste */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
+}
+
+.card-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.card-overlay-content {
+    background-color: var(--card-bg); /* Utilise la couleur de fond des cartes */
+    border-radius: 1rem;
+    padding: 2.5rem;
+    max-width: 90%;
+    max-height: 90%;
+    overflow-y: auto; /* Permet le défilement si le contenu est trop grand */
+    transform: scale(0.8); /* Commence plus petit pour l'animation */
+    opacity: 0;
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+    position: relative;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+    color: var(--text-color); /* Couleur du texte dans l'overlay */
+    text-align: center;
+}
+
+.card-overlay.show .card-overlay-content {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.card-overlay-content h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5em;
+    color: var(--primary-color); /* Couleur du titre dans l'overlay */
+    margin-bottom: 1.5rem;
+    letter-spacing: 1px;
+}
+
+.card-overlay-content p {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.2em;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+.card-overlay-content .stat-value-large {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 4em; /* Très grande taille pour la valeur principale */
+    color: #ffffff;
+    letter-spacing: 2px;
+    margin-bottom: 1rem;
+    display: block; /* S'assure qu'il est sur sa propre ligne */
+}
+
+.card-overlay-close {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    background: none;
+    border: none;
+    font-size: 2em;
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: color 0.2s ease-out;
+}
+
+.card-overlay-close:hover {
+    color: var(--danger-color); /* Rouge au survol pour la fermeture */
+}
+
+/* Styles spécifiques pour l'évolution dans l'overlay */
+.card-overlay-content .evolution-text {
+    font-size: 1.5em;
+    font-weight: 700;
+}
+/* --- Styles spécifiques à leaderboard.html --- */
+
+/* Conteneur principal pour le classement */
+.leaderboard-card {
+    background-color: var(--card-bg);
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Styles pour le tableau de classement */
+.leaderboard-table {
+    background-color: transparent; /* Géré par la carte parente */
+}
+.leaderboard-table thead th {
+    color: var(--text-color);
+    background-color: rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 1.2rem 1rem;
+    font-size: 1.1em;
+    font-weight: 600;
+}
+.leaderboard-table tbody td {
+    color: var(--text-color);
+    background-color: transparent;
+    border-top: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 1rem;
+}
+
+/* Style de chaque ligne du tableau */
+.leaderboard-table tbody tr {
+    transition: background-color 0.3s ease;
+}
+.leaderboard-table tbody tr:not(.current-user-row) {
+    background-color: rgba(0, 0, 0, 0.4);
+}
+.leaderboard-table tbody tr:not(.current-user-row):hover {
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* Mise en évidence de la ligne de l'utilisateur actuel */
+.current-user-row {
+    background-color: rgba(60, 179, 113, 0.7) !important;
+    font-weight: bold;
+    border-left: 5px solid var(--primary-color);
+}
+.current-user-row:hover {
+    background-color: rgba(60, 179, 113, 0.8) !important;
+}
+
+/* Style des onglets */
+.nav-tabs {
+    border-bottom: none;
+}
+.nav-tabs .nav-link {
+    color: rgba(255, 255, 255, 0.7);
+    border: none;
+    background-color: rgba(0, 0, 0, 0.3);
+    margin-right: 5px;
+    border-radius: 0.8rem 0.8rem 0 0;
+    transition: all 0.3s ease;
+    font-weight: 600;
+}
+.nav-tabs .nav-link.active {
+    color: white;
+    background-color: var(--card-bg);
+    border-color: var(--card-bg);
+    font-weight: bold;
+    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.2);
+}
+.nav-tabs .nav-link:hover:not(.active) {
+    background-color: rgba(0, 0, 0, 0.4);
+}
+.tab-content {
+    background-color: var(--card-bg);
+    padding: 2rem;
+    border-radius: 0 1rem 1rem 1rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Style des icônes de trophées pour les premières places */
+.trophy-icon {
+    font-size: 1.2em;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+.gold-trophy { color: gold; }
+.silver-trophy { color: silver; }
+.bronze-trophy { color: #CD7F32; }
+
+/* Ajustements responsifs */
+@media (max-width: 768px) {
+    .leaderboard-card {
+        padding: 1rem;
+    }
+    .leaderboard-table thead th,
+    .leaderboard-table tbody td {
+        font-size: 0.9em;
+        padding: 0.8em;
+    }
+}
+/* --- Styles spécifiques à products.html --- */
+
+/* Conteneur de la liste des produits */
+.product-list-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2rem;
+    padding-bottom: 3rem;
+}
+
+/* Carte individuelle de produit */
+.product-card {
+    background-color: var(--card-bg);
+    border-radius: 1rem;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    transition: transform 0.4s ease-out, box-shadow 0.4s ease-out, opacity 0.4s ease-out;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.product-card.show-animation {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Effet de survol sur la carte */
+.product-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Image de la carte */
+.product-image-container {
+    height: 200px; /* Conserver la hauteur pour une taille uniforme */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 10px; /* Ajouter un padding pour s'assurer que l'image ne touche pas les bords */
+}
+
+.product-image-small {
+    max-width: 100%; /* S'assurer que l'image ne dépasse pas la largeur du conteneur */
+    max-height: 100%; /* S'assurer que l'image ne dépasse pas la hauteur du conteneur */
+    object-fit: contain; /* L'image s'adapte entièrement sans être coupée */
+    transition: transform 0.3s ease;
+}
+.product-card:hover .product-image-small {
+    transform: scale(1.1);
+}
+
+/* Corps de la carte */
+.product-card-body {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex-grow: 1;
+}
+
+/* Titre du produit */
+.product-name-display {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+}
+
+.product-sku-display {
+    font-size: 0.9em;
+    color: #a0a0a0;
+    margin-bottom: 0.5rem;
+}
+
+/* Badges de stock */
+.stock-badge {
+    font-size: 0.9em;
+    font-weight: 600;
+    padding: 0.4em 0.8em;
+    border-radius: 1rem;
+}
+
+
+
+/* Corps de la carte */
+.product-card-body {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* Aligner le contenu au début du flex-container */
+    flex-grow: 1;
+    /* Assurer un minimum de hauteur si nécessaire, ou une flexibilité adéquate */
+}
+
+/* Groupe de boutons d'action */
+.product-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: auto; /* Utilisez margin-top: auto pour pousser le groupe de boutons vers le bas */
+    padding: 0 0.5rem;
+    /* S'assurer que les actions sont toujours en bas du corps de la carte */
+}
+
+.product-actions .btn {
+    flex-grow: 1;
+    font-size: 0.85em;
+    padding: 0.6rem 0.4rem;
+    font-weight: 600;
+    border-radius: 0.75rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    white-space: nowrap;
+}
+
+/* Ajustement pour le bouton de suppression, s'il est unique */
+.product-actions .btn-danger {
+    flex-grow: 0;
+    padding: 0.6rem 0.8rem;
+}
+
+/* Style de la modale */
+#productDetailsModal .modal-content {
+    background-color: var(--card-bg);
+    border-radius: 1.5rem;
+    border: none;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+#productDetailsModal .modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#productDetailsModal .modal-title {
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+#productDetailsModal .modal-body img {
+    border-radius: 1rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Formulaire de recherche et filtres */
+.filter-bar {
+    background-color: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.filter-bar .form-control,
+.filter-bar .form-select {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.filter-bar .form-control::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.filter-bar .form-select option {
+    background-color: #212529;
+    color: white;
+}
+
+/* Message si aucun produit */
+.no-products-message {
+    background-color: var(--card-bg);
+    padding: 2rem;
+    border-radius: 1rem;
+    text-align: center;
+    margin-top: 3rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+/* --- Styles spécifiques à add_product.html --- */
+
+/* Conteneur du formulaire par étapes */
+.form-steps-container {
+    max-width: 900px;
+    margin: 3rem auto;
+    padding: 0 1rem;
+}
+
+/* Carte d'étape individuelle */
+.step-card {
+    background-color: var(--card-bg);
+    border-radius: 1rem;
+    padding: 2.5rem;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out, background-color 0.4s ease;
+    margin-bottom: 2rem; /* Espacement entre les cartes d'étape */
+    position: relative; /* Pour le positionnement du overlay */
+}
+
+/* État initial pour les étapes non actives (visibles mais grisées) */
+.step-card:not(.active-step) {
+    opacity: 0.5; /* Légèrement grisé */
+    pointer-events: none; /* Désactive les interactions */
+    user-select: none; /* Empêche la sélection de texte */
+}
+
+/* État actif */
+.step-card.active-step {
+    opacity: 1;
+    pointer-events: auto; /* Active les interactions */
+    user-select: auto;
+    background-color: var(--card-bg); /* S'assurer qu'elle n'est pas trop foncée */
+}
+
+/* État complété */
+.step-card.completed {
+    opacity: 0.7; /* Légèrement grisé après complétion */
+    background-color: rgba(50, 50, 50, 0.9); /* Un peu plus sombre pour indiquer la complétion */
+}
+
+.step-card.completed .step-number {
+    background-color: #43b581; /* Vert pour complété */
+    color: #fff;
+    box-shadow: 0 0 0 5px rgba(67, 181, 129, 0.3); /* Petite aura verte */
+}
+.step-card.completed .step-title {
+    color: #a0a0a0; /* Titre grisé */
+}
+
+/* En-tête de l'étape */
+.step-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 2rem;
+    cursor: pointer; /* Indique que l'en-tête est cliquable (pour revenir en arrière) */
+    transition: all 0.3s ease;
+}
+
+.step-header:hover {
+    color: var(--primary-color);
+}
+
+.step-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    background-color: rgba(114, 137, 218, 0.2);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    transition: all 0.3s ease, box-shadow 0.3s ease;
+}
+
+.step-card.active-step .step-number {
+    background-color: var(--primary-color); /* Bleu pour l'étape active */
+    color: #fff;
+    box-shadow: 0 0 0 5px rgba(114, 137, 218, 0.3); /* Aura bleue pour l'active */
+}
+
+/* Contenu des étapes (masqué ou visible) */
+.step-content {
+    /* Cache le contenu par défaut pour les étapes non actives */
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.7s ease-out, opacity 0.7s ease-out;
+    opacity: 0;
+}
+
+.step-card.active-step .step-content {
+    max-height: 1000px; /* Grande valeur pour révéler tout le contenu */
+    opacity: 1;
+}
+
+/* Masquer les champs de formulaire des étapes non actives,
+   pour qu'ils ne soient pas interactifs même s'ils sont dans le DOM */
+.step-card:not(.active-step) .form-group-item,
+.step-card:not(.active-step) .btn:not(.step-header) {
+    pointer-events: none;
+    user-select: none;
+}
+/* --- Styles spécifiques à sales.html --- */
+
+/* Animations pour l'apparition des éléments */
+@keyframes fadeInSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dashboard-section-fadein {
+    opacity: 0;
+    animation: fadeInSlideUp 0.6s ease-out forwards;
+}
+
+.dashboard-card-delay-1 { animation-delay: 0.1s; }
+.dashboard-card-delay-2 { animation-delay: 0.2s; }
+.dashboard-card-delay-3 { animation-delay: 0.3s; }
+.dashboard-card-delay-4 { animation-delay: 0.4s; }
+
+/* Styles pour les cartes de statistiques */
+.stats-card {
+    background: rgba(40, 40, 40, 0.9);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    color: white;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.stats-icon {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+}
+
+.stats-value {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+/* Barre de filtres et de recherche */
+.filter-bar {
+    background: rgba(40, 40, 40, 0.9);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.filter-bar .form-control,
+.filter-bar .form-select {
+    background-color: #36393f;
+    border: 1px solid #4f545c;
+    color: #dcddde;
+}
+.filter-bar .form-control::placeholder,
+.filter-bar .form-select {
+    color: #8e9297;
+}
+
+/* Liste des ventes (grille) */
+.sales-list-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+/* Carte de vente individuelle */
+.sale-card {
+    background: rgba(40, 40, 40, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    color: #dcddde;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    min-height: 150px; /* Réduire la hauteur minimale de la carte */
+    position: relative;
+    overflow: hidden;
+}
+.sale-card:hover {
+    transform: translateY(-5px) scale(1.01);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    border-color: #7289da; /* Bordure de survol */
+}
+
+.sale-card.selected-sale-card {
+    transform: scale(1.03);
+    border-color: #43b581 !important;
+    box-shadow: 0 8px 30px rgba(67, 181, 129, 0.4);
+}
+
+
+.sale-info-item {
+    font-size: 0.9em;
+}
+
+.sale-price {
+    font-size: 1.5em;
+    font-weight: 700;
+    color: #fff;
+}
+
+/* Badge de bénéfice */
+.badge {
+    padding: 0.5em 0.7em;
+    font-size: 0.85em;
+}
+
+/* Panneau d'actions */
+#actionPanel {
+    position: fixed;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 300px;
+    background: rgba(30, 30, 30, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 1030;
+    padding: 2rem;
+    transform: translateX(100%);
+    transition: transform 0.5s ease;
+}
+
+#actionPanel.show {
+    transform: translateX(0);
+}
+
+@media (max-width: 768px) {
+    #actionPanel {
+        width: 100%;
+    }
+}
+
+/* --- Styles spécifiques à add_sale.html --- */
+/* Utilise les classes .step-card, .active-step, etc. déjà définies pour add_product.html */
+
+/* Conteneur des cartes de sélection de produit */
+.product-selection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5rem;
+    padding-top: 1rem;
+    max-height: 500px; /* Limite la hauteur pour un défilement */
+    overflow-y: auto;
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: #7289da #2c2f33; /* Firefox */
+}
+
+/* Scrollbar pour les navigateurs basés sur WebKit */
+.product-selection-grid::-webkit-scrollbar {
+    width: 8px;
+}
+
+.product-selection-grid::-webkit-scrollbar-track {
+    background: #2c2f33;
+    border-radius: 10px;
+}
+
+.product-selection-grid::-webkit-scrollbar-thumb {
+    background-color: #7289da;
+    border-radius: 10px;
+    border: 2px solid #2c2f33;
+}
+
+/* Carte de produit dans la sélection */
+.product-card {
+    background: rgba(40, 40, 40, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    padding: 1rem;
+    cursor: pointer;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    min-height: 150px;
+    position: relative;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    border-color: #7289da;
+}
+
+/* Style pour la carte de produit sélectionnée */
+.product-card.selected {
+    transform: scale(1.05);
+    border-color: #43b581;
+    box-shadow: 0 0 0 4px rgba(67, 181, 129, 0.3); /* Aura verte */
+}
+
+/* Icône de coche de sélection */
+.product-card .selected-icon {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 1.5em;
+    color: #43b581;
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.product-card.selected .selected-icon {
+    display: block;
+}
+
+/* Image du produit */
+.product-card-img {
+    max-height: 100px;
+    width: auto;
+    margin-bottom: 0.5rem;
+    object-fit: contain;
+}
+
+/* Styles pour le bouton "Changer de produit" */
+#changeProductBtn {
+    background-color: #4f545c;
+    border-color: #4f545c;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+#changeProductBtn:hover {
+    background-color: #5d636f;
+    border-color: #5d636f;
 }

@@ -1,232 +1,22 @@
-{# templates/add_sale.html #}
 {% extends 'base.html' %}
 
 {% block title %}Enregistrer Vente{% endblock %}
 
 {% block content %}
 <style>
-    /* Styles Responsifs */
-    @media (max-width: 768px) {
-        h1 {
-            font-size: 1.8em;
-        }
-        .form-label, .col-form-label {
-            font-size: 0.9em;
-        }
-        .form-control, .form-select {
-            font-size: 0.9em;
-            padding: 0.6rem 0.8rem;
-        }
-        .btn {
-            padding: 10px 20px;
-            font-size: 0.9em;
-        }
-    }
-
-    @media (max-width: 480px) {
-        h1 {
-            font-size: 1.5em;
-        }
-        .form-label, .col-form-label {
-            font-size: 0.85em;
-        }
-        .form-control, .form-select {
-            font-size: 0.85em;
-            padding: 0.5rem 0.7rem;
-        }
-        .btn {
-            padding: 8px 15px;
-            font-size: 0.8em;
-        }
-        /* Styles spécifiques pour les cartes sur très petits écrans */
-        .product-cards-container {
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 8px;
-        }
-        .product-card {
-            padding: 10px;
-            font-size: 0.8em;
-        }
-        .product-card h5 {
-            font-size: 1em;
-            margin-bottom: 5px;
-        }
-        .product-card p {
-            font-size: 0.75em;
-        }
-        .product-card .btn-select-product {
-            padding: 6px 10px;
-            font-size: 0.75em;
-        }
-    }
-
-    /* Animation de fondu pour les éléments */
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .animated-form {
-        animation: fadeIn 0.5s ease-in-out forwards;
-    }
-
-    /* Styles du conteneur principal */
-    .form-container {
-        background-color: #2c2f33; /* Gris foncé */
-        border-radius: 10px;
-        padding: 30px;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        color: #dcddde;
-    }
-
-    /* Styles pour le titre */
-    h1 {
-        color: #fff;
-    }
-
-    /* Styles pour les champs de formulaire */
-    .form-control, .form-select {
-        background-color: #36393f;
-        border: 1px solid #4f545c;
-        color: #dcddde;
-        transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    }
-
-    .form-control:focus, .form-select:focus {
-        background-color: #36393f;
-        border-color: #7289da;
-        box-shadow: 0 0 0 0.25rem rgba(114, 137, 218, 0.25);
-        color: #dcddde;
-    }
-
-    .form-label, .col-form-label {
-        color: #dcddde;
-        font-weight: 500;
-    }
-
-    /* Styles pour les boutons */
-    .btn-primary {
-        background-color: #7289da;
-        border-color: #7289da;
-        transition: background-color 0.2s ease-in-out;
-    }
-    .btn-primary:hover {
-        background-color: #677bc4;
-        border-color: #677bc4;
-    }
-    .btn-secondary {
-        background-color: #4f545c;
-        border-color: #4f545c;
-    }
-    .btn-secondary:hover {
-        background-color: #42464d;
-        border-color: #42464d;
-    }
-    .btn-warning {
-        background-color: #faa61a;
-        border-color: #faa61a;
-    }
-    .btn-warning:hover {
-        background-color: #e69512;
-        border-color: #e69512;
-    }
-
-    /* Styles pour les messages flash */
-    .flashes .alert {
-        border-radius: 8px;
-    }
-
-    .alert-success {
-        background-color: #43b581;
-        color: #fff;
-        border-color: #43b581;
-    }
-    .alert-danger {
-        background-color: #f04747;
-        color: #fff;
-        border-color: #f04747;
-    }
-
-    /* Styles par défaut pour les cartes de produit (écrans plus larges) */
-    .product-cards-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 15px;
-        margin-bottom: 20px;
-    }
-
+    /* Règle temporaire pour forcer l'affichage des cartes de produits */
     .product-card {
-        border: 1px solid #4f545c;
-        border-radius: 8px;
-        padding: 15px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        background-color: #36393f;
-        color: #dcddde;
-        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
-        animation: fadeIn 0.5s ease-in-out forwards;
-        opacity: 0;
-    }
-
-    .product-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    }
-
-    .product-card.selected {
-        border-color: #7289da;
-        box-shadow: 0 0 10px rgba(114, 137, 218, 0.7);
-        background-color: #42464d;
-    }
-
-    .product-card h5 {
-        margin-top: 0;
-        margin-bottom: 10px;
-        color: #ffffff;
-    }
-
-    .product-card p {
-        margin-bottom: 5px;
-        font-size: 0.9em;
-        color: #b9bbbe;
-    }
-
-    .product-card .btn-select-product {
-        margin-top: 10px;
-        width: 100%;
-        background-color: #43b581;
-        border-color: #43b581;
-        color: #fff;
-        transition: background-color 0.2s ease-in-out;
-    }
-    .product-card .btn-select-product:hover {
-        background-color: #389568;
-        border-color: #389568;
-    }
-
-    /* Style du display du produit sélectionné */
-    #selected-product-display {
-        background-color: #42464d;
-        border: 1px solid #7289da;
-        color: #dcddde;
-        border-radius: 8px;
-        padding: 15px;
+        opacity: 1 !important;
+        visibility: visible !important;
     }
 </style>
-<div class="form-container animated-form">
-    <h1 class="mb-4">Enregistrer une nouvelle Vente</h1>
+
+<div class="form-steps-container">
+    <h1 class="text-white text-center mb-5 dashboard-section-fadein dashboard-card-delay-1">Enregistrer une nouvelle vente</h1>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-            <div class="flashes">
+            <div class="flashes mb-4 dashboard-section-fadein dashboard-card-delay-2">
                 {% for category, message in messages %}
                     <div class="alert alert-{{ category }}">{{ message }}</div>
                 {% endfor %}
@@ -234,199 +24,207 @@
         {% endif %}
     {% endwith %}
 
-    <form method="post">
-        <div class="mb-3">
-            <label class="form-label">Sélectionner un Produit en Stock (Optionnel - pour les produits en stock):</label>
+    <form method="post" id="add-sale-form">
+        <input type="hidden" id="product_id" name="product_id" value="{{ product_id if product_id }}">
+        <input type="hidden" id="product_name_hidden" name="product_name_hidden" value="">
+        <input type="hidden" id="sku_hidden" name="sku_hidden" value="">
 
-            <div class="mb-3">
-                <input type="text" class="form-control" id="product-search" placeholder="Rechercher par nom ou SKU...">
+        {# Étape 1: Sélectionner le produit #}
+        <div class="step-card dashboard-card-delay-3" id="step-1">
+            <div class="step-header" data-step="1">
+                <div class="step-number">1</div>
+                <h3 class="step-title">Sélectionner le produit</h3>
             </div>
-
-            <div class="product-cards-container">
-                {% for product in products %}
-                <div class="product-card" data-product-id="{{ product.id }}"
-                     data-product-name="{{ product.name | lower }}"
-                     data-product-sku="{{ product.sku | lower }}"
-                     style="--animation-delay: {{ loop.index0 * 0.1 }}s;">
-                    <h5>{{ product.name }}</h5>
-                    <p><strong>SKU:</strong> {{ product.sku }}</p>
-                    <p><strong>Taille:</strong> {{ product.size }}</p>
-                    <p><strong>Quantité disponible:</strong> {{ product.quantity }}</p>
-                    <p><strong>Prix d'achat:</strong> {{ '%.2f'|format(product.purchase_price|float) }} €</p>
-                    <button type="button" class="btn btn-primary btn-select-product"
-                            data-product-id="{{ product.id }}"
-                            data-product-name="{{ product.name }}"
-                            data-product-sku="{{ product.sku }}"
-                            data-product-size="{{ product.size }}"
-                            data-product-quantity="{{ product.quantity }}"
-                            data-product-purchase-price="{{ product.purchase_price if product.purchase_price else 0 }}">
-                        Vendez ce produit
-                    </button>
+            <div class="step-content">
+                <div class="mb-3">
+                    <input type="text" id="productSearch" class="form-control form-control-lg" placeholder="Rechercher un produit par nom ou SKU..." autocomplete="off">
                 </div>
-                {% endfor %}
+
+                {% if products %}
+                <div class="product-selection-grid" id="productGrid">
+                    {% for product in products %}
+                    <div class="product-card animated-card"
+                         data-product-id="{{ product.id }}"
+                         data-product-name="{{ product.name }}"
+                         data-product-sku="{{ product.sku }}"
+                         data-product-price="{{ product.purchase_price }}"
+                         data-product-image="{{ product.image_url }}"
+                         data-animation-delay="{{ loop.index * 0.05 }}s">
+                        <i class="bi bi-check-circle-fill selected-icon"></i>
+                        {% if product.image_url %}
+                        <img src="{{ product.image_url }}" alt="{{ product.name }}" class="product-card-img">
+                        {% else %}
+                        <i class="bi bi-box2" style="font-size: 3em; color: #8e9297; margin-bottom: 0.5rem;"></i>
+                        {% endif %}
+                        <h6 class="card-title mb-1">{{ product.name }}</h6>
+                        <small class="text-muted">SKU: {{ product.sku }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div id="no-products-found" class="text-center text-muted" style="display: none;">
+                    Aucun produit ne correspond à votre recherche.
+                </div>
+                {% else %}
+                <div class="text-center text-white p-4">
+                    <h3>Aucun produit n'est disponible.</h3>
+                    <p>Veuillez d'abord <a href="{{ url_for('add_product') }}">ajouter un produit</a>.</p>
+                </div>
+                {% endif %}
             </div>
-            <button type="button" class="btn btn-secondary mt-2" id="clear-product-selection">Effacer la sélection de produit</button>
         </div>
 
-        <input type="hidden" id="product_id_hidden" name="product_id" value="{{ sale.product_id if sale.product_id else '' }}">
-        <input type="hidden" id="selected_product_name_hidden" name="selected_product_name" value="">
+        {# Étape 2: Détails de la vente #}
+        <div class="step-card mt-4 dashboard-card-delay-4" id="step-2">
+            <div class="step-header" data-step="2">
+                <div class="step-number">2</div>
+                <h3 class="step-title">Détails de la vente</h3>
+            </div>
+            <div class="step-content">
+                <div class="alert alert-info mt-3" id="selected-product-info-panel" style="display: none;">
+                    <button type="button" class="btn btn-sm btn-dark float-end" id="changeProductBtn">Changer de produit</button>
+                    <p class="mb-0"><strong>Produit sélectionné:</strong> <span id="selected-product-name"></span></p>
+                    <p class="mb-0"><strong>SKU:</strong> <span id="selected-product-sku"></span></p>
+                </div>
 
-        {# NOUVEAU: Affichage du produit sélectionné et bouton "Changez de produit" #}
-        <div id="selected-product-display" style="display: none; margin-bottom: 20px;">
-            <p class="text-white"><strong>Produit sélectionné:</strong> <span id="displayed-product-name"></span>
-                <button type="button" class="btn btn-sm btn-warning ms-3" id="change-product-btn">Changez de produit</button>
-            </p>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="sale_price" class="form-label">Prix de vente (€):</label>
+                        <input type="number" step="0.01" class="form-control" id="sale_price" name="sale_price" value="{{ sale_price if sale_price }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="sale_date" class="form-label">Date de la vente:</label>
+                        <input type="date" class="form-control" id="sale_date" name="sale_date" value="{{ sale_date if sale_date }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="shipping_cost" class="form-label">Frais de port (€):</label>
+                        <input type="number" step="0.01" class="form-control" id="shipping_cost" name="shipping_cost" value="{{ shipping_cost if shipping_cost }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="fees" class="form-label">Frais de plateforme (€):</label>
+                        <input type="number" step="0.01" class="form-control" id="fees" name="fees" value="{{ fees if fees }}" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 mt-4">Enregistrer la vente</button>
+            </div>
         </div>
-
-        <div class="mb-3">
-            <label for="item_name" class="form-label">Nom de l'article vendu (pour les produits non en stock ou personnalisés):</label>
-            <input type="text" class="form-control" id="item_name" name="item_name" value="{{ sale.item_name if sale.item_name else '' }}">
-        </div>
-        <div class="mb-3">
-            <label for="quantity" class="form-label">Quantité vendue:</label>
-            <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="{{ sale.quantity if sale.quantity else 1 }}" required>
-        </div>
-        <div class="mb-3">
-            <label for="sale_price" class="form-label">Prix de vente (€):</label>
-            <input type="number" step="0.01" class="form-control" id="sale_price" name="sale_price" value="{{ '%.2f'|format(sale.sale_price|float) if sale.sale_price and (sale.sale_price|float is not none) else '' }}" required>
-        </div>
-        <div class="mb-3">
-            <label for="sale_date" class="form-label">Date de vente:</label>
-            <input type="date" class="form-control" id="sale_date" name="sale_date" value="{{ sale.sale_date if sale.sale_date else '' }}" required>
-        </div>
-        <div class="mb-3">
-            <label for="platform" class="form-label">Plateforme de vente (ex: Vinted, StockX):</label>
-            <input type="text" class="form-control" id="platform" name="platform" value="{{ sale.platform if sale.platform else '' }}">
-        </div>
-        <div class="mb-3">
-            <label for="shipping_cost" class="form-label">Frais de port (€ - Optionnel):</label>
-            <input type="number" step="0.01" class="form-control" id="shipping_cost" name="shipping_cost" value="{{ '%.2f'|format(sale.shipping_cost|float) if sale.shipping_cost and (sale.shipping_cost|float is not none) else '' }}">
-        </div>
-        <div class="mb-3">
-            <label for="fees" class="form-label">Frais de plateforme/commission (€ - Optionnel):</label>
-            <input type="number" step="0.01" class="form-control" id="fees" name="fees" value="{{ '%.2f'|format(sale.fees|float) if sale.fees and (sale.fees|float is not none) else '' }}">
-        </div>
-        <div class="mb-3">
-            <label for="notes" class="form-label">Notes (Optionnel):</label>
-            <textarea class="form-control" id="notes" name="notes" rows="3">{{ sale.notes if sale.notes else '' }}</textarea>
-        </div>
-        <button type="submit" class="btn btn-primary">Enregistrer la Vente</button>
     </form>
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const productSelectButtons = document.querySelectorAll('.btn-select-product');
-        const clearProductSelectionButton = document.getElementById('clear-product-selection');
-        const productIdHiddenInput = document.getElementById('product_id_hidden');
-        const selectedProductNameHiddenInput = document.getElementById('selected_product_name_hidden');
-        const itemNameInput = document.getElementById('item_name');
-        const quantityInput = document.getElementById('quantity');
-        const salePriceInput = document.getElementById('sale_price');
-        const productCards = document.querySelectorAll('.product-card');
-        const productSearchInput = document.getElementById('product-search');
+        // Form Elements
+        const form = document.getElementById('add-sale-form');
+        const productSearchInput = document.getElementById('productSearch');
+        const productIdHiddenInput = document.getElementById('product_id');
+        const productNameHiddenInput = document.getElementById('product_name_hidden');
+        const skuHiddenInput = document.getElementById('sku_hidden');
+        const productGrid = document.getElementById('productGrid');
+        const productCards = productGrid ? productGrid.querySelectorAll('.product-card') : [];
+        const noProductsMessage = document.getElementById('no-products-found');
 
-        const selectedProductDisplay = document.getElementById('selected-product-display');
-        const displayedProductName = document.getElementById('displayed-product-name');
-        const changeProductBtn = document.getElementById('change-product-btn');
+        // Step Containers
+        const step1Card = document.getElementById('step-1');
+        const step2Card = document.getElementById('step-2');
+        const allSteps = [step1Card, step2Card];
+        const selectedProductInfoPanel = document.getElementById('selected-product-info-panel');
+        const changeProductBtn = document.getElementById('changeProductBtn');
 
-        function selectProduct(button) {
-            productCards.forEach(card => card.classList.remove('selected'));
-            const selectedCard = button.closest('.product-card');
-            selectedCard.classList.add('selected');
+        // Step Logic
+        function activateStep(stepCard) {
+            allSteps.forEach(s => s.classList.remove('active-step'));
+            stepCard.classList.add('active-step');
+        }
 
-            const productId = button.dataset.productId;
-            const productName = button.dataset.productName;
-            const productQuantity = button.dataset.productQuantity;
-            const productPurchasePrice = button.dataset.productPurchasePrice;
+        function completeStep(stepCard) {
+            stepCard.classList.add('completed');
+        }
 
-            productIdHiddenInput.value = productId;
-            selectedProductNameHiddenInput.value = productName;
+        function uncompleteStep(stepCard) {
+            stepCard.classList.remove('completed');
+        }
 
-            itemNameInput.value = productName;
-            itemNameInput.readOnly = true;
-            itemNameInput.placeholder = "Nom déterminé par le produit sélectionné";
+        // Product Selection
+        function selectProduct(card) {
+            // Remove 'selected' class from all cards
+            productCards.forEach(c => c.classList.remove('selected'));
+            // Add 'selected' class to the clicked card
+            card.classList.add('selected');
 
-            quantityInput.value = 1;
-            quantityInput.setAttribute('max', productQuantity);
+            // Populate hidden fields and info panel
+            productIdHiddenInput.value = card.dataset.productId;
+            productNameHiddenInput.value = card.dataset.productName;
+            skuHiddenInput.value = card.dataset.productSku;
+            document.getElementById('selected-product-name').textContent = card.dataset.productName;
+            document.getElementById('selected-product-sku').textContent = card.dataset.productSku;
 
-            productCards.forEach(card => {
-                if (card !== selectedCard) {
-                    card.style.display = 'none';
-                }
-            });
-            productSearchInput.style.display = 'none';
-            clearProductSelectionButton.style.display = 'none';
+            selectedProductInfoPanel.style.display = 'block';
 
-            displayedProductName.textContent = productName;
-            selectedProductDisplay.style.display = 'block';
+            // Complete step 1 and activate step 2
+            completeStep(step1Card);
+            activateStep(step2Card);
         }
 
         function clearProductSelection() {
-            productCards.forEach(card => card.classList.remove('selected'));
+            productCards.forEach(c => c.classList.remove('selected'));
             productIdHiddenInput.value = '';
-            selectedProductNameHiddenInput.value = '';
+            productNameHiddenInput.value = '';
+            skuHiddenInput.value = '';
+            selectedProductInfoPanel.style.display = 'none';
 
-            itemNameInput.value = '';
-            itemNameInput.readOnly = false;
-            itemNameInput.placeholder = "";
-
-            quantityInput.removeAttribute('max');
-            quantityInput.value = 1;
-
-            productCards.forEach(card => {
-                card.style.display = 'flex';
-            });
-            productSearchInput.style.display = 'block';
-            clearProductSelectionButton.style.display = 'block';
-
-            selectedProductDisplay.style.display = 'none';
+            // Re-activate step 1
+            uncompleteStep(step1Card);
+            uncompleteStep(step2Card);
+            activateStep(step1Card);
         }
 
+        // Product Search and Filter
         function filterProductCards() {
             const searchTerm = productSearchInput.value.toLowerCase();
+            let hasVisibleProducts = false;
             productCards.forEach(card => {
-                const productName = card.dataset.productName || '';
-                const productSku = card.dataset.productSku || '';
+                const productName = card.dataset.productName.toLowerCase();
+                const productSku = card.dataset.productSku.toLowerCase();
 
                 if (productName.includes(searchTerm) || productSku.includes(searchTerm)) {
-                    card.style.display = 'flex';
+                    card.style.display = 'block';
+                    hasVisibleProducts = true;
                 } else {
                     card.style.display = 'none';
                 }
             });
+
+            if (noProductsMessage) {
+                if (hasVisibleProducts) {
+                    noProductsMessage.style.display = 'none';
+                } else {
+                    noProductsMessage.style.display = 'block';
+                }
+            }
         }
 
-        productSelectButtons.forEach(button => {
-            button.addEventListener('click', function() {
+        // Event Listeners
+        productCards.forEach(card => {
+            card.addEventListener('click', function() {
                 selectProduct(this);
             });
         });
 
-        clearProductSelectionButton.addEventListener('click', clearProductSelection);
-
         changeProductBtn.addEventListener('click', clearProductSelection);
-
         productSearchInput.addEventListener('input', filterProductCards);
+
+        // Initial setup
+        activateStep(step1Card);
 
         const initialProductId = productIdHiddenInput.value;
         if (initialProductId) {
-            const initialSelectedButton = document.querySelector(`.btn-select-product[data-product-id="${initialProductId}"]`);
-            if (initialSelectedButton) {
-                selectProduct(initialSelectedButton);
+            const initialSelectedCard = document.querySelector(`.product-card[data-product-id="${initialProductId}"]`);
+            if (initialSelectedCard) {
+                selectProduct(initialSelectedCard);
             }
-        } else {
-            clearProductSelection();
         }
 
-        const saleDateInput = document.getElementById('sale_date');
-        if (!saleDateInput.value) {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            saleDateInput.value = `${year}-${month}-${day}`;
-        }
+        // CORRECTION: Appeler la fonction de filtre au chargement de la page pour afficher les produits
+        filterProductCards();
     });
 </script>
 {% endblock %}

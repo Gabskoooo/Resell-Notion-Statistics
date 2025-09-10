@@ -5,306 +5,252 @@
 
 {% block content %}
 <style>
-    /* Animations CSS pour une meilleure expérience utilisateur */
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    /* Styles généraux de la page */
+    body {
+        background-color: #1a1a2e; /* Fond sombre */
+        color: #e0e0e0; /* Texte clair */
     }
 
-    .animated-card {
-        animation: fadeIn 0.6s ease-out forwards;
-        opacity: 0;
+    .container-fluid {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+
+    h1, h5, h6, p, .text-muted {
+        color: #e0e0e0 !important; /* Force le texte en clair */
+    }
+
+    a {
+        color: #8e9297; /* Liens gris par défaut */
+    }
+
+    a:hover {
+        color: #ffffff; /* Liens blancs au survol */
+    }
+
+    /* Styles des cartes de produits */
+    .product-card-item .card {
+        background-color: #2a2a4a; /* Fond de carte plus foncé */
+        border: none;
+        border-radius: 12px;
+        overflow: hidden; /* Important pour l'image */
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
+        height: 100%; /* Assure que toutes les cartes ont la même hauteur */
     }
 
-    .product-card-item:nth-child(1) .animated-card { animation-delay: 0.1s; }
-    .product-card-item:nth-child(2) .animated-delay: 0.2s; }
-    .product-card-item:nth-child(3) .animated-card { animation-delay: 0.3s; }
-    .product-card-item:nth-child(4) .animated-card { animation-delay: 0.4s; }
-    .product-card-item:nth-child(5) .animated-card { animation-delay: 0.5s; }
-    /* Ajoutez d'autres délais si nécessaire */
-
-    /* Effet de survol pour les cartes de produits */
     .product-card-item .card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
     }
 
-    /* Styles pour la disposition unifiée sur tous les écrans */
-    .card-product-row {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-    }
-    .product-image-container {
+    .product-card-img {
         width: 100%;
-        max-width: 100px; /* Taille réduite pour les cartes fines */
-        height: 100px;
+        height: 150px; /* Hauteur plus petite pour l'image */
+        object-fit: contain; /* L'image est entièrement visible et conserve son aspect */
+        background-color: #3a3a5a; /* Fond pour l'image si elle ne remplit pas */
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+        padding: 10px; /* Pour donner un peu d'espace autour de l'image si elle est petite */
+    }
+
+    .product-card-item .card-body {
+        padding: 1.25rem;
         display: flex;
-        justify-content: center;
-        align-items: center;
-        overflow: hidden;
-        margin: auto;
+        flex-direction: column;
     }
-    .product-image-small {
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain; /* L'image s'adapte entièrement à l'espace */
-    }
-    .product-name-display {
-        font-size: 1em;
+
+    .product-card-item .card-title {
+        font-size: 1.4rem;
         font-weight: bold;
-        display: block;
-        margin: 0.5rem 0 0.2rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 100%;
+        color: #8a2be2 !important; /* Couleur violette pour le titre */
+        margin-bottom: 0.25rem;
+        flex-grow: 1; /* Permet au titre de prendre l'espace disponible */
     }
-    .product-size-display {
-        font-size: 0.8em;
+
+    .product-card-item .card-subtitle {
+        font-size: 0.9rem;
+        color: #b0b0b0 !important;
         margin-bottom: 0.5rem;
-        color: #adb5bd;
-    }
-    .dropdown-toggle::after {
-        display: none;
-    }
-    .card-body {
-        padding: 0.75rem; /* Réduire le padding pour un aspect plus fin */
-    }
-    .btn.details-toggle {
-        padding: 0.25rem 0.5rem; /* Réduire la taille du bouton d'actions */
-        font-size: 0.75em;
     }
 
-    /* Styles Responsifs pour la disposition unifiée */
-    @media (max-width: 768px) {
-        .product-card-item {
-            width: 50%; /* Affiche deux cartes par ligne sur mobile */
-            padding-right: 0.5rem;
-            padding-left: 0.5rem;
-            flex: 0 0 auto;
-        }
-        .row {
-            margin-left: -0.5rem;
-            margin-right: -0.5rem;
-        }
-        .product-image-container {
-            max-width: 80px; /* Encore plus petit sur mobile */
-            height: 80px;
-        }
+    .product-card-item .card-text {
+        font-size: 1rem;
+        color: #e0e0e0 !important;
+        margin-bottom: 0.25rem; /* Réduire l'espacement */
     }
-    @media (max-width: 576px) {
-        .product-card-item {
-            width: 100%; /* Une seule carte par ligne sur les très petits écrans */
-            padding: 0 0.5rem;
-        }
+
+    .product-card-item .card-text strong {
+        color: #e0e0e0 !important;
     }
+
+    /* Styles des boutons d'action */
+    .product-actions-btn {
+        width: 100%;
+        margin-top: 10px;
+        border-radius: 8px; /* Bords légèrement arrondis */
+        font-weight: bold;
+    }
+
+    /* Couleurs spécifiques des boutons */
+    .btn-success {
+        background-color: #28a745; /* Vert */
+        border-color: #28a745;
+    }
+    .btn-success:hover {
+        background-color: #218838;
+        border-color: #1e7e34;
+    }
+
+    .btn-info {
+        background-color: #17a2b8; /* Bleu clair (pour Modifier) */
+        border-color: #17a2b8;
+        color: #fff;
+    }
+    .btn-info:hover {
+        background-color: #138496;
+        border-color: #117a8b;
+    }
+
+    .btn-danger {
+        background-color: #dc3545; /* Rouge */
+        border-color: #dc3545;
+    }
+    .btn-danger:hover {
+        background-color: #c82333;
+        border-color: #bd2130;
+    }
+
+    /* Réinitialisation de l'opacité et des animations si nécessaires pour l'affichage */
+    .product-card-item {
+        opacity: 1; /* S'assure que les cartes sont toujours visibles */
+    }
+    .animated-card {
+        opacity: 1; /* Désactive l'animation fadeIn si elle cause des problèmes */
+        animation: none !important; /* Supprime toute animation fadeIn */
+    }
+    .dashboard-section-fadein {
+        animation: none !important;
+    }
+
+    /* Ajustements pour la mise en page des informations et l'espacement */
+    .d-grid.gap-2.mt-auto {
+        margin-top: auto !important; /* Pousse les boutons vers le bas de la carte */
+    }
+
 </style>
-<h1 class="mb-4">Mes Produits</h1>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        {% for category, message in messages %}
-            <div class="alert alert-{{ category }}">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
-{% endwith %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
+        <h1 class="text-white">Mes Produits</h1>
+        <a href="{{ url_for('add_product') }}" class="btn btn-primary">Ajouter un produit</a>
+    </div>
 
-<a href="{{ url_for('add_product') }}" class="btn btn-primary mb-3">Ajouter un nouveau produit</a>
+    <div class="row mb-4 animate__animated animate__fadeInUp">
+        <div class="col-md-6 mb-3">
+            <input type="text" id="searchInput" class="form-control" placeholder="Rechercher par nom ou SKU...">
+        </div>
+        <div class="col-md-3 mb-3">
+            <select id="sizeFilter" class="form-select">
+                <option value="all">Toutes les tailles</option>
+                {% for size in available_sizes %}
+                    <option value="{{ size }}">{{ size }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3 mb-3">
+            <select id="dateFilter" class="form-select">
+                <option value="all">Toutes les dates</option>
+                <option value="last7days">Derniers 7 jours</option>
+                <option value="last30days">Derniers 30 jours</option>
+                <option value="thismonth">Ce mois-ci</option>
+                <option value="thisyear">Cette année</option>
+            </select>
+        </div>
+    </div>
 
-{# Champ de recherche et filtres #}
-<div class="mb-3">
-    <input type="text" id="productSearch" class="form-control" placeholder="Rechercher par SKU ou Nom de produit...">
-</div>
-<div class="row mb-3">
-    <div class="col-md-6 mb-2 mb-md-0">
-        <select id="sizeFilter" class="form-select">
-            <option value="">Filtrer par Taille (Tout)</option>
-            {% set unique_sizes = [] %}
-            {% for product in products %}
-                {% if product.size and product.size not in unique_sizes %}
-                    {% set _ = unique_sizes.append(product.size) %}
+    {% if products %}
+    <div id="productGrid" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for product in products %}
+        <div class="col product-card-item" data-date="{{ product.date_added.strftime('%Y-%m-%d') }}" data-product-size="{{ product.size }}">
+            <div class="card h-100">
+                {% if product.image_url %}
+                    <img src="{{ product.image_url }}" alt="{{ product.name }}" class="product-card-img">
+                {% else %}
+                    <img src="https://via.placeholder.com/200x150?text=No+Image" alt="No Image" class="product-card-img">
                 {% endif %}
-            {% endfor %}
-            {% for size in unique_sizes | sort %}
-                <option value="{{ size }}">{{ size }}</option>
-            {% endfor %}
-            {% if 'N/A' not in unique_sizes %}
-                 <option value="N/A">N/A</option>
-            {% endif %}
-        </select>
-    </div>
-    <div class="col-md-6">
-        <select id="dateFilter" class="form-select">
-            <option value="all">Filtrer par Date d'Ajout (Tout)</option>
-            <option value="today">Aujourd'hui</option>
-            <option value="last7days">7 derniers jours</option>
-            <option value="last30days">30 derniers jours</option>
-            <option value="thismonth">Mois en cours</option>
-            <option value="thisyear">Année en cours</option>
-        </select>
-    </div>
-</div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title">{{ product.name | truncate(20, True, '...') }}</h5> {# Truncate pour éviter les débordements si le titre est long #}
+                        {# Le badge "Stock faible" est supprimé ici #}
+                    </div>
 
-{% if products %}
-<div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3" id="productCardsContainer">
-    {% for product in products %}
-    <div class="col product-card-item"
-         data-id="{{ product.id }}"
-         data-sku="{{ product.sku | lower }}"
-         data-name="{{ product.name | lower }}"
-         data-size="{{ (product.size | lower) if product.size else 'n/a' }}"
-         data-purchase-price="{{ "%.2f"|format(product.purchase_price) }}"
-         data-quantity="{{ product.quantity }}"
-         data-description="{{ product.description | default('', true) }}"
-         data-image-url="{{ product.image_url }}"
-         data-date-added="{{ product.date_added.strftime('%Y-%m-%d') if product.date_added else '' }}"
-         data-delete-url="{{ url_for('delete_product', id=product.id) }}"
-         data-edit-url="{{ url_for('edit_product', id=product.id) }}">
-        <div class="card text-white h-100 animated-card" style="background-color: rgba(0, 0, 0, 0.7);">
-            <div class="card-body d-flex flex-column align-items-center">
-                <div class="product-image-container">
-                    {% if product.image_url %}
-                        <img src="{{ product.image_url }}" alt="{{ product.name }}" class="product-image-small rounded">
-                    {% else %}
-                        <span class="d-flex align-items-center justify-content-center border rounded w-100 h-100" style="font-size: 0.7em;">No Image</span>
-                    {% endif %}
-                </div>
+                    <p class="card-subtitle mb-1">SKU: {{ product.sku }}</p>
+                    <p class="card-text mb-1">Taille: {{ product.size }}</p>
+                    <p class="card-text mb-3">Prix d'achat: <strong>{{ "%.2f"|format(product.purchase_price) }}€</strong></p>
+                    {# La quantité est supprimée ici #}
 
-                <span class="product-name-display">{{ product.name }}</span>
-
-                <span class="product-size-display">{{ product.size if product.size else 'N/A' }}</span>
-
-                <div class="mt-auto">
-                    <button class="btn btn-sm btn-secondary details-btn" type="button" data-bs-toggle="modal" data-bs-target="#productDetailsModal" data-product-id="{{ product.id }}">
-                        ...
-                    </button>
+                    <div class="d-grid gap-2 mt-auto">
+                        <a href="{{ url_for('add_sale', product_id=product.id) }}" class="btn btn-success product-actions-btn">
+                            <i class="bi bi-tag"></i> Vendre
+                        </a>
+                        <a href="{{ url_for('edit_product', id=product.id) }}" class="btn btn-info product-actions-btn">
+                            <i class="bi bi-pencil"></i> Modifier
+                        </a>
+                        <form action="{{ url_for('delete_product', id=product.id) }}" method="post" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?');" style="display:inline;">
+                            <button type="submit" class="btn btn-danger product-actions-btn">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
+        {% endfor %}
     </div>
-    {% endfor %}
-</div>
-{% else %}
-<p>Aucun produit enregistré pour le moment. <a href="{{ url_for('add_product') }}">Ajouter un produit</a>.</p>
-{% endif %}
+    {% else %}
+    <div class="text-center text-white mt-5">
+        <h3>Vous n'avez pas encore ajouté de produits.</h3>
+        <p>Commencez par <a href="{{ url_for('add_product') }}">ajouter votre premier produit</a>.</p>
+    </div>
+    {% endif %}
 
-{# Modal pour les détails du produit #}
-<div class="modal fade" id="productDetailsModal" tabindex="-1" aria-labelledby="productDetailsModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content text-white" style="background-color: rgba(0, 0, 0, 0.9);">
-      <div class="modal-header border-bottom-0">
-        <h5 class="modal-title" id="productDetailsModalLabel">Détails du Produit</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        </div>
+    <div id="no-products-found" class="text-center text-muted mt-5" style="display: none;">
+        <h3>Aucun produit ne correspond à votre recherche.</h3>
     </div>
-  </div>
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const searchInput = document.getElementById('productSearch');
+        const searchInput = document.getElementById('searchInput');
         const sizeFilter = document.getElementById('sizeFilter');
         const dateFilter = document.getElementById('dateFilter');
-        const productCardsContainer = document.getElementById('productCardsContainer');
-        const productCardItems = productCardsContainer ? productCardsContainer.getElementsByClassName('product-card-item') : [];
-        const productDetailsModal = new bootstrap.Modal(document.getElementById('productDetailsModal'));
-        const modalBody = document.querySelector('#productDetailsModal .modal-body');
+        const productItems = document.querySelectorAll('.product-card-item');
+        const noProductsFound = document.getElementById('no-products-found');
+        const allProductCards = document.querySelectorAll('.product-card-item');
 
-        // Fonction pour remplir et afficher la modale
-        document.querySelectorAll('.details-btn').forEach(button => {
-            button.addEventListener('click', function(event) {
-                // Le bouton a déjà les attributs pour ouvrir la modale, donc on ne fait rien ici pour l'affichage
-                const cardItem = this.closest('.product-card-item');
-                const product = {
-                    sku: cardItem.dataset.sku,
-                    name: cardItem.dataset.name,
-                    size: cardItem.dataset.size,
-                    purchase_price: cardItem.dataset.purchasePrice,
-                    quantity: cardItem.dataset.quantity,
-                    description: cardItem.dataset.description,
-                    image_url: cardItem.dataset.imageUrl,
-                    date_added: cardItem.dataset.dateAdded,
-                    id: cardItem.dataset.id,
-                    edit_url: cardItem.dataset.editUrl,
-                    delete_url: cardItem.dataset.deleteUrl
-                };
-
-                // La ligne suivante a été modifiée pour construire l'URL correctement
-                const sellButtonUrl = `{{ url_for('add_sale') }}?product_id=${product.id}`;
-
-                modalBody.innerHTML = `
-                    <div class="row">
-                        <div class="col-md-4 text-center mb-3">
-                            <img src="${product.image_url || '{{ url_for("static", filename="sku_not_found.png") }}'}" alt="${product.name}" class="img-fluid rounded" style="max-height: 200px; object-fit: contain;">
-                        </div>
-                        <div class="col-md-8 text-white text-md-start text-center">
-                            <h5>${product.name}</h5>
-                            <p><strong>SKU:</strong> ${product.sku}</p>
-                            <p><strong>Taille:</strong> ${product.size.toUpperCase()}</p>
-                            <p><strong>Prix d'achat:</strong> ${product.purchase_price} €</p>
-                            <p><strong>Quantité en stock:</strong> ${product.quantity}</p>
-                            <p><strong>Date d'ajout:</strong> ${product.date_added}</p>
-                            <p><strong>Description:</strong> ${product.description || 'N/A'}</p>
-                            <hr>
-                            <div class="d-flex flex-column flex-md-row justify-content-end">
-                                <a href="${sellButtonUrl}" class="btn btn-success me-2 mb-2 mb-md-0">Vendre</a>
-                                <a href="${product.edit_url}" class="btn btn-info me-2 mb-2 mb-md-0">Modifier</a>
-                                <form action="${product.delete_url}" method="post" class="d-inline">
-                                    <button type="submit" class="btn btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?');">Supprimer</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-        });
-
-        // Fonction pour les filtres (inchangée)
         function applyFilters() {
             const searchTerm = searchInput.value.toLowerCase();
-            const selectedSize = sizeFilter.value.toLowerCase();
+            const selectedSize = sizeFilter.value;
             const selectedDateFilter = dateFilter.value;
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            let found = false;
 
-            for (let i = 0; i < productCardItems.length; i++) {
-                const cardItem = productCardItems[i];
-                const sku = cardItem.dataset.sku;
-                const name = cardItem.dataset.name;
-                const size = cardItem.dataset.size;
-                const dateAddedStr = cardItem.dataset.dateAdded;
-                const dateAdded = dateAddedStr ? new Date(dateAddedStr + 'T00:00:00') : null;
+            allProductCards.forEach(cardItem => {
+                const productName = cardItem.querySelector('.card-title').textContent.toLowerCase();
+                const productSku = cardItem.querySelector('.card-subtitle').textContent.toLowerCase();
+                const productSize = cardItem.dataset.productSize;
+                const productDate = cardItem.dataset.date;
 
-                let isSearchMatch = true;
-                if (searchTerm) {
-                    isSearchMatch = sku.includes(searchTerm) || name.includes(searchTerm);
-                }
-
-                let isSizeMatch = true;
-                if (selectedSize && selectedSize !== 'n/a') {
-                    isSizeMatch = (selectedSize === size);
-                } else if (selectedSize === 'n/a') {
-                    isSizeMatch = (size === 'n/a' || !size);
-                }
+                const isSearchMatch = productName.includes(searchTerm) || productSku.includes(searchTerm);
+                const isSizeMatch = selectedSize === 'all' || productSize === selectedSize;
 
                 let isDateMatch = true;
-                if (selectedDateFilter !== 'all' && dateAdded) {
-                    let filterDate = new Date(today);
+                if (selectedDateFilter !== 'all') {
+                    const today = new Date();
+                    const dateAdded = new Date(productDate);
+                    let filterDate = new Date();
 
-                    switch (selectedDateFilter) {
-                        case 'today':
-                            isDateMatch = dateAdded.getTime() === today.getTime();
-                            break;
+                    switch(selectedDateFilter) {
                         case 'last7days':
                             filterDate.setDate(today.getDate() - 7);
                             isDateMatch = dateAdded >= filterDate && dateAdded <= today;
@@ -326,9 +272,16 @@
 
                 if (isSearchMatch && isSizeMatch && isDateMatch) {
                     cardItem.style.display = "";
+                    found = true;
                 } else {
                     cardItem.style.display = "none";
                 }
+            });
+
+            if (found) {
+                noProductsFound.style.display = 'none';
+            } else {
+                noProductsFound.style.display = 'block';
             }
         }
 

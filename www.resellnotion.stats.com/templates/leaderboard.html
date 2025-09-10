@@ -4,133 +4,9 @@
 {% block title %}Classement des Utilisateurs{% endblock %}
 
 {% block content %}
-<style>
-    /* Styles pour le tableau de classement */
-    .leaderboard-table {
-        background-color: transparent; /* Le fond est géré par la carte parente */
-    }
-    .leaderboard-table thead th {
-        color: white;
-        background-color: rgba(255, 255, 255, 0.08); /* En-tête légèrement plus clair */
-        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-        padding: 1rem;
-    }
-    .leaderboard-table tbody td {
-        color: white;
-        background-color: transparent; /* Chaque ligne aura son propre fond */
-        border-top: none; /* Supprime la bordure supérieure par défaut des cellules */
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05); /* Séparateur subtil entre les lignes */
-        padding: 1rem;
-    }
-
-    /* Style pour chaque ligne de tableau pour ressembler à une carte */
-    .leaderboard-table tbody tr {
-        margin-bottom: 8px; /* Ajoute un espace entre les lignes */
-        border-radius: 8px; /* Bords arrondis pour chaque ligne */
-        overflow: hidden; /* Assure que le border-radius fonctionne */
-        display: table-row; /* Maintient le comportement de ligne de tableau */
-        transition: background-color 0.3s ease; /* Transition douce pour le survol et la sélection */
-    }
-
-    /* Fond normal pour les lignes (légèrement plus sombre que la carte parente) */
-    .leaderboard-table tbody tr:not(.current-user-row) {
-        background-color: rgba(0, 0, 0, 0.4);
-    }
-    .leaderboard-table tbody tr:not(.current-user-row):hover {
-        background-color: rgba(0, 0, 0, 0.6); /* Effet de survol */
-    }
-
-    /* Mise en évidence de la ligne de l'utilisateur actuel */
-    .current-user-row {
-        background-color: rgba(60, 179, 113, 0.7) !important; /* Vert plus vif */
-        font-weight: bold;
-    }
-    .current-user-row:hover {
-        background-color: rgba(60, 179, 113, 0.8) !important; /* Effet de survol pour la ligne sélectionnée */
-    }
-
-    /* Style des onglets pour le thème sombre */
-    .nav-tabs .nav-link {
-        color: rgba(255, 255, 255, 0.7); /* Texte plus clair pour les onglets inactifs */
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-bottom-color: transparent; /* Cache la bordure inférieure des onglets inactifs */
-        background-color: rgba(0, 0, 0, 0.3); /* Fond sombre pour les onglets */
-        margin-right: 5px; /* Espace entre les onglets */
-        border-radius: 0.25rem 0.25rem 0 0; /* Bords arrondis seulement en haut */
-        transition: all 0.3s ease;
-    }
-    .nav-tabs .nav-link.active {
-        color: white;
-        background-color: rgba(0, 0, 0, 0.5); /* Correspond au fond de la carte principale */
-        border-color: rgba(0, 0, 0, 0.5); /* Assure que la bordure correspond au fond */
-        border-bottom-color: transparent; /* Cache la bordure inférieure de l'onglet actif */
-        font-weight: bold;
-    }
-    .nav-tabs .nav-link:hover:not(.active) {
-        border-color: rgba(255, 255, 255, 0.2);
-        background-color: rgba(0, 0, 0, 0.4);
-    }
-    .tab-content {
-        border: none; /* Supprime la bordure par défaut du contenu des onglets */
-    }
-    .card.mb-3 {
-        border: none; /* S'assure qu'il n'y a pas de bordure de carte blanche */
-        border-radius: 0.25rem;
-    }
-    .table-responsive {
-        border-radius: 0.25rem; /* Applique des bords arrondis au conteneur du tableau */
-        overflow: hidden; /* S'assure que les bords arrondis sont visibles */
-    }
-
-    /* Ajustements responsifs */
-    @media (max-width: 768px) {
-        h1 {
-            font-size: 2em; /* Réduit la taille du titre principal sur les tablettes */
-        }
-        p {
-            font-size: 0.9em; /* Réduit la taille du paragraphe introductif */
-        }
-        .leaderboard-table thead th,
-        .leaderboard-table tbody td {
-            font-size: 0.9em;
-            padding: 0.6em;
-        }
-        .nav-tabs .nav-link {
-            font-size: 0.9em;
-            padding: 0.5em 0.8em;
-        }
-    }
-    @media (max-width: 576px) {
-        h1 {
-            font-size: 1.5em; /* Réduit encore plus la taille du titre sur les mobiles */
-        }
-        p {
-            font-size: 0.8em; /* Réduit encore plus la taille du paragraphe */
-        }
-        .leaderboard-table thead th,
-        .leaderboard-table tbody td {
-            font-size: 0.8em;
-            padding: 0.4em;
-        }
-        .nav-tabs .nav-link {
-            font-size: 0.8em;
-            padding: 0.4em 0.6em;
-        }
-    }
-</style>
 <h1 class="mb-4 text-white">Classement des Utilisateurs</h1>
 
 <p class="text-white mb-4">Afin de reconnaître l'excellence et la performance, le participant se classant premier chaque mois sera gratifié de journées d'accès offertes sur le serveur Discord de Resell Notion.</p>
-
-{# Trouver l'entrée de l'utilisateur actuel dans le classement #}
-{% set current_user_entry = none %}
-{% if current_user.is_authenticated %}
-    {% for user_data in leaderboard %}
-        {% if user_data.user_id == current_user.id %}
-            {% set current_user_entry = user_data %}
-        {% endif %}
-    {% endfor %}
-{% endif %}
 
 <ul class="nav nav-tabs mb-3" id="leaderboardTabs" role="tablist">
     <li class="nav-item" role="presentation">
@@ -140,92 +16,109 @@
         <button class="nav-link" id="profit-tab" data-bs-toggle="tab" data-bs-target="#profit-ranking" type="button" role="tab" aria-controls="profit-ranking" aria-selected="false">Par Bénéfice</button>
     </li>
 </ul>
+
 <div class="tab-content" id="leaderboardTabsContent">
     {# Contenu de l'onglet "Par Chiffre d'Affaires" #}
     <div class="tab-pane fade show active" id="ca-ranking" role="tabpanel" aria-labelledby="ca-tab">
-        <div class="card mb-3" style="background-color: rgba(0, 0, 0, 0.5); color: white;">
-            <div class="card-body p-0"> {# p-0 pour gérer le padding via la table #}
-                <div class="table-responsive">
-                    <table class="table leaderboard-table text-white mb-0"> {# Ajout de la classe et mb-0 #}
-                        <thead>
-                            <tr>
-                                <th>Rang</th>
-                                <th>Utilisateur</th>
-                                <th>Chiffre d'Affaires Total</th>
+        <div class="leaderboard-card">
+            <div class="table-responsive">
+                <table class="table leaderboard-table text-white mb-0">
+                    <thead>
+                        <tr>
+                            <th>Rang</th>
+                            <th>Utilisateur</th>
+                            <th>Chiffre d'Affaires Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set current_user_in_ca_top = false %}
+                        {% for user in leaderboard %}
+                            <tr class="{% if current_user.is_authenticated and user.user_id == current_user.id %}current-user-row{% endif %}">
+                                <td>
+                                    {% if user.rank_ca == 1 %}<i class="bi bi-trophy-fill trophy-icon gold-trophy"></i>
+                                    {% elif user.rank_ca == 2 %}<i class="bi bi-trophy-fill trophy-icon silver-trophy"></i>
+                                    {% elif user.rank_ca == 3 %}<i class="bi bi-trophy-fill trophy-icon bronze-trophy"></i>
+                                    {% endif %}
+                                    {{ user.rank_ca }}
+                                </td>
+                                <td>
+                                    {% if current_user.is_authenticated and user.user_id == current_user.id %}Vous (Rang {{ user.rank_ca }}){% else %}User #{{ user.rank_ca }}{% endif %}
+                                </td>
+                                <td>{{ "{:,.2f} €".format(user.total_ca) }}</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {% set user_in_top_3_ca_displayed = false %}
-                            {% for user in leaderboard %}
-                                {% if current_user.is_authenticated and user.user_id == current_user.id and user.rank_ca <= 3 %}
-                                    {% set user_in_top_3_ca_displayed = true %}
-                                {% endif %}
-                                <tr class="{% if current_user.is_authenticated and user.user_id == current_user.id %}current-user-row{% endif %}">
-                                    <td>{{ user.rank_ca }}</td>
-                                    <td>
-                                        {% if current_user.is_authenticated and user.user_id == current_user.id %}Vous (Rang {{ user.rank_ca }}){% else %}User #{{ user.rank_ca }}{% endif %}
-                                    </td>
-                                    <td>{{ "{:,.2f} €".format(user.total_ca) }}</td>
-                                </tr>
-                            {% endfor %}
-                            {% if not leaderboard %}
-                                <tr>
-                                    <td colspan="3" class="text-center">Aucune donnée de classement disponible pour le moment.</td>
-                                </tr>
-                            {% elif current_user.is_authenticated and current_user_entry and current_user_entry.rank_ca > 3 and not user_in_top_3_ca_displayed %}
+                            {% if current_user.is_authenticated and user.user_id == current_user.id %}
+                                {% set current_user_in_ca_top = true %}
+                            {% endif %}
+                        {% endfor %}
+                        {% if not leaderboard %}
+                            <tr>
+                                <td colspan="3" class="text-center">Aucune donnée de classement disponible pour le moment.</td>
+                            </tr>
+                        {% endif %}
+                        {% if current_user.is_authenticated and not current_user_in_ca_top %}
+                            {% set current_user_entry = leaderboard | selectattr('user_id', 'equalto', current_user.id) | first %}
+                            {% if current_user_entry and current_user_entry.rank_ca > leaderboard|length %}
                                 <tr class="current-user-row">
                                     <td>{{ current_user_entry.rank_ca }}</td>
                                     <td>Vous (Rang {{ current_user_entry.rank_ca }})</td>
                                     <td>{{ "{:,.2f} €".format(current_user_entry.total_ca) }}</td>
                                 </tr>
                             {% endif %}
-                        </tbody>
-                    </table>
-                </div>
+                        {% endif %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
     {# Contenu de l'onglet "Par Bénéfice" #}
     <div class="tab-pane fade" id="profit-ranking" role="tabpanel" aria-labelledby="profit-tab">
-        <div class="card mb-3" style="background-color: rgba(0, 0, 0, 0.5); color: white;">
-            <div class="card-body p-0"> {# p-0 pour gérer le padding via la table #}
-                <div class="table-responsive">
-                    <table class="table leaderboard-table text-white mb-0"> {# Ajout de la classe et mb-0 #}
-                        <thead>
-                            <tr>
-                                <th>Rang</th>
-                                <th>Utilisateur</th>
-                                <th>Bénéfice Total</th>
+        <div class="leaderboard-card">
+            <div class="table-responsive">
+                <table class="table leaderboard-table text-white mb-0">
+                    <thead>
+                        <tr>
+                            <th>Rang</th>
+                            <th>Utilisateur</th>
+                            <th>Bénéfice Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set current_user_in_profit_top = false %}
+                        {% for user in leaderboard %}
+                            <tr class="{% if current_user.is_authenticated and user.user_id == current_user.id %}current-user-row{% endif %}">
+                                <td>
+                                    {% if user.rank_benefice == 1 %}<i class="bi bi-trophy-fill trophy-icon gold-trophy"></i>
+                                    {% elif user.rank_benefice == 2 %}<i class="bi bi-trophy-fill trophy-icon silver-trophy"></i>
+                                    {% elif user.rank_benefice == 3 %}<i class="bi bi-trophy-fill trophy-icon bronze-trophy"></i>
+                                    {% endif %}
+                                    {{ user.rank_benefice }}
+                                </td>
+                                <td>
+                                    {% if current_user.is_authenticated and user.user_id == current_user.id %}Vous (Rang {{ user.rank_benefice }}){% else %}User #{{ user.rank_benefice }}{% endif %}
+                                </td>
+                                <td>{{ "{:,.2f} €".format(user.total_benefice) }}</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {% set user_in_top_3_benefice_displayed = false %}
-                            {% for user in leaderboard | sort(attribute='rank_benefice') %}
-                                {% if current_user.is_authenticated and user.user_id == current_user.id and user.rank_benefice <= 3 %}
-                                    {% set user_in_top_3_benefice_displayed = true %}
-                                {% endif %}
-                                <tr class="{% if current_user.is_authenticated and user.user_id == current_user.id %}current-user-row{% endif %}">
-                                    <td>{{ user.rank_benefice }}</td>
-                                    <td>
-                                        {% if current_user.is_authenticated and user.user_id == current_user.id %}Vous (Rang {{ user.rank_benefice }}){% else %}User #{{ user.rank_benefice }}{% endif %}
-                                    </td>
-                                    <td>{{ "{:,.2f} €".format(user.total_benefice) }}</td>
-                                </tr>
-                            {% endfor %}
-                            {% if not leaderboard and not current_user_entry %} {# Add condition for no data at all #}
-                                <tr>
-                                    <td colspan="3" class="text-center">Aucune donnée de classement disponible pour le moment.</td>
-                                </tr>
-                            {% elif current_user.is_authenticated and current_user_entry and current_user_entry.rank_benefice > 3 and not user_in_top_3_benefice_displayed %}
+                            {% if current_user.is_authenticated and user.user_id == current_user.id %}
+                                {% set current_user_in_profit_top = true %}
+                            {% endif %}
+                        {% endfor %}
+                        {% if not leaderboard %}
+                            <tr>
+                                <td colspan="3" class="text-center">Aucune donnée de classement disponible pour le moment.</td>
+                            </tr>
+                        {% endif %}
+                        {% if current_user.is_authenticated and not current_user_in_profit_top %}
+                             {% set current_user_entry = leaderboard | selectattr('user_id', 'equalto', current_user.id) | first %}
+                             {% if current_user_entry and current_user_entry.rank_benefice > leaderboard|length %}
                                 <tr class="current-user-row">
                                     <td>{{ current_user_entry.rank_benefice }}</td>
                                     <td>Vous (Rang {{ current_user_entry.rank_benefice }})</td>
                                     <td>{{ "{:,.2f} €".format(current_user_entry.total_benefice) }}</td>
                                 </tr>
                             {% endif %}
-                        </tbody>
-                    </table>
-                </div>
+                        {% endif %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

@@ -1,18 +1,14 @@
+{# templates/statistics.html #}
 {% extends 'base.html' %}
 
-{% block head %}
-<title>Statistiques</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-{% endblock %}
+{% block title %}Statistiques{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="text-center mb-5 animate__animated animate__fadeInDown">Tableau de Bord des Statistiques</h1>
+    <h1 class="text-center mb-5 dashboard-section-fadein dashboard-card-delay-1">Tableau de Bord des Statistiques</h1>
 
-    <div class="d-flex justify-content-center">
-        <div class="form-group animate__animated animate__fadeInUp">
+    <div class="d-flex justify-content-center mb-5 dashboard-section-fadein dashboard-card-delay-2">
+        <div class="form-group">
             <label for="periodSelect" class="sr-only">Sélectionner la Période</label>
             <select class="form-control" id="periodSelect">
                 <option value="this_week" {% if selected_period == 'this_week' %}selected{% endif %}>Cette Semaine</option>
@@ -26,154 +22,94 @@
         </div>
     </div>
 
-    <h2 class="mb-4 text-center animate__animated animate__fadeIn">Résumé des Performances de la Période</h2>
+    <h2 class="mb-4 text-center dashboard-section-fadein dashboard-card-delay-3">Résumé des Performances de la Période</h2>
     <div class="stat-container mb-5">
-        <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <div class="card-inner">
-                <div class="card-front">
-                    <h5 class="stat-block-title-v4">Nb Ventes</h5>
-                </div>
-                <div class="card-back">
-                    <p class="stat-block-value-v4">{{ total_sales_count }}</p>
-                </div>
-            </div>
+        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-4">
+            <h5>Nb Ventes</h5>
+            <p class="stat-value">{{ total_sales_count }}</p>
         </div>
-        <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <div class="card-inner">
-                <div class="card-front">
-                    <h5 class="stat-block-title-v4">Prix Vente Total</h5>
-                </div>
-                <div class="card-back">
-                    <p class="stat-block-value-v4">{{ "%.2f"|format(total_sales_revenue) }}€</p>
-                </div>
-            </div>
+        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-5">
+            <h5>Prix Vente Total</h5>
+            <p class="stat-value">{{ "%.2f"|format(total_sales_revenue) }}€</p>
         </div>
-        <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <div class="card-inner">
-                <div class="card-front">
-                    <h5 class="stat-block-title-v4">Bénéfice Total</h5>
-                </div>
-                <div class="card-back">
-                    <p class="stat-block-value-v4">{{ "%.2f"|format(total_sales_profit) }}€</p>
-                </div>
-            </div>
+        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-6">
+            <h5>Bénéfice Total</h5>
+            <p class="stat-value">{{ "%.2f"|format(total_sales_profit) }}€</p>
         </div>
-        <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <div class="card-inner">
-                <div class="card-front">
-                    <h5 class="stat-block-title-v4">Taux Marge (%)</h5>
-                </div>
-                <div class="card-back">
-                    <p class="stat-block-value-v4">{{ "%.2f"|format(margin_rate) }}%</p>
-                </div>
-            </div>
+        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-7">
+            <h5>Taux Marge (%)</h5>
+            <p class="stat-value">{{ "%.2f"|format(margin_rate) }}%</p>
         </div>
-        <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <div class="card-inner">
-                <div class="card-front">
-                    <h5 class="stat-block-title-v4">Jours Moy. Vente</h5>
-                </div>
-                <div class="card-back">
-                    <p class="stat-block-value-v4">{{ "%.2f"|format(average_days_to_sell) }} jours</p>
-                </div>
-            </div>
+        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-8">
+            <h5>Jours Moy. Vente</h5>
+            <p class="stat-value">{{ "%.2f"|format(average_days_to_sell) }} jours</p>
         </div>
-        <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <div class="card-inner">
-                <div class="card-front">
-                    <h5 class="stat-block-title-v4">Évolution Taux</h5>
-                </div>
-                <div class="card-back">
-                    <p class="stat-block-value-v4">N/A</p>
-                </div>
-            </div>
+        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-9">
+            <h5>Évolution Taux</h5>
+            <p class="stat-value">N/A</p>
         </div>
     </div>
 
-    <div class="chart-section mb-5 animate__animated animate__fadeInUp">
-        <h3 class="text-center">Évolution des Ventes et Bénéfices (Période Actuelle)</h3>
+    <div class="chart-section mb-5 dashboard-section-fadein dashboard-card-delay-10">
+        <h3 class="text-center mb-3">Évolution des Ventes et Bénéfices (Période Actuelle)</h3>
 
         <div id="dynamicSalesChartContainer">
             <img id="dynamicSalesChart" src="data:image/png;base64,{{ plot_base64 }}"
-                 style="max-width: 100%; height: auto; display: block; border-radius: 0.5rem;">
+                 style="max-width: 100%; height: auto; display: block; border-radius: 0.5rem; border: 1px solid var(--border-color);">
         </div>
 
         <div class="blurred-chart-container" id="blurredChartMessageContainer">
-            <div class="blurred-chart"></div>
             <div class="blurred-message">
                 Veuillez enregistrer au moins 5 ventes pour obtenir ce graphique.
             </div>
         </div>
     </div>
 
-    <h2 class="mt-5 mb-4 text-center animate__animated animate__fadeIn">Taux d'Évolution vs. Période Précédente</h2>
+    <h2 class="mt-5 mb-4 text-center dashboard-section-fadein dashboard-card-delay-11">Taux d'Évolution vs. Période Précédente</h2>
     <div class="stat-container">
-        <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <div class="card-inner">
-                <div class="card-front">
-                    <h5 class="stat-block-title-v4">Évolution Coût d'achat (PA)</h5>
-                </div>
-                <div class="card-back">
-                    <p class="stat-block-value-v4">
-                        {% if evolution_rate_cogs is string and evolution_rate_cogs == 'infinity' %}
-                            N/A (croissance infinie)
-                        {% elif evolution_rate_cogs is not string and evolution_rate_cogs == 0.0 %}
-                            <span class="evolution-neutral">0.00%</span>
-                        {% elif evolution_rate_cogs is not string and evolution_rate_cogs is defined %}
-                            <span class="{% if evolution_rate_cogs > 0 %}evolution-negative{% elif evolution_rate_cogs < 0 %}evolution-positive{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_cogs) }}%</span>
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
+        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-12">
+            <h5>Évolution Coût d'achat (PA)</h5>
+            <p class="stat-value">
+                {% if evolution_rate_cogs is string and evolution_rate_cogs == 'infinity' %}
+                    N/A (croissance infinie)
+                {% elif evolution_rate_cogs is not string and evolution_rate_cogs is defined %}
+                    <span class="{% if evolution_rate_cogs > 0 %}evolution-negative{% elif evolution_rate_cogs < 0 %}evolution-positive{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_cogs) }}%</span>
+                {% else %}
+                    N/A
+                {% endif %}
+            </p>
         </div>
 
-        <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <div class="card-inner">
-                <div class="card-front">
-                    <h5 class="stat-block-title-v4">Évolution Prix de Vente (PV)</h5>
-                </div>
-                <div class="card-back">
-                    <p class="stat-block-value-v4">
-                        {% if evolution_rate_revenue is string and evolution_rate_revenue == 'infinity' %}
-                            N/A (croissance infinie)
-                        {% elif evolution_rate_revenue is not string and evolution_rate_revenue == 0.0 %}
-                            <span class="evolution-neutral">0.00%</span>
-                        {% elif evolution_rate_revenue is not string and evolution_rate_revenue is defined %}
-                            <span class="{% if evolution_rate_revenue > 0 %}evolution-positive{% elif evolution_rate_revenue < 0 %}evolution-negative{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_revenue) }}%</span>
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
+        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-13">
+            <h5>Évolution Prix de Vente (PV)</h5>
+            <p class="stat-value">
+                {% if evolution_rate_revenue is string and evolution_rate_revenue == 'infinity' %}
+                    N/A (croissance infinie)
+                {% elif evolution_rate_revenue is not string and evolution_rate_revenue is defined %}
+                    <span class="{% if evolution_rate_revenue > 0 %}evolution-positive{% elif evolution_rate_revenue < 0 %}evolution-negative{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_revenue) }}%</span>
+                {% else %}
+                    N/A
+                {% endif %}
+            </p>
         </div>
 
-        <div class="stat-block-v4 animate__animated animate__fadeIn">
-            <div class="card-inner">
-                <div class="card-front">
-                    <h5 class="stat-block-title-v4">Évolution Bénéfice</h5>
-                </div>
-                <div class="card-back">
-                    <p class="stat-block-value-v4">
-                        {% if evolution_rate_profit is string and evolution_rate_profit == 'infinity' %}
-                            N/A (croissance infinie)
-                        {% elif evolution_rate_profit is not string and evolution_rate_profit == 0.0 %}
-                            <span class="evolution-neutral">0.00%</span>
-                        {% elif evolution_rate_profit is not string and evolution_rate_profit is defined %}
-                            <span class="{% if evolution_rate_profit > 0 %}evolution-positive{% elif evolution_rate_profit < 0 %}evolution-negative{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_profit) }}%</span>
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
+        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-14">
+            <h5>Évolution Bénéfice</h5>
+            <p class="stat-value">
+                {% if evolution_rate_profit is string and evolution_rate_profit == 'infinity' %}
+                    N/A (croissance infinie)
+                {% elif evolution_rate_profit is not string and evolution_rate_profit is defined %}
+                    <span class="{% if evolution_rate_profit > 0 %}evolution-positive{% elif evolution_rate_profit < 0 %}evolution-negative{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_profit) }}%</span>
+                {% else %}
+                    N/A
+                {% endif %}
+            </p>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+{% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const periodSelect = document.getElementById('periodSelect');
