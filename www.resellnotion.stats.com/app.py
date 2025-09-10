@@ -65,14 +65,7 @@ UPLOAD_FOLDER = 'static/uploads/listings' # Dossier où les images seront sauveg
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Configuration de Flask-Mail
-# Assurez-vous d'avoir les variables d'environnement dans votre fichier .env
-app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER')
-app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT'))
-app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS').lower() in ('true', '1')
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
+
 
 mail = Mail(app)
 # Crée le dossier d'upload s'il n'existe pas
