@@ -210,7 +210,7 @@
         </div>
     </div>
 
-    <div class="row mt-5">
+    <div class="row mt-5 g-2">
         <div class="col-6 col-md-6 col-lg-3 mb-4 animated-item stat-card-container" style="--animation-delay: 0.2s;">
             <div class="stat-card stat-card-positive">
                 <div class="stat-card-title">Valeur Totale du Stock</div>
@@ -283,6 +283,11 @@
                         <p class="latest-sale-info mb-1 d-none d-md-block"><strong>SKU:</strong> {{ sale.sku }}</p>
                         <p class="latest-sale-info mb-1"><strong>Prix Vente:</strong> {{ sale.sale_price_formatted }}</p>
                         <p class="latest-sale-info mb-1 d-none d-md-block"><strong>Taille:</strong> {{ sale.size }}</p>
+                        <p class="latest-sale-info mb-1 d-md-none">
+                            <span class="badge {% if sale.profit > 0 %}bg-success{% elif sale.profit < 0 %}bg-danger{% else %}bg-secondary{% endif %}">
+                                Bénéfice: {{ sale.profit_formatted }}
+                            </span>
+                        </p>
                         <p class="latest-sale-info mb-1 d-none d-md-block"><strong>Bénéfice:</strong>
                             <span class="badge {% if sale.profit > 0 %}bg-success{% elif sale.profit < 0 %}bg-danger{% else %}bg-secondary{% endif %}">
                                 {{ sale.profit_formatted }}

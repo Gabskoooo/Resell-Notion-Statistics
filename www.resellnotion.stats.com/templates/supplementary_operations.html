@@ -1,4 +1,3 @@
-{# templates/supplementary_operations.html #}
 {% extends 'base.html' %}
 
 {% block title %}Opérations Supplémentaires{% endblock %}
@@ -11,20 +10,16 @@
         color: #e0e0e0; /* Texte clair */
         font-family: 'Poppins', sans-serif;
     }
-
     .container-fluid {
         padding-left: 15px;
         padding-right: 15px;
     }
-
     h1, h5, h6, p, .text-muted {
         color: #e0e0e0 !important;
     }
-
     .btn {
         font-weight: bold;
     }
-
     /* Styles des cartes "Glassmorphism" */
     .operation-card {
         background: rgba(255, 255, 255, 0.05);
@@ -34,67 +29,56 @@
         box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
-
     .operation-card:hover {
         transform: translateY(-5px);
         box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
     }
-
-    /* Indicateurs de type */
     .operation-card.charge-card {
         border-left: 5px solid #ff4444; /* Rouge pour les charges */
     }
-
     .operation-card.bonus-card {
         border-left: 5px solid #44ff44; /* Vert pour les bonus */
     }
-
-    /* Contenu de la carte */
     .operation-info {
         display: flex;
         align-items: center;
         width: 100%;
     }
-
     .operation-info-content {
         flex-grow: 1;
     }
-
     .operation-info-item {
         font-size: 1rem;
         margin-bottom: 0.2rem;
     }
-
     .operation-info-item strong {
         color: #fff;
     }
-
-    .operation-info-item .amount {
+    .amount {
         font-weight: bold;
     }
-
-    /* Boutons de la page */
+    .text-success {
+        color: #4CAF50 !important;
+    }
+    .text-danger {
+        color: #f44336 !important;
+    }
     .btn-add {
         border-radius: 8px;
         padding: 12px 25px;
         transition: transform 0.2s ease;
     }
-
     .btn-add:hover {
         transform: translateY(-2px);
     }
-
     .btn-success {
         background-color: #28a745;
         border-color: #28a745;
     }
-
     .btn-danger {
         background-color: #dc3545;
         border-color: #dc3545;
     }
-
-    /* Animations */
     @keyframes fadeInSlideUp {
         from {
             opacity: 0;
@@ -105,14 +89,11 @@
             transform: translateY(0);
         }
     }
-
     .animated-item {
         animation: fadeInSlideUp 0.6s ease-out forwards;
         animation-delay: var(--animation-delay);
         opacity: 0;
     }
-
-    /* Icones */
     .operation-icon {
         font-size: 2rem;
         margin-right: 15px;
@@ -125,16 +106,12 @@
         background: rgba(255, 255, 255, 0.1);
         color: #fff;
     }
-
     .charge-card .operation-icon {
         background: rgba(220, 53, 69, 0.2);
     }
-
     .bonus-card .operation-icon {
         background: rgba(40, 167, 69, 0.2);
     }
-
-    /* Media Queries pour la réactivité */
     @media (max-width: 768px) {
         .operation-info {
             flex-direction: column;
@@ -161,12 +138,12 @@
     {% endwith %}
 
     <div class="mb-4 d-flex flex-wrap gap-2 animated-item" style="--animation-delay: 0.4s;">
-        <a href="{{ url_for('add_supplementary_operation', operation_type='bonus') }}" class="btn btn-success btn-add">
+        <button type="button" class="btn btn-success btn-add" data-bs-toggle="modal" data-bs-target="#bonusModal">
             <i class="bi bi-plus-circle me-2"></i>Ajouter un Bonus
-        </a>
-        <a href="{{ url_for('add_supplementary_operation', operation_type='charge') }}" class="btn btn-danger btn-add">
+        </button>
+        <button type="button" class="btn btn-danger btn-add" data-bs-toggle="modal" data-bs-target="#chargeModal">
             <i class="bi bi-dash-circle me-2"></i>Ajouter une Charge
-        </a>
+        </button>
     </div>
 
     {% if operations %}
@@ -211,5 +188,61 @@
             Aucune opération supplémentaire enregistrée pour le moment.
         </p>
     {% endif %}
+</div>
+
+<div class="modal fade" id="bonusModal" tabindex="-1" aria-labelledby="bonusModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white">
+            <form action="{{ url_for('add_supplementary_operation') }}" method="POST">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="bonusModalLabel">Ajouter un Bonus</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="type" value="bonus">
+                    <div class="mb-3">
+                        <label for="bonusAmountInput" class="form-label">Montant (€)</label>
+                        <input type="number" step="0.01" class="form-control" id="bonusAmountInput" name="amount" placeholder="Ex: 5.50" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="bonusDescriptionInput" class="form-label">Description (facultatif)</label>
+                        <input type="text" class="form-control" id="bonusDescriptionInput" name="description" placeholder="Ex: Vente de matériel">
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="chargeModal" tabindex="-1" aria-labelledby="chargeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white">
+            <form action="{{ url_for('add_supplementary_operation') }}" method="POST">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="chargeModalLabel">Ajouter une Charge</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="type" value="charge">
+                    <div class="mb-3">
+                        <label for="chargeAmountInput" class="form-label">Montant (€)</label>
+                        <input type="number" step="0.01" class="form-control" id="chargeAmountInput" name="amount" placeholder="Ex: 5.50" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="chargeDescriptionInput" class="form-label">Description (facultatif)</label>
+                        <input type="text" class="form-control" id="chargeDescriptionInput" name="description" placeholder="Ex: Coût de livraison">
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}

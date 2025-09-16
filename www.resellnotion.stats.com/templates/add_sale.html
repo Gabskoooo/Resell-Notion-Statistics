@@ -49,6 +49,7 @@
                          data-product-sku="{{ product.sku }}"
                          data-product-price="{{ product.purchase_price }}"
                          data-product-image="{{ product.image_url }}"
+                         data-product-size="{{ product.size }}"
                          data-animation-delay="{{ loop.index * 0.05 }}s">
                         <i class="bi bi-check-circle-fill selected-icon"></i>
                         {% if product.image_url %}
@@ -58,6 +59,7 @@
                         {% endif %}
                         <h6 class="card-title mb-1">{{ product.name }}</h6>
                         <small class="text-muted">SKU: {{ product.sku }}</small>
+                        <p class="text-muted mb-0"><small>Taille: {{ product.size }}</small></p>
                     </div>
                     {% endfor %}
                 </div>

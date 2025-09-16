@@ -755,6 +755,7 @@ def key_activation_required():
 
 import psycopg2.extras # Assurez-vous que cet import est présent en haut de votre fichier
 
+
 @app.route('/')
 @login_required
 @key_active_required
@@ -763,70 +764,83 @@ def dashboard():
     cur = None
 
     try:
-        # Calcul du nombre de produits en stock
+        # Définir le début et la fin du mois en cours
+        today = date.today()
+        start_of_month = today.replace(day=1)
+        # Trouve le dernier jour du mois
+        if today.month == 12:
+            end_of_month = today.replace(year=today.year + 1, month=1, day=1) - timedelta(days=1)
+        else:
+            end_of_month = today.replace(month=today.month + 1, day=1) - timedelta(days=1)
+
+        # 1. Calcul du nombre de produits en stock (pas de filtre mensuel)
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute("SELECT SUM(quantity) FROM products WHERE user_id = %s",
-                               (current_user.id,))
+                    (current_user.id,))
         products_in_stock_query = cur.fetchone()
-        products_in_stock = products_in_stock_query['sum'] if products_in_stock_query and products_in_stock_query['sum'] is not None else 0
+        products_in_stock = products_in_stock_query['sum'] if products_in_stock_query and products_in_stock_query[
+            'sum'] is not None else 0
         cur.close()
 
-        # Calcul de la valeur totale du stock (Prix d'achat * Quantité pour tous les produits)
+        # 2. Valeur totale du stock (pas de filtre mensuel)
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute("SELECT SUM(purchase_price * quantity) FROM products WHERE user_id = %s",
-                                      (current_user.id,))
+                    (current_user.id,))
         total_stock_value_query = cur.fetchone()
-        # MODIFICATION ICI : Utiliser Decimal('0.00') au lieu de 0.0
-        total_stock_value = total_stock_value_query['sum'] if total_stock_value_query and total_stock_value_query['sum'] is not None else Decimal('0.00')
+        total_stock_value = total_stock_value_query['sum'] if total_stock_value_query and total_stock_value_query[
+            'sum'] is not None else Decimal('0.00')
         cur.close()
 
-        # Calcul du bénéfice total des ventes
+        # 3. Calcul du bénéfice des ventes pour le mois en cours
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
-            "SELECT SUM(profit) FROM sales WHERE user_id = %s",
-            (current_user.id,))
+            "SELECT SUM(profit) FROM sales WHERE user_id = %s AND sale_date >= %s AND sale_date <= %s",
+            (current_user.id, start_of_month, end_of_month)
+        )
         total_sales_profit_query = cur.fetchone()
-        # MODIFICATION ICI : Utiliser Decimal('0.00') au lieu de 0.0
-        total_sales_profit = total_sales_profit_query['sum'] if total_sales_profit_query and total_sales_profit_query['sum'] is not None else Decimal('0.00')
+        total_sales_profit = total_sales_profit_query['sum'] if total_sales_profit_query and total_sales_profit_query[
+            'sum'] is not None else Decimal('0.00')
         cur.close()
 
-        # Calcul du chiffre d'affaires total (Somme de tous les prix de vente)
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute("SELECT SUM(sale_price) FROM sales WHERE user_id = %s",
-                                   (current_user.id,))
-        total_revenue_query = cur.fetchone()
-        # MODIFICATION ICI : Utiliser Decimal('0.00') au lieu de 0.0
-        total_revenue = total_revenue_query['sum'] if total_revenue_query and total_revenue_query['sum'] is not None else Decimal('0.00')
-        cur.close()
-
-        # --- Calcul des 'charges' et 'bonus' depuis supplementary_operations ---
-        # Total des bonus
+        # 4. Calcul du chiffre d'affaires pour le mois en cours
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
-            "SELECT SUM(amount) FROM supplementary_operations WHERE user_id = %s AND type = 'bonus'",
-            (current_user.id,)
+            "SELECT SUM(sale_price) FROM sales WHERE user_id = %s AND sale_date >= %s AND sale_date <= %s",
+            (current_user.id, start_of_month, end_of_month)
+        )
+        total_revenue_query = cur.fetchone()
+        total_revenue = total_revenue_query['sum'] if total_revenue_query and total_revenue_query[
+            'sum'] is not None else Decimal('0.00')
+        cur.close()
+
+        # 5. Calcul des bonus pour le mois en cours
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            "SELECT SUM(amount) FROM supplementary_operations WHERE user_id = %s AND type = 'bonus' AND operation_date >= %s AND operation_date <= %s",
+            (current_user.id, start_of_month, end_of_month)
         )
         total_bonus_operations_query = cur.fetchone()
-        # MODIFICATION ICI : Utiliser Decimal('0.00') au lieu de 0.0
-        total_bonus_operations = total_bonus_operations_query['sum'] if total_bonus_operations_query and total_bonus_operations_query['sum'] is not None else Decimal('0.00')
+        total_bonus_operations = total_bonus_operations_query['sum'] if total_bonus_operations_query and \
+                                                                        total_bonus_operations_query[
+                                                                            'sum'] is not None else Decimal('0.00')
         cur.close()
 
-        # Total des charges
+        # 6. Calcul des charges pour le mois en cours
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
-            "SELECT SUM(amount) FROM supplementary_operations WHERE user_id = %s AND type = 'charge'",
-            (current_user.id,)
+            "SELECT SUM(amount) FROM supplementary_operations WHERE user_id = %s AND type = 'charge' AND operation_date >= %s AND operation_date <= %s",
+            (current_user.id, start_of_month, end_of_month)
         )
         total_charge_operations_query = cur.fetchone()
-        # MODIFICATION ICI : Utiliser Decimal('0.00') au lieu de 0.0
-        total_charge_operations = total_charge_operations_query['sum'] if total_charge_operations_query and total_charge_operations_query['sum'] is not None else Decimal('0.00')
+        total_charge_operations = total_charge_operations_query['sum'] if total_charge_operations_query and \
+                                                                          total_charge_operations_query[
+                                                                              'sum'] is not None else Decimal('0.00')
         cur.close()
 
-        # --- Calcul du Résultat Net ---
-        net_result = total_sales_profit + total_bonus_operations - total_charge_operations
+        # 7. Calcul du Résultat Net mensuel
+        net_result = total_sales_profit + total_bonus_operations + total_charge_operations
 
-
-        # Récupération des 5 dernières ventes avec toutes les données nécessaires
+        # 8. Récupération des 5 dernières ventes (non filtrées par mois)
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute('''
             SELECT
@@ -855,11 +869,9 @@ def dashboard():
 
             sale_dict['sku'] = sale['sku'] if sale['sku'] else 'N/A'
             sale_dict['size'] = sale['size'] if sale['size'] else 'N/A'
-
-            # Assurez-vous que les valeurs sont des Decimals avant de les formater, ou qu'elles peuvent être converties en float pour le formatage
-            # Si 'sale.profit' est déjà un Decimal, pas besoin de le modifier ici, juste s'assurer que c'est bien formatable
             sale_dict['sale_price_formatted'] = '{:.2f} €'.format(float(sale_dict['sale_price'] or 0.0))
-            sale_dict['purchase_price_at_sale_formatted'] = '{:.2f} €'.format(float(sale_dict['purchase_price_at_sale'] or 0.0))
+            sale_dict['purchase_price_at_sale_formatted'] = '{:.2f} €'.format(
+                float(sale_dict['purchase_price_at_sale'] or 0.0))
             sale_dict['shipping_cost_formatted'] = '{:.2f} €'.format(float(sale_dict['shipping_cost'] or 0.0))
             sale_dict['fees_formatted'] = '{:.2f} €'.format(float(sale_dict['fees'] or 0.0))
             sale_dict['profit_formatted'] = '{:.2f} €'.format(float(sale_dict['profit'] or 0.0))
@@ -872,8 +884,8 @@ def dashboard():
                                total_sales_profit=total_sales_profit,
                                total_revenue=total_revenue,
                                net_result=net_result,
-                               latest_sales=latest_sales_for_template,
-                               total_monthly_charges=total_charge_operations) # <-- This is the only change
+                               latest_sales=latest_sales_for_template)
+
     except Exception as e:
         flash(f"Une erreur est survenue lors du chargement du tableau de bord: {e}", 'danger')
         print(f"Erreur tableau de bord: {e}")
@@ -2407,14 +2419,14 @@ def delete_sale(id):
         pass
 @app.route('/supplementary_operations', methods=('GET',))
 @login_required
-@key_active_required
 def supplementary_operations():
     conn = g.db
     operations = []
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        # La requête est maintenant correcte, elle utilise les colonnes de votre table.
         cur.execute(
-            'SELECT id, type, amount, description, operation_date FROM supplementary_operations WHERE user_id = %s ORDER BY operation_date DESC, created_at DESC LIMIT 10',
+            'SELECT id, type, amount, description, operation_date FROM supplementary_operations WHERE user_id = %s ORDER BY operation_date DESC LIMIT 10',
             (current_user.id,)
         )
         operations = cur.fetchall()
@@ -2425,11 +2437,14 @@ def supplementary_operations():
 
     return render_template('supplementary_operations.html', operations=operations)
 
+
 @app.route('/add_supplementary_operation', methods=('GET', 'POST'))
 @login_required
 @key_active_required
 def add_supplementary_operation():
-    operation_type = request.args.get('type') # Récupère le type ('charge' ou 'bonus') de l'URL
+    # La ligne ci-dessous est corrigée pour récupérer 'type' des données POST du formulaire.
+    operation_type = request.form.get('type')
+
     if operation_type not in ['charge', 'bonus']:
         flash("Type d'opération non valide.", "danger")
         return redirect(url_for('supplementary_operations'))
@@ -2449,7 +2464,7 @@ def add_supplementary_operation():
         if error is None:
             conn = g.db
             try:
-                amount_float = float(amount) # Convertir en float pour l'insertion si la colonne est numeric/decimal
+                amount_float = float(amount)
 
                 cur = conn.cursor()
                 cur.execute(
@@ -2476,7 +2491,6 @@ def add_supplementary_operation():
                            amount=amount,
                            description=description,
                            operation_date=operation_date)
-
 # --- Route Flask /generate_test_report (Modifiée pour la semaine actuelle) ---
 @app.route('/generate_test_report', methods=['POST'])
 @login_required
