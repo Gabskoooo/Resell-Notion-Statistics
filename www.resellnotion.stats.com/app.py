@@ -967,6 +967,53 @@ def products():
             cur.close()
 
 
+@app.route('/add_cashback/<int:product_id>', methods=['POST'])
+@login_required
+def add_cashback(product_id):
+    conn = g.db
+    cur = None
+    try:
+        data = request.get_json()
+        cashback_amount = data.get('amount')
+
+        if cashback_amount is None or not isinstance(cashback_amount, (int, float)) or float(cashback_amount) <= 0:
+            return jsonify({'success': False, 'message': 'Montant invalide.'}), 400
+
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+        # 1. Vérifier que le produit existe et appartient à l'utilisateur actuel
+        cur.execute("SELECT purchase_price FROM products WHERE id = %s AND user_id = %s", (product_id, current_user.id))
+        product = cur.fetchone()
+
+        if not product:
+            return jsonify({'success': False, 'message': 'Produit non trouvé ou non autorisé.'}), 404
+
+        current_price = product['purchase_price']
+
+        # **Correction ici : conversion en float avant la soustraction**
+        new_price = float(current_price) - float(cashback_amount)
+
+        # S'assurer que le prix ne devient pas négatif
+        if new_price < 0:
+            new_price = 0
+
+        # 2. Mettre à jour le prix d'achat dans la base de données
+        # Note : Le pilote psycopg2 est capable de convertir un float en type décimal de la BDD
+        cur.execute("UPDATE products SET purchase_price = %s WHERE id = %s AND user_id = %s",
+                    (new_price, product_id, current_user.id))
+        conn.commit()
+
+        return jsonify({'success': True, 'message': 'Cashback ajouté avec succès!'})
+
+    except Exception as e:
+        print(f"Erreur lors de l'ajout du cashback: {e}")
+        conn.rollback()  # Annuler les modifications en cas d'erreur
+        return jsonify({'success': False, 'message': 'Une erreur est survenue.'}), 500
+    finally:
+        if cur:
+            cur.close()
+
+
 @app.route('/products/add', methods=('GET', 'POST'))
 @login_required
 def add_product():

@@ -121,6 +121,17 @@
         border-color: #bd2130;
     }
 
+    .btn-warning {
+        background-color: #ffc107; /* Jaune */
+        border-color: #ffc107;
+        color: #000;
+    }
+    .btn-warning:hover {
+        background-color: #e0a800;
+        border-color: #d39e00;
+        color: #000;
+    }
+
     /* Réinitialisation de l'opacité et des animations si nécessaires pour l'affichage */
     .product-card-item {
         opacity: 1; /* S'assure que les cartes sont toujours visibles */
@@ -136,6 +147,58 @@
     /* Ajustements pour la mise en page des informations et l'espacement */
     .d-grid.gap-2.mt-auto {
         margin-top: auto !important; /* Pousse les boutons vers le bas de la carte */
+    }
+
+    /* Styles pour la modal de cashback */
+    .cashback-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: none; /* Caché par défaut */
+        justify-content: center;
+        align-items: center;
+        z-index: 1050; /* Au-dessus des autres éléments */
+    }
+
+    .cashback-modal-content {
+        background-color: #2a2a4a;
+        padding: 25px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 400px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        color: #e0e0e0;
+        text-align: center;
+        position: relative; /* Nécessaire pour le bouton de fermeture */
+    }
+
+    .cashback-modal-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: transparent;
+        border: none;
+        font-size: 1.5rem;
+        color: #e0e0e0;
+        cursor: pointer;
+    }
+
+    .cashback-modal-content h4 {
+        color: #8a2be2;
+        margin-bottom: 20px;
+    }
+
+    .cashback-modal-content .form-control {
+        background-color: #3a3a5a;
+        border: 1px solid #5a5a7a;
+        color: #e0e0e0;
+    }
+
+    .cashback-modal-content .btn {
+        margin-top: 15px;
     }
 
 </style>
@@ -191,6 +254,9 @@
                     {# La quantité est supprimée ici #}
 
                     <div class="d-grid gap-2 mt-auto">
+                        <a href="#" class="btn btn-warning product-actions-btn cashback-btn" data-product-id="{{ product.id }}">
+                            <i class="bi bi-coin"></i> Cashback
+                        </a>
                         <a href="{{ url_for('add_sale', product_id=product.id) }}" class="btn btn-success product-actions-btn">
                             <i class="bi bi-tag"></i> Vendre
                         </a>
@@ -217,6 +283,22 @@
 
     <div id="no-products-found" class="text-center text-muted mt-5" style="display: none;">
         <h3>Aucun produit ne correspond à votre recherche.</h3>
+    </div>
+</div>
+
+<div id="cashbackModal" class="cashback-modal-overlay">
+    <div class="cashback-modal-content">
+        <button class="cashback-modal-close">&times;</button>
+        <h4>Ajouter du Cashback</h4>
+        <p id="cashbackProductInfo"></p>
+        <form id="cashbackForm">
+            <input type="hidden" id="cashbackProductId" name="product_id">
+            <div class="form-group mb-3">
+                <label for="cashbackAmount" class="form-label">Montant du Cashback (€)</label>
+                <input type="number" id="cashbackAmount" name="amount" class="form-control" step="0.01" min="0" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Valider</button>
+        </form>
     </div>
 </div>
 
@@ -296,6 +378,76 @@
         }
 
         applyFilters();
+    });
+
+    // Nouveau script pour le cashback
+    const cashbackButtons = document.querySelectorAll('.cashback-btn');
+    const cashbackModal = document.getElementById('cashbackModal');
+    const cashbackModalCloseBtn = document.querySelector('.cashback-modal-close');
+    const cashbackForm = document.getElementById('cashbackForm');
+    const cashbackProductIdInput = document.getElementById('cashbackProductId');
+    const cashbackProductInfo = document.getElementById('cashbackProductInfo');
+
+    cashbackButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const productId = this.getAttribute('data-product-id');
+            const card = this.closest('.product-card-item');
+            const productName = card.querySelector('.card-title').textContent.trim();
+
+            cashbackProductIdInput.value = productId;
+            cashbackProductInfo.textContent = `Produit: ${productName}`;
+            cashbackModal.style.display = 'flex';
+        });
+    });
+
+    cashbackModalCloseBtn.addEventListener('click', function() {
+        cashbackModal.style.display = 'none';
+        cashbackForm.reset();
+    });
+
+    window.addEventListener('click', function(e) {
+        if (e.target === cashbackModal) {
+            cashbackModal.style.display = 'none';
+            cashbackForm.reset();
+        }
+    });
+
+    cashbackForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const productId = cashbackProductIdInput.value;
+        const amount = document.getElementById('cashbackAmount').value;
+
+        if (!productId || amount === "" || parseFloat(amount) <= 0) {
+            alert("Veuillez entrer un montant de cashback valide.");
+            return;
+        }
+
+        fetch(`/add_cashback/${productId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ amount: parseFloat(amount) })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("Cashback ajouté avec succès!");
+                window.location.reload(); // Recharger la page pour voir la mise à jour
+            } else {
+                alert(`Erreur: ${data.message}`);
+            }
+            cashbackModal.style.display = 'none';
+            cashbackForm.reset();
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            alert("Une erreur est survenue lors de l'ajout du cashback.");
+            cashbackModal.style.display = 'none';
+            cashbackForm.reset();
+        });
     });
 </script>
 {% endblock %}
