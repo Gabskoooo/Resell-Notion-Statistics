@@ -41,6 +41,11 @@
         from { text-shadow: 0 0 2px #ff6666; }
         to { text-shadow: 0 0 8px #ff6666; }
     }
+    /* NOUVEAU: Effet de brillance pour les paiements en attente (Jaune) */
+    @keyframes glow-pending {
+        from { text-shadow: 0 0 2px #ffdd66; } /* Jaune clair */
+        to { text-shadow: 0 0 8px #ffdd66; }
+    }
 
     /* Cartes de statistiques */
     .stat-card {
@@ -85,6 +90,11 @@
     .stat-value-negative {
         color: #ff6666; /* Rouge clair pour le chiffre */
         animation: glow-negative 1.5s infinite alternate;
+    }
+    /* NOUVEAU: Style Jaune pour la valeur "Paiements en Attente" */
+    .stat-value-pending {
+        color: #ffdd66;
+        animation: glow-pending 1.5s infinite alternate;
     }
 
     .stat-description {
@@ -254,19 +264,14 @@
             </div>
         </div>
         <div class="col-6 col-md-6 col-lg-3 mb-4 animated-item stat-card-container" style="--animation-delay: 0.8s;">
-            <div class="stat-card {% if net_result >= 0 %}stat-card-positive{% else %}stat-card-negative{% endif %}">
-                <div class="stat-card-title">Résultat Net</div>
-                <div class="stat-value {% if net_result >= 0 %}stat-value-positive{% else %}stat-value-negative{% endif %}">
-                    {% if net_result is not none %}
-                        {{ '%.2f'|format(net_result) }}€
+            <div class="stat-card stat-card-positive"> <div class="stat-card-title">Paiements en Attente</div> <div class="stat-value stat-value-pending"> {% if total_pending_payments is not none %}
+                        {{ '%.2f'|format(total_pending_payments) }}€
                     {% else %}
                         0.00€
                     {% endif %}
                 </div>
-                <div class="stat-description d-none d-md-block">Bénéfice après toutes les opérations.</div>
-                <div class="stat-footer">
-                    <a href="{{ url_for('supplementary_operations') }}" class="btn btn-stat btn-sm {% if net_result < 0 %}btn-stat-negative{% endif %}">Voir les opérations</a>
-                </div>
+                <div class="stat-description d-none d-md-block">Total des ventes dont le paiement est en attente.</div> <div class="stat-footer">
+                    <a href="{{ url_for('sales') }}" class="btn btn-stat btn-sm">Gérer les paiements</a> </div>
             </div>
         </div>
     </div>

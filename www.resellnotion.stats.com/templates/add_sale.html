@@ -9,6 +9,34 @@
         opacity: 1 !important;
         visibility: visible !important;
     }
+    /* Styles pour les boutons de statut de paiement */
+    .status-button {
+        width: 100%;
+        padding: 15px;
+        font-size: 1.1em;
+        font-weight: bold;
+        border: 2px solid transparent;
+        transition: all 0.2s ease-in-out;
+        margin-bottom: 10px;
+    }
+    .status-button.selected {
+        /* Encadrement et mise en évidence de la sélection */
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        transform: scale(1.02);
+    }
+    .status-button:hover:not(.selected) {
+        opacity: 0.8;
+    }
+    .btn-received {
+        background-color: #4CAF50; /* Vert */
+        border-color: #4CAF50;
+        color: white;
+    }
+    .btn-pending {
+        background-color: #FFC107; /* Jaune/Orange */
+        border-color: #FFC107;
+        color: black;
+    }
 </style>
 
 <div class="form-steps-container">
@@ -25,9 +53,10 @@
     {% endwith %}
 
     <form method="post" id="add-sale-form">
-        <input type="hidden" id="product_id" name="product_id" value="{{ product_id if product_id }}">
+        <input type="hidden" id="product_id" name="product_id" value="{{ sale.product_id if sale.product_id }}">
         <input type="hidden" id="product_name_hidden" name="product_name_hidden" value="">
         <input type="hidden" id="sku_hidden" name="sku_hidden" value="">
+        <input type="hidden" id="payment_status_hidden" name="payment_status" value="{{ sale.payment_status if sale.payment_status }}">
 
         {# Étape 1: Sélectionner le produit #}
         <div class="step-card dashboard-card-delay-3" id="step-1">
@@ -91,22 +120,46 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label for="sale_price" class="form-label">Prix de vente (€):</label>
-                        <input type="number" step="0.01" class="form-control" id="sale_price" name="sale_price" value="{{ sale_price if sale_price }}" required>
+                        <input type="number" step="0.01" class="form-control" id="sale_price" name="sale_price" value="{{ sale.sale_price }}" required>
                     </div>
                     <div class="col-md-6">
                         <label for="sale_date" class="form-label">Date de la vente:</label>
-                        <input type="date" class="form-control" id="sale_date" name="sale_date" value="{{ sale_date if sale_date }}" required>
+                        <input type="date" class="form-control" id="sale_date" name="sale_date" value="{{ sale.sale_date }}" required>
                     </div>
                     <div class="col-md-6">
                         <label for="shipping_cost" class="form-label">Frais de port (€):</label>
-                        <input type="number" step="0.01" class="form-control" id="shipping_cost" name="shipping_cost" value="{{ shipping_cost if shipping_cost }}" required>
+                        <input type="number" step="0.01" class="form-control" id="shipping_cost" name="shipping_cost" value="{{ sale.shipping_cost }}" required>
                     </div>
                     <div class="col-md-6">
                         <label for="fees" class="form-label">Frais de plateforme (€):</label>
-                        <input type="number" step="0.01" class="form-control" id="fees" name="fees" value="{{ fees if fees }}" required>
+                        <input type="number" step="0.01" class="form-control" id="fees" name="fees" value="{{ sale.fees }}" required>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary w-100 mt-4">Enregistrer la vente</button>
+                <button type="button" class="btn btn-secondary w-100 mt-4" id="goToStep3">Continuer vers le statut de paiement</button>
+            </div>
+        </div>
+
+        {# Étape 3: Statut du paiement #}
+        <div class="step-card mt-4 dashboard-card-delay-5" id="step-3">
+            <div class="step-header" data-step="3">
+                <div class="step-number">3</div>
+                <h3 class="step-title">Statut du Paiement</h3>
+            </div>
+            <div class="step-content">
+                <p class="text-white-50">Veuillez indiquer le statut de paiement de cette vente.</p>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <button type="button" class="btn status-button btn-received" data-status="reçu">
+                            <i class="bi bi-check-circle-fill me-2"></i>Paiement Reçu
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <button type="button" class="btn status-button btn-pending" data-status="en_attente">
+                            <i class="bi bi-clock-fill me-2"></i>Paiement en Attente
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 mt-4" id="submitSaleBtn" style="display: none;">Enregistrer la vente</button>
             </div>
         </div>
     </form>
@@ -120,6 +173,7 @@
         const productIdHiddenInput = document.getElementById('product_id');
         const productNameHiddenInput = document.getElementById('product_name_hidden');
         const skuHiddenInput = document.getElementById('sku_hidden');
+        const paymentStatusHiddenInput = document.getElementById('payment_status_hidden'); // Nouveau champ
         const productGrid = document.getElementById('productGrid');
         const productCards = productGrid ? productGrid.querySelectorAll('.product-card') : [];
         const noProductsMessage = document.getElementById('no-products-found');
@@ -127,11 +181,18 @@
         // Step Containers
         const step1Card = document.getElementById('step-1');
         const step2Card = document.getElementById('step-2');
-        const allSteps = [step1Card, step2Card];
+        const step3Card = document.getElementById('step-3'); // Nouvelle étape
+        const allSteps = [step1Card, step2Card, step3Card];
         const selectedProductInfoPanel = document.getElementById('selected-product-info-panel');
         const changeProductBtn = document.getElementById('changeProductBtn');
+        const goToStep3Btn = document.getElementById('goToStep3'); // Nouveau bouton
+        const submitSaleBtn = document.getElementById('submitSaleBtn'); // Bouton de soumission
 
-        // Step Logic
+        // Status Buttons
+        const statusButtons = document.querySelectorAll('.status-button');
+
+        // --- Step & Status Logic ---
+
         function activateStep(stepCard) {
             allSteps.forEach(s => s.classList.remove('active-step'));
             stepCard.classList.add('active-step');
@@ -145,14 +206,20 @@
             stepCard.classList.remove('completed');
         }
 
+        function selectStatus(button) {
+            statusButtons.forEach(b => b.classList.remove('selected'));
+            button.classList.add('selected');
+
+            paymentStatusHiddenInput.value = button.dataset.status;
+            completeStep(step3Card);
+            submitSaleBtn.style.display = 'block'; // Afficher le bouton de soumission
+        }
+
         // Product Selection
         function selectProduct(card) {
-            // Remove 'selected' class from all cards
             productCards.forEach(c => c.classList.remove('selected'));
-            // Add 'selected' class to the clicked card
             card.classList.add('selected');
 
-            // Populate hidden fields and info panel
             productIdHiddenInput.value = card.dataset.productId;
             productNameHiddenInput.value = card.dataset.productName;
             skuHiddenInput.value = card.dataset.productSku;
@@ -161,7 +228,6 @@
 
             selectedProductInfoPanel.style.display = 'block';
 
-            // Complete step 1 and activate step 2
             completeStep(step1Card);
             activateStep(step2Card);
         }
@@ -171,23 +237,26 @@
             productIdHiddenInput.value = '';
             productNameHiddenInput.value = '';
             skuHiddenInput.value = '';
+            paymentStatusHiddenInput.value = ''; // Réinitialiser le statut
             selectedProductInfoPanel.style.display = 'none';
 
-            // Re-activate step 1
-            uncompleteStep(step1Card);
-            uncompleteStep(step2Card);
+            // Réinitialiser les étapes
+            allSteps.forEach(uncompleteStep);
+            statusButtons.forEach(b => b.classList.remove('selected'));
+            submitSaleBtn.style.display = 'none';
             activateStep(step1Card);
         }
 
-        // Product Search and Filter
+        // Product Search and Filter (inchangé)
         function filterProductCards() {
             const searchTerm = productSearchInput.value.toLowerCase();
             let hasVisibleProducts = false;
             productCards.forEach(card => {
                 const productName = card.dataset.productName.toLowerCase();
                 const productSku = card.dataset.productSku.toLowerCase();
+                const productSize = card.dataset.productSize.toLowerCase(); // Ajout de la recherche par taille
 
-                if (productName.includes(searchTerm) || productSku.includes(searchTerm)) {
+                if (productName.includes(searchTerm) || productSku.includes(searchTerm) || productSize.includes(searchTerm)) {
                     card.style.display = 'block';
                     hasVisibleProducts = true;
                 } else {
@@ -204,7 +273,8 @@
             }
         }
 
-        // Event Listeners
+        // --- Event Listeners ---
+
         productCards.forEach(card => {
             card.addEventListener('click', function() {
                 selectProduct(this);
@@ -214,18 +284,53 @@
         changeProductBtn.addEventListener('click', clearProductSelection);
         productSearchInput.addEventListener('input', filterProductCards);
 
-        // Initial setup
+        // Listener pour aller à l'étape 3
+        goToStep3Btn.addEventListener('click', function() {
+            // Petite validation rapide avant de passer à l'étape suivante
+            const salePrice = document.getElementById('sale_price').value;
+            if (!productIdHiddenInput.value) {
+                alert("Veuillez d'abord sélectionner un produit.");
+            } else if (!salePrice || isNaN(parseFloat(salePrice))) {
+                alert("Veuillez saisir un prix de vente valide.");
+            } else {
+                completeStep(step2Card);
+                activateStep(step3Card);
+            }
+        });
+
+        // Listeners pour les boutons de statut
+        statusButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                selectStatus(this);
+            });
+        });
+
+
+        // --- Initial setup ---
         activateStep(step1Card);
 
         const initialProductId = productIdHiddenInput.value;
+        const initialPaymentStatus = paymentStatusHiddenInput.value;
+
         if (initialProductId) {
             const initialSelectedCard = document.querySelector(`.product-card[data-product-id="${initialProductId}"]`);
             if (initialSelectedCard) {
                 selectProduct(initialSelectedCard);
+
+                // Si la vente a déjà des données (venant d'un POST raté), on avance
+                completeStep(step2Card);
+                activateStep(step3Card);
             }
         }
 
-        // CORRECTION: Appeler la fonction de filtre au chargement de la page pour afficher les produits
+        // Si un statut est déjà défini (POST raté), le présélectionner
+        if (initialPaymentStatus) {
+            const initialStatusBtn = document.querySelector(`.status-button[data-status="${initialPaymentStatus}"]`);
+            if (initialStatusBtn) {
+                selectStatus(initialStatusBtn);
+            }
+        }
+
         filterProductCards();
     });
 </script>
