@@ -1,9 +1,9 @@
 import json
 
 # Nom du fichier JSON à re-formater (celui qui a été nettoyé)
-input_filename = "pop_mart_laced_data_scraped_debug.json"  # Ou "chaussures_whentocop_data_html_fast.json" si vous n'avez pas encore nettoyé les noms
+input_filename = "chaussures_whentocop_data_html_fast.json"  # Ou "chaussures_whentocop_data_html_fast.json" si vous n'avez pas encore nettoyé les noms
 # Nom du nouveau fichier JSON avec la structure désirée
-output_filename = "pop_mart_laced.json"
+output_filename = "database_sku.json"
 
 try:
     # Charger les données depuis le fichier JSON d'entrée

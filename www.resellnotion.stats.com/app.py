@@ -1620,21 +1620,24 @@ def add_sale():
     conn = g.db
     cur = None
 
+    # Tente de récupérer un ID produit pré-sélectionné dans l'URL
     preselected_product_id = request.args.get('product_id', None)
 
+    # 1. Chargement des produits pour le menu déroulant (pour les requêtes GET)
+    products_for_dropdown = []
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
-            'SELECT id, name, sku, size, quantity, purchase_price FROM products WHERE user_id = %s AND quantity > 0 ORDER BY name',
+            'SELECT id, name, sku, size, purchase_price FROM products WHERE user_id = %s ORDER BY name',
             (current_user.id,))
         products_for_dropdown = cur.fetchall()
         cur.close()
     except Exception as e:
         flash(f"Erreur lors du chargement des produits pour la vente : {e}", "danger")
         print(f"DEBUG: Erreur de chargement produits_for_dropdown : {e}")
-        products_for_dropdown = []
+        # products_for_dropdown reste []
 
-    # AJOUT du 'payment_status'
+    # Initialisation des données du formulaire (pour GET ou pour POST en cas d'erreur)
     form_data = {
         'product_id': None,
         'item_name': '',
@@ -1648,8 +1651,12 @@ def add_sale():
         'payment_status': 'reçu'  # Valeur par défaut
     }
 
+    # 1.1 Gestion de la pré-sélection (GET)
     if request.method == 'GET' and preselected_product_id:
         try:
+            # S'assurer que l'ID pré-sélectionné est bien un entier pour l'exécution SQL
+            preselected_product_id = int(preselected_product_id)
+
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             cur.execute(
                 'SELECT id, name, purchase_price FROM products WHERE id = %s AND user_id = %s',
@@ -1660,27 +1667,39 @@ def add_sale():
             if preselected_product:
                 form_data['product_id'] = preselected_product['id']
                 form_data['item_name'] = preselected_product['name']
+        except ValueError:
+            flash("ID produit invalide pour la pré-sélection.", "warning")
         except Exception as e:
             flash("Produit pré-sélectionné introuvable.", "warning")
             print(f"DEBUG: Erreur de pré-sélection du produit : {e}")
 
+    # 2. Gestion de la soumission du formulaire (POST)
     elif request.method == 'POST':
-        # AJOUT du 'payment_status' lors du POST
+        # Récupération des données POST pour la validation
         form_data = {
             'product_id': request.form.get('product_id', ''),
             'item_name': request.form.get('product_name_hidden', '').strip(),
-            'quantity': 1,  # Quantité fixe à 1 pour l'instant (non présent dans le HTML)
+            'quantity': 1,
             'sale_price': request.form.get('sale_price', '').replace(',', '.'),
             'sale_date': request.form.get('sale_date', datetime.now().strftime('%Y-%m-%d')),
             'platform': request.form.get('platform', '').strip(),
             'shipping_cost': request.form.get('shipping_cost', '').replace(',', '.'),
             'fees': request.form.get('fees', '').replace(',', '.'),
-            'notes': request.form.get('notes', '').strip(),  # Ce champ n'est pas dans le HTML actuel mais on le garde
-            'payment_status': request.form.get('payment_status', 'en_attente')  # Récupération du statut
+            'notes': request.form.get('notes', '').strip(),
+            'payment_status': request.form.get('payment_status', 'en_attente')
         }
 
+    # --- LOGIQUE POST (Enregistrement de la vente et suppression du stock) ---
     if request.method == 'POST':
-        product_id = form_data['product_id'] if form_data['product_id'] else None
+
+        # Tentative de conversion de l'ID en entier pour la cohérence
+        try:
+            product_id = int(form_data['product_id']) if form_data['product_id'] else None
+        except ValueError:
+            flash("Erreur : ID produit invalide.", 'danger')
+            # Renvoyer le template avec l'erreur
+            return redirect(url_for('add_sale'))
+
         item_name = form_data['item_name']
         quantity_sold_str = str(form_data['quantity'])
         sale_price_str = form_data['sale_price']
@@ -1689,20 +1708,27 @@ def add_sale():
         platform = form_data['platform']
         shipping_cost_str = form_data['shipping_cost']
         fees_str = form_data['fees']
-        payment_status = form_data['payment_status']  # Récupération de la valeur
+        payment_status = form_data['payment_status']
+
+        # --- LOG DE DÉBOGAGE CRITIQUE (S'AFFICHE DANS VOTRE TERMINAL) ---
+        print(f"--- DÉBOGAGE VENTE SOUMISSION (Route /sales/add) ---")
+        print(f"ID Produit reçu: {product_id} (Type: {type(product_id)})")
+        print(f"ID Utilisateur (current_user.id): {current_user.id}")
+        print(f"--------------------------------------------------")
+        # --- FIN DU LOG DE DÉBOGAGE ---
 
         error = None
 
+        # Validation des champs (le reste de vos validations)
         if not item_name and not product_id:
             error = 'Veuillez saisir le nom de l\'article vendu ou sélectionner un produit existant.'
         elif not quantity_sold_str.isdigit() or int(quantity_sold_str) <= 0:
-            # Note: Le HTML actuel ne permet pas de changer la quantité qui est fixée à 1
             error = 'La quantité vendue est requise et doit être un nombre entier positif !'
         elif not sale_price_str or not (sale_price_str.replace('.', '', 1).isdigit()):
             error = 'Le prix de vente est requis et doit être un nombre valide !'
         elif not sale_date:
             error = 'La date de vente est requise !'
-        elif payment_status not in ['reçu', 'en_attente']:  # Nouvelle validation
+        elif payment_status not in ['reçu', 'en_attente']:
             error = 'Le statut de paiement est invalide.'
         if shipping_cost_str and not shipping_cost_str.replace('.', '', 1).isdigit():
             error = 'Les frais de port doivent être un nombre valide.'
@@ -1721,47 +1747,58 @@ def add_sale():
                 product_sku = "N/A"
                 product_image_url = None
 
+                # Début de la transaction
+                cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
                 if product_id:
-                    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                    # ÉTAPE 1: Vérification et récupération du prix d'achat/SKU du produit existant
                     cur.execute(
                         'SELECT purchase_price, sku, image_url FROM products WHERE id = %s AND user_id = %s',
                         (product_id, current_user.id))
                     product_data_for_sale = cur.fetchone()
-                    cur.close()
-                    if product_data_for_sale:
-                        purchase_price_at_sale = float(product_data_for_sale['purchase_price'])
-                        product_sku = product_data_for_sale['sku']
-                        product_image_url = product_data_for_sale['image_url']
+
+                    if not product_data_for_sale:
+                        cur.close()
+                        # Si l'ID est fourni mais ne correspond à rien, c'est une erreur de stock/sécurité
+                        raise Exception(f"Produit avec ID {product_id} introuvable en stock.")
+
+                    purchase_price_at_sale = float(product_data_for_sale['purchase_price'])
+                    product_sku = product_data_for_sale['sku']
+                    product_image_url = product_data_for_sale['image_url']
+
+                # Le cursor doit être en mode standard pour les commandes de base (INSERT/DELETE)
+                cur.close()
+                cur = conn.cursor()
 
                 profit = sale_price_float - purchase_price_at_sale - shipping_cost_float - fees_float
-                sale_ca = sale_price_float
 
-                cur = conn.cursor()
-                # ATTENTION: Vous DEVEZ ajouter la colonne 'payment_status' à votre table 'sales' dans votre base de données.
+                # ÉTAPE 2 : Insérer la Vente
                 cur.execute(
                     'INSERT INTO sales (user_id, product_id, item_name, quantity, sale_price, purchase_price_at_sale, sale_date, notes, sale_channel, shipping_cost, fees, profit, payment_status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id',
                     (current_user.id, product_id, item_name, quantity_sold, sale_price_float, purchase_price_at_sale,
                      sale_date, notes, platform, shipping_cost_float, fees_float, profit, payment_status)
                 )
                 new_sale_id = cur.fetchone()[0]
-                cur.close()
 
-                # ... [Le reste du code de mise à jour du stock et de notification Discord] ...
-
-                # Le code de mise à jour du stock est le même, j'omets la répétition ici.
+                # ÉTAPE 3 : Supprimer le produit du stock (S'IL Y AVAIT UN LIEN DE STOCK)
                 if product_id:
-                    # ... [mise à jour du stock] ...
-                    pass
+                    cur.execute(
+                        'DELETE FROM products WHERE id = %s AND user_id = %s',
+                        (product_id, current_user.id)
+                    )
 
-                # Le code de notification Discord est le même, j'omets la répétition ici.
-                # if DISCORD_WEBHOOK_URL:
-                #     # ... [notification Discord] ...
-                #     pass
+                    # Vérification critique : 1 ligne DOIT avoir été supprimée
+                    if cur.rowcount == 0:
+                        conn.rollback()
+                        cur.close()
+                        # Annuler la vente insérée si la suppression du stock échoue
+                        raise Exception(
+                            f"Échec critique de la suppression du produit (ID: {product_id}) du stock. Transaction annulée.")
 
-                # Le code d'intégration du classement est le même, j'omets la répétition ici.
-                # cur.execute(...)
+                # ... [Le code de notification Discord et classement (si réintégré)] ...
 
-                conn.commit()
+                conn.commit()  # Valider la transaction (Insertion de vente + Suppression de stock)
+                flash("Vente enregistrée et stock mis à jour avec succès.", 'success')
                 return redirect(url_for('sale_success', sale_id=new_sale_id))
 
             except ValueError:
@@ -1779,7 +1816,9 @@ def add_sale():
         else:
             flash(error, 'danger')
 
-    # Mise en forme des données pour l'affichage (réutilise le code existant)
+    # 3. Rendu du template (GET ou POST avec erreur)
+
+    # Mise en forme des données pour l'affichage (pour les ré-afficher après une erreur POST)
     display_sale_price = '{:.2f}'.format(float(form_data['sale_price'])) if form_data['sale_price'] and form_data[
         'sale_price'].replace('.', '', 1).isdigit() else ''
     display_shipping_cost = '{:.2f}'.format(float(form_data['shipping_cost'])) if form_data['shipping_cost'] and \
@@ -1800,7 +1839,7 @@ def add_sale():
                                'shipping_cost': display_shipping_cost,
                                'fees': display_fees,
                                'notes': form_data['notes'],
-                               'payment_status': form_data['payment_status']  # AJOUT de 'payment_status'
+                               'payment_status': form_data['payment_status']
                            })
 @app.route('/leaderboard')
 @login_required # Pour que seuls les utilisateurs connectés puissent voir le classement

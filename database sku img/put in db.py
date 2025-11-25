@@ -1,11 +1,13 @@
 import json
 import psycopg2
 from psycopg2 import errors as pg_errors
+import psycopg2.extras
 import datetime
-import os  # Pour vérifier la taille du fichier
+import os
+import time
 
 # --- Configuration du fichier JSON d'entrée ---
-JSON_FILE_PATH = "sku_img_with_name.json"  # Assurez-vous que ce chemin est correct
+JSON_FILE_PATH = "database_sku.json"
 
 # --- Configuration PostgreSQL (vos identifiants Render) ---
 DB_HOST = "dpg-d1v824qdbo4c73f9onog-a.oregon-postgres.render.com"
@@ -14,13 +16,12 @@ DB_USER = "database_resell_notion_stats_user"
 DB_PASSWORD = "S93nJbBAUHQR1TimsIH4HfBHxtYCIRJy"
 DB_PORT = "5432"
 
-TABLE_NAME = "sku_database"  # Le nom de la table où importer les données
+TABLE_NAME = "sku_database"
+BATCH_SIZE = 1000  # Taille du lot d'insertion.
 
 
 def get_db_connection():
-    """
-    Établit une connexion à la base de données PostgreSQL.
-    """
+    """Établit une connexion à la base de données PostgreSQL."""
     try:
         conn = psycopg2.connect(
             host=DB_HOST,
@@ -29,7 +30,7 @@ def get_db_connection():
             password=DB_PASSWORD,
             port=DB_PORT
         )
-        print("Connexion à la base de données PostgreSQL établie avec succès.")
+        # print("Connexion à la base de données PostgreSQL établie avec succès.")
         return conn
     except Exception as e:
         print(f"ERREUR : Connexion à la base de données impossible : {e}")
@@ -37,13 +38,11 @@ def get_db_connection():
 
 
 def create_table_if_not_exists(conn):
-    """
-    Vérifie si la table sku_database existe et la crée si ce n'est pas le cas.
-    """
+    """Vérifie si la table sku_database existe et la crée si ce n'est pas le cas."""
     try:
         cur = conn.cursor()
         cur.execute(f"""
-            CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
+            CREATE TABLE IF NOT EXISTS public.{TABLE_NAME} (
                 id SERIAL PRIMARY KEY,
                 sku VARCHAR(255) UNIQUE NOT NULL,
                 image_url TEXT,
@@ -52,54 +51,62 @@ def create_table_if_not_exists(conn):
             );
         """)
         conn.commit()
-        print(f"Table '{TABLE_NAME}' vérifiée/créée avec succès.")
+        print(f"Table 'public.{TABLE_NAME}' vérifiée/créée avec succès.")
         cur.close()
         return True
     except Exception as e:
-        print(f"ERREUR : Impossible de créer ou vérifier la table '{TABLE_NAME}' : {e}")
+        print(f"ERREUR : Impossible de créer ou vérifier la table 'public.{TABLE_NAME}' : {e}")
         conn.rollback()
         return False
 
 
 def import_data_to_db():
     """
-    Charge les données du fichier JSON et les importe dans la base de données.
+    Charge les données du fichier JSON, les déduplique globalement,
+    et les importe dans la base de données en utilisant execute_values.
     """
     conn = None
+    total_items_read = 0
+    total_skipped = 0
+    start_time = time.time()
+
     try:
         print(f"Tentative de chargement du fichier JSON : '{JSON_FILE_PATH}'")
 
-        # --- LOGS DE DÉBOGAGE POUR LA LECTURE DU FICHIER JSON ---
         if not os.path.exists(JSON_FILE_PATH):
             print(f"ERREUR : Le fichier '{JSON_FILE_PATH}' n'existe PAS à l'emplacement spécifié.")
-            print(f"Vérifiez le chemin du fichier et le répertoire d'exécution du script.")
             return
 
-        file_size_bytes = os.path.getsize(JSON_FILE_PATH)
-        print(f"DEBUG : Taille du fichier '{JSON_FILE_PATH}' : {file_size_bytes / (1024 * 1024):.2f} MB")
-
-        # Lecture du fichier comme texte brut pour inspecter le début
-        try:
-            with open(JSON_FILE_PATH, 'r', encoding='utf-8') as f_raw:
-                first_chars = f_raw.read(100)  # Lire les 100 premiers caractères
-                print(f"DEBUG : 100 premiers caractères du fichier : '{first_chars}'")
-                # Si le fichier commence par un BOM UTF-8 (souvent invisible), on pourrait le voir ici comme '\ufeff'
-                if first_chars.startswith('\ufeff'):
-                    print(
-                        "ATTENTION : Le fichier semble commencer par un BOM UTF-8. Cela peut parfois causer des problèmes, mais Python devrait le gérer.")
-        except UnicodeDecodeError as e:
-            print(f"ERREUR DE DÉCODAGE BRUT : Impossible de lire les premiers caractères en UTF-8. Cause : {e}")
-            print(
-                "Le fichier pourrait ne pas être en UTF-8. Essayez de l'ouvrir dans un éditeur de texte et de le sauvegarder en UTF-8.")
-            return
-        # --- FIN DES LOGS DE DÉBOGAGE POUR LA LECTURE DU FICHIER JSON ---
-
-        # 1. Charger les données depuis le fichier JSON
-        # Spécifier l'encodage pour éviter les problèmes
         with open(JSON_FILE_PATH, 'r', encoding='utf-8') as f:
-            data_to_import = json.load(f)
+            data_list = json.load(f)
 
-        print(f"Chargement de {len(data_to_import)} entrées depuis '{JSON_FILE_PATH}' effectué avec succès.")
+        total_items_read = len(data_list)
+        print(f"Chargement de {total_items_read} entrées depuis '{JSON_FILE_PATH}' effectué avec succès.")
+
+        # --- ÉTAPE CLÉ : DÉDUPLICATION GLOBALE ---
+        print("Début de la déduplication du jeu de données...")
+        dedup_map = {}  # Utilisé pour garantir l'unicité du SKU (le dernier SKU trouvé gagne)
+        temp_skipped_count = 0
+
+        for item in data_list:
+            sku = item.get("sku")
+
+            # Validation de base
+            if not sku or not isinstance(sku, str) or sku.strip() == "":
+                temp_skipped_count += 1
+                continue
+
+            # Met à jour le dictionnaire. Le SKU le plus récent écrase l'ancien.
+            dedup_map[sku.strip()] = item
+
+        # Convertir le dictionnaire dédupliqué en liste ordonnée
+        deduplicated_data = list(dedup_map.values())
+        total_unique_items = len(deduplicated_data)
+        total_duplicates = total_items_read - total_unique_items - temp_skipped_count
+
+        print(f"-> {total_unique_items} SKU uniques trouvés.")
+        print(f"-> {total_duplicates} doublons supprimés.")
+        total_skipped += temp_skipped_count
 
         # 2. Établir la connexion à la base de données
         conn = get_db_connection()
@@ -111,93 +118,82 @@ def import_data_to_db():
             conn.close()
             return
 
-        # 4. Importer les données
-        imported_count = 0
-        updated_count = 0
-        skipped_count = 0
-        total_items = len(data_to_import)
+        # 4. Importer les données en bloc
+        data_to_send = []
+        cur = conn.cursor()
 
-        cur = conn.cursor()  # Ouvrir un seul curseur pour toutes les insertions
+        insert_query = f"""
+            INSERT INTO public.{TABLE_NAME} (sku, product_name, image_url, last_updated)
+            VALUES %s
+            ON CONFLICT (sku) DO UPDATE SET
+                product_name = EXCLUDED.product_name,
+                image_url = EXCLUDED.image_url,
+                last_updated = EXCLUDED.last_updated;
+        """
 
-        for i, item in enumerate(data_to_import):
-            # Mappage des clés du nouveau format JSON
-            sku = item.get("sku")
-            product_name = item.get("product_name")
-            image_url = item.get("image_url")
-
-            # Validation basique
-            if not sku or not isinstance(sku, str) or sku.strip() == "":
-                print(f"  [SKIPPED] Ligne {i + 1}/{total_items}: SKU invalide ou manquant ('{sku}'). Ignoré.")
-                skipped_count += 1
-                continue
-
-                # Assurez-vous que les valeurs sont bien des chaînes de caractères (ou None)
-            sku = str(sku).strip() if sku is not None else None
-            product_name = str(product_name).strip() if product_name is not None else None
-            image_url = str(image_url).strip() if image_url is not None else None
-
-            # Obtenir le timestamp actuel pour 'last_updated'
+        for i, item in enumerate(deduplicated_data):
+            # Les données sont déjà pré-validées et dédupliquées
+            sku = item["sku"].strip()
+            product_name = item.get("product_name", "").strip()
+            image_url = item.get("image_url", "").strip()
             current_timestamp = datetime.datetime.now()
 
-            try:
-                cur.execute(f"""
-                    INSERT INTO {TABLE_NAME} (sku, product_name, image_url, last_updated)
-                    VALUES (%s, %s, %s, %s)
-                    ON CONFLICT (sku) DO UPDATE SET
-                        product_name = EXCLUDED.product_name,
-                        image_url = EXCLUDED.image_url,
-                        last_updated = EXCLUDED.last_updated;
-                """, (sku, product_name, image_url, current_timestamp))
+            # Ajouter les données au lot
+            data_to_send.append((sku, product_name, image_url, current_timestamp))
 
-                if cur.rowcount > 0:
-                    if cur.statusmessage.startswith("INSERT"):
-                        imported_count += 1
-                    elif cur.statusmessage.startswith("UPDATE"):
-                        updated_count += 1
+            # Exécuter le lot si la taille maximale est atteinte OU s'il s'agit du dernier élément
+            is_last_item = (i + 1) == total_unique_items
 
-                # Commiter par lots
-                if (i + 1) % 100 == 0:
-                    conn.commit()
+            if len(data_to_send) >= BATCH_SIZE or (is_last_item and data_to_send):
+
+                try:
+                    # Envoi du lot au DB
+                    psycopg2.extras.execute_values(
+                        cur,
+                        insert_query,
+                        data_to_send,
+                        page_size=BATCH_SIZE
+                    )
+
+                    elapsed_time = time.time() - start_time
+
                     print(
-                        f"  Progression: {i + 1}/{total_items} traités (insérés: {imported_count}, mis à jour: {updated_count}, ignorés: {skipped_count}).")
+                        f"  Progression DB : {i + 1}/{total_unique_items} traités. Lot de {len(data_to_send)} lignes envoyé. Temps total: {elapsed_time:.2f}s."
+                    )
 
-            except pg_errors.DataError as e:
-                conn.rollback()
-                print(
-                    f"  [ERREUR SQL GRAVE] Ligne {i + 1}/{total_items} (SKU: '{sku}'): Erreur de données - {e}. Transaction annulée.")
-                print(f"  Détails de la ligne : SKU='{sku}', Nom='{product_name}', Image='{image_url}'")
-                skipped_count += 1
-            except Exception as e:
-                conn.rollback()
-                print(
-                    f"  [ERREUR IMPORT INCONNUE] Ligne {i + 1}/{total_items} (SKU: '{sku}'): {e}. Transaction annulée.")
-                print(f"  Détails de la ligne : SKU='{sku}', Nom='{product_name}', Image='{image_url}'")
-                skipped_count += 1
+                    conn.commit()
+                    data_to_send = []  # Réinitialiser le lot
 
-        # Commiter les insertions restantes à la fin
-        conn.commit()
-        print("\n--- Processus d'importation terminé ---")
-        print(f"Total inséré dans la DB: {imported_count}")
-        print(f"Total mis à jour dans la DB: {updated_count}")
-        print(f"Total ignoré (SKU invalide, erreur de ligne): {skipped_count}")
-        print(f"Total d'éléments lus depuis le JSON: {total_items}")
+                except Exception as e:
+                    conn.rollback()
+                    print(
+                        f"  [ERREUR LOT FATALE] Échec du traitement du lot. Cause : {e}. Les données restantes sont ignorées."
+                    )
+                    total_skipped += len(data_to_send)  # Ces lignes sont perdues
+                    break
 
     except FileNotFoundError:
-        print(f"ERREUR FATALE : Le fichier JSON '{JSON_FILE_PATH}' n'a pas été trouvé (répétition, mais important).")
+        print(f"ERREUR FATALE : Le fichier JSON '{JSON_FILE_PATH}' n'a pas été trouvé.")
     except json.JSONDecodeError as e:
-        print(f"\nERREUR FATALE DE DÉCODAGE JSON : Impossible de lire le fichier '{JSON_FILE_PATH}'.")
-        print(f"Détails de l'erreur JSON : {e}")
-        print(
-            f"Vérifiez la syntaxe JSON du fichier à la ligne/colonne indiquée ci-dessus. Utilisez un validateur JSON en ligne.")
-        print(
-            f"Le problème peut être une virgule manquante, des guillemets incorrects, des crochets/accolades non balancés, ou des caractères non-JSON.")
+        print(f"\nERREUR FATALE DE DÉCODAGE JSON : Impossible de lire le fichier '{JSON_FILE_PATH}'. Détails : {e}")
     except Exception as e:
         print(f"ERREUR FATALE INCONNUE : Une erreur inattendue est survenue au niveau global : {e}")
     finally:
+        end_time = time.time()
+        final_elapsed_time = end_time - start_time
+
         if conn:
             cur.close()
             conn.close()
             print("Connexion à la base de données fermée.")
+
+        print("\n--- Processus d'importation terminé ---")
+        print(f"Temps total d'exécution : {final_elapsed_time:.2f} secondes.")
+        print(f"Total des lignes lues depuis le JSON: {total_items_read}")
+        print(
+            f"Total des lignes uniques et valides envoyées au DB: {total_unique_items if 'total_unique_items' in locals() else 0}")
+        print(
+            f"Total ignoré (doublons ou SKU invalides): {total_items_read - (total_unique_items if 'total_unique_items' in locals() else 0)}")
 
 
 if __name__ == "__main__":
