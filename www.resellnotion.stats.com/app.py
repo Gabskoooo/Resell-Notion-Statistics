@@ -767,109 +767,59 @@ def dashboard():
         # Définir le début et la fin du mois en cours
         today = date.today()
         start_of_month = today.replace(day=1)
-        # Trouve le dernier jour du mois
         if today.month == 12:
             end_of_month = today.replace(year=today.year + 1, month=1, day=1) - timedelta(days=1)
         else:
             end_of_month = today.replace(month=today.month + 1, day=1) - timedelta(days=1)
 
-        # 1. Calcul du nombre de produits en stock (pas de filtre mensuel)
+        # 1. Calcul du nombre de produits en stock
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute("SELECT SUM(quantity) FROM products WHERE user_id = %s",
-                    (current_user.id,))
+        cur.execute("SELECT SUM(quantity) FROM products WHERE user_id = %s", (current_user.id,))
         products_in_stock_query = cur.fetchone()
-        products_in_stock = products_in_stock_query['sum'] if products_in_stock_query and products_in_stock_query[
-            'sum'] is not None else 0
+        products_in_stock = products_in_stock_query['sum'] if products_in_stock_query and products_in_stock_query['sum'] is not None else 0
         cur.close()
 
-        # 2. Valeur totale du stock (pas de filtre mensuel)
+        # 2. Valeur totale du stock
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute("SELECT SUM(purchase_price * quantity) FROM products WHERE user_id = %s",
-                    (current_user.id,))
+        cur.execute("SELECT SUM(purchase_price * quantity) FROM products WHERE user_id = %s", (current_user.id,))
         total_stock_value_query = cur.fetchone()
-        total_stock_value = total_stock_value_query['sum'] if total_stock_value_query and total_stock_value_query[
-            'sum'] is not None else Decimal('0.00')
+        total_stock_value = total_stock_value_query['sum'] if total_stock_value_query and total_stock_value_query['sum'] is not None else Decimal('0.00')
         cur.close()
 
         # 3. Calcul du bénéfice des ventes pour le mois en cours
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(
-            "SELECT SUM(profit) FROM sales WHERE user_id = %s AND sale_date >= %s AND sale_date <= %s",
-            (current_user.id, start_of_month, end_of_month)
-        )
+        cur.execute("SELECT SUM(profit) FROM sales WHERE user_id = %s AND sale_date >= %s AND sale_date <= %s", (current_user.id, start_of_month, end_of_month))
         total_sales_profit_query = cur.fetchone()
-        total_sales_profit = total_sales_profit_query['sum'] if total_sales_profit_query and total_sales_profit_query[
-            'sum'] is not None else Decimal('0.00')
+        total_sales_profit = total_sales_profit_query['sum'] if total_sales_profit_query and total_sales_profit_query['sum'] is not None else Decimal('0.00')
         cur.close()
 
         # 4. Calcul du chiffre d'affaires pour le mois en cours
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(
-            "SELECT SUM(sale_price) FROM sales WHERE user_id = %s AND sale_date >= %s AND sale_date <= %s",
-            (current_user.id, start_of_month, end_of_month)
-        )
+        cur.execute("SELECT SUM(sale_price) FROM sales WHERE user_id = %s AND sale_date >= %s AND sale_date <= %s", (current_user.id, start_of_month, end_of_month))
         total_revenue_query = cur.fetchone()
-        total_revenue = total_revenue_query['sum'] if total_revenue_query and total_revenue_query[
-            'sum'] is not None else Decimal('0.00')
+        total_revenue = total_revenue_query['sum'] if total_revenue_query and total_revenue_query['sum'] is not None else Decimal('0.00')
         cur.close()
 
-        # 5. Calcul des bonus pour le mois en cours (maintenu pour d'éventuels futurs besoins)
+        # 7. NOUVEAU : Calcul du total des paiements en attente
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(
-            "SELECT SUM(amount) FROM supplementary_operations WHERE user_id = %s AND type = 'bonus' AND operation_date >= %s AND operation_date <= %s",
-            (current_user.id, start_of_month, end_of_month)
-        )
-        total_bonus_operations_query = cur.fetchone()
-        total_bonus_operations = total_bonus_operations_query['sum'] if total_bonus_operations_query and \
-                                                                        total_bonus_operations_query[
-                                                                            'sum'] is not None else Decimal('0.00')
-        cur.close()
-
-        # 6. Calcul des charges pour le mois en cours (maintenu)
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(
-            "SELECT SUM(amount) FROM supplementary_operations WHERE user_id = %s AND type = 'charge' AND operation_date >= %s AND operation_date <= %s",
-            (current_user.id, start_of_month, end_of_month)
-        )
-        total_charge_operations_query = cur.fetchone()
-        total_charge_operations = total_charge_operations_query['sum'] if total_charge_operations_query and \
-                                                                          total_charge_operations_query[
-                                                                              'sum'] is not None else Decimal('0.00')
-        cur.close()
-
-        # 7. NOUVEAU : Calcul du total des paiements en attente (sur toutes les ventes)
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(
-            "SELECT COALESCE(SUM(sale_price), 0) FROM sales WHERE user_id = %s AND payment_status = 'en_attente'",
-            (current_user.id,)
-        )
+        cur.execute("SELECT COALESCE(SUM(sale_price), 0) FROM sales WHERE user_id = %s AND payment_status = 'en_attente'", (current_user.id,))
         total_pending_payments_query = cur.fetchone()
-        total_pending_payments = total_pending_payments_query['coalesce'] if total_pending_payments_query and \
-                                                                             total_pending_payments_query[
-                                                                                 'coalesce'] is not None else Decimal(
-            '0.00')
+        total_pending_payments = total_pending_payments_query['coalesce'] if total_pending_payments_query else Decimal('0.00')
         cur.close()
 
-        # Le calcul du Résultat Net (net_result) est retiré car il n'est plus utilisé par le template.
-
-        # 8. Récupération des 5 dernières ventes (non filtrées par mois)
+        # 8. Récupération des 5 dernières ventes (CORRECTION ICI)
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        # On essaie de prendre l'image, le sku et la taille depuis sales s'ils existent, sinon via le JOIN
         cur.execute('''
-            SELECT
-                s.item_name,
-                s.quantity,
-                s.sale_price,
-                s.sale_date,
-                s.purchase_price_at_sale,
-                s.shipping_cost,
-                s.fees,
-                s.profit,
-                p.sku,
-                p.size
+            SELECT 
+                s.item_name, s.quantity, s.sale_price, s.sale_date, s.profit,
+                COALESCE(s.sku, p.sku) as sku, 
+                COALESCE(s.size, p.size) as size,
+                COALESCE(s.image_url, p.image_url) as image_url
             FROM sales s
             LEFT JOIN products p ON s.product_id = p.id
             WHERE s.user_id = %s
-            ORDER BY s.sale_date DESC
+            ORDER BY s.sale_date DESC, s.id DESC
             LIMIT 5
         ''', (current_user.id,))
         latest_sales_raw = cur.fetchall()
@@ -878,34 +828,25 @@ def dashboard():
         latest_sales_for_template = []
         for sale in latest_sales_raw:
             sale_dict = dict(sale)
-
             sale_dict['sku'] = sale['sku'] if sale['sku'] else 'N/A'
             sale_dict['size'] = sale['size'] if sale['size'] else 'N/A'
+            sale_dict['image_url'] = sale['image_url'] if sale['image_url'] else None
             sale_dict['sale_price_formatted'] = '{:.2f} €'.format(float(sale_dict['sale_price'] or 0.0))
-            sale_dict['purchase_price_at_sale_formatted'] = '{:.2f} €'.format(
-                float(sale_dict['purchase_price_at_sale'] or 0.0))
-            sale_dict['shipping_cost_formatted'] = '{:.2f} €'.format(float(sale_dict['shipping_cost'] or 0.0))
-            sale_dict['fees_formatted'] = '{:.2f} €'.format(float(sale_dict['fees'] or 0.0))
             sale_dict['profit_formatted'] = '{:.2f} €'.format(float(sale_dict['profit'] or 0.0))
-
             latest_sales_for_template.append(sale_dict)
 
         return render_template('dashboard.html',
-                               products_in_stock=products_in_stock,
                                total_stock_value=total_stock_value,
                                total_sales_profit=total_sales_profit,
                                total_revenue=total_revenue,
-                               # net_result=net_result, # Retiré
-                               total_pending_payments=total_pending_payments,  # NOUVEAU
+                               total_pending_payments=total_pending_payments,
                                latest_sales=latest_sales_for_template)
 
     except Exception as e:
-        flash(f"Une erreur est survenue lors du chargement du tableau de bord: {e}", 'danger')
-        print(f"Erreur tableau de bord: {e}")
+        flash(f"Erreur tableau de bord: {e}", 'danger')
         return redirect(url_for('login'))
     finally:
-        if cur is not None and not cur.closed:
-            cur.close()
+        if cur and not cur.closed: cur.close()
 @app.route('/profile', methods=('GET', 'POST'))
 @login_required  # L'utilisateur doit être connecté pour accéder à cette page
 def profile():
@@ -1612,235 +1553,83 @@ def delete_product(id):
             cur.close()
 
 
-# --- Route add_sale() modifiée ---
-@app.route('/sales/add', methods=('GET', 'POST'))
+@app.route('/sales/add', methods=['GET', 'POST'])
 @login_required
-@key_active_required
 def add_sale():
     conn = g.db
-    cur = None
+    if request.method == 'POST':
+        data = request.get_json()
+        if not data or 'sales' not in data:
+            return jsonify({"success": False, "message": "Aucune donnée reçue"}), 400
 
-    # Tente de récupérer un ID produit pré-sélectionné dans l'URL
-    preselected_product_id = request.args.get('product_id', None)
-
-    # 1. Chargement des produits pour le menu déroulant (pour les requêtes GET)
-    products_for_dropdown = []
-    try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(
-            'SELECT id, name, sku, size, purchase_price FROM products WHERE user_id = %s ORDER BY name',
-            (current_user.id,))
-        products_for_dropdown = cur.fetchall()
-        cur.close()
-    except Exception as e:
-        flash(f"Erreur lors du chargement des produits pour la vente : {e}", "danger")
-        print(f"DEBUG: Erreur de chargement produits_for_dropdown : {e}")
-        # products_for_dropdown reste []
+        webhook_url = "https://discord.com/api/webhooks/1404523543512748035/teqgeczafL9-rViNAysRP-EPViALok9DGfH1v19Kvekvk2mbACbNzB9ltqv7ZxRV6gW5"
 
-    # Initialisation des données du formulaire (pour GET ou pour POST en cas d'erreur)
-    form_data = {
-        'product_id': None,
-        'item_name': '',
-        'quantity': 1,
-        'sale_price': '',
-        'sale_date': datetime.now().strftime('%Y-%m-%d'),
-        'platform': '',
-        'shipping_cost': '',
-        'fees': '',
-        'notes': '',
-        'payment_status': 'reçu'  # Valeur par défaut
-    }
-
-    # 1.1 Gestion de la pré-sélection (GET)
-    if request.method == 'GET' and preselected_product_id:
         try:
-            # S'assurer que l'ID pré-sélectionné est bien un entier pour l'exécution SQL
-            preselected_product_id = int(preselected_product_id)
+            for sale_data in data['sales']:
+                product_id = sale_data.get('product_id')
+                sale_price = Decimal(str(sale_data.get('sale_price', 0)))
+                sale_date = sale_data.get('sale_date') or date.today()
+                payment_status = sale_data.get('payment_status', 'reçu')
+                platform = sale_data.get('platform', 'Autre')
 
-            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            cur.execute(
-                'SELECT id, name, purchase_price FROM products WHERE id = %s AND user_id = %s',
-                (preselected_product_id, current_user.id))
-            preselected_product = cur.fetchone()
+                # 1. Récupération des infos produit
+                cur.execute("SELECT name, purchase_price, quantity, sku, size, image_url FROM products WHERE id = %s AND user_id = %s", (product_id, current_user.id))
+                product = cur.fetchone()
+
+                if not product:
+                    continue # On passe au suivant si le produit est introuvable
+
+                profit = sale_price - product['purchase_price']
+
+                # 2. Insertion en base de données
+                cur.execute('''
+                    INSERT INTO sales (user_id, product_id, item_name, quantity, sale_price, purchase_price_at_sale, profit, sale_date, payment_status, sku, size, image_url)
+                    VALUES (%s, %s, %s, 1, %s, %s, %s, %s, %s, %s, %s, %s)
+                ''', (current_user.id, product_id, product['name'], sale_price, product['purchase_price'], profit, sale_date, payment_status, product['sku'], product['size'], product['image_url']))
+
+                # 3. Mise à jour du stock
+                if product['quantity'] <= 1:
+                    cur.execute("DELETE FROM products WHERE id = %s", (product_id,))
+                else:
+                    cur.execute("UPDATE products SET quantity = quantity - 1 WHERE id = %s", (product_id, ))
+
+                # 4. ENVOI DU WEBHOOK DISCORD
+                discord_data = {
+                    "embeds": [{
+                        "title": "👟 Nouvelle Vente !",
+                        "color": 3066993, # Vert émeraude
+                        "fields": [
+                            {"name": "Modèle", "value": f"**{product['name']}**", "inline": False},
+                            {"name": "SKU", "value": f"`{product['sku']}`", "inline": True},
+                            {"name": "Taille", "value": f"{product['size']}", "inline": True},
+                            {"name": "Prix de Vente", "value": f"**{sale_price}€**", "inline": True},
+                            {"name": "Plateforme", "value": f"{platform}", "inline": True}
+                        ],
+                        "thumbnail": {"url": product['image_url'] if product['image_url'] else ""}
+
+                    }]
+                }
+                try:
+                    requests.post(webhook_url, json=discord_data)
+                except Exception as e:
+                    print(f"Erreur Webhook Discord: {e}")
+
+            conn.commit()
+            return jsonify({"success": True, "redirect": url_for('dashboard')})
+
+        except Exception as e:
+            conn.rollback()
+            return jsonify({"success": False, "message": str(e)}), 500
+        finally:
             cur.close()
 
-            if preselected_product:
-                form_data['product_id'] = preselected_product['id']
-                form_data['item_name'] = preselected_product['name']
-        except ValueError:
-            flash("ID produit invalide pour la pré-sélection.", "warning")
-        except Exception as e:
-            flash("Produit pré-sélectionné introuvable.", "warning")
-            print(f"DEBUG: Erreur de pré-sélection du produit : {e}")
-
-    # 2. Gestion de la soumission du formulaire (POST)
-    elif request.method == 'POST':
-        # Récupération des données POST pour la validation
-        form_data = {
-            'product_id': request.form.get('product_id', ''),
-            'item_name': request.form.get('product_name_hidden', '').strip(),
-            'quantity': 1,
-            'sale_price': request.form.get('sale_price', '').replace(',', '.'),
-            'sale_date': request.form.get('sale_date', datetime.now().strftime('%Y-%m-%d')),
-            'platform': request.form.get('platform', '').strip(),
-            'shipping_cost': request.form.get('shipping_cost', '').replace(',', '.'),
-            'fees': request.form.get('fees', '').replace(',', '.'),
-            'notes': request.form.get('notes', '').strip(),
-            'payment_status': request.form.get('payment_status', 'en_attente')
-        }
-
-    # --- LOGIQUE POST (Enregistrement de la vente et suppression du stock) ---
-    if request.method == 'POST':
-
-        # Tentative de conversion de l'ID en entier pour la cohérence
-        try:
-            product_id = int(form_data['product_id']) if form_data['product_id'] else None
-        except ValueError:
-            flash("Erreur : ID produit invalide.", 'danger')
-            # Renvoyer le template avec l'erreur
-            return redirect(url_for('add_sale'))
-
-        item_name = form_data['item_name']
-        quantity_sold_str = str(form_data['quantity'])
-        sale_price_str = form_data['sale_price']
-        sale_date = form_data['sale_date']
-        notes = form_data['notes']
-        platform = form_data['platform']
-        shipping_cost_str = form_data['shipping_cost']
-        fees_str = form_data['fees']
-        payment_status = form_data['payment_status']
-
-        # --- LOG DE DÉBOGAGE CRITIQUE (S'AFFICHE DANS VOTRE TERMINAL) ---
-        print(f"--- DÉBOGAGE VENTE SOUMISSION (Route /sales/add) ---")
-        print(f"ID Produit reçu: {product_id} (Type: {type(product_id)})")
-        print(f"ID Utilisateur (current_user.id): {current_user.id}")
-        print(f"--------------------------------------------------")
-        # --- FIN DU LOG DE DÉBOGAGE ---
-
-        error = None
-
-        # Validation des champs (le reste de vos validations)
-        if not item_name and not product_id:
-            error = 'Veuillez saisir le nom de l\'article vendu ou sélectionner un produit existant.'
-        elif not quantity_sold_str.isdigit() or int(quantity_sold_str) <= 0:
-            error = 'La quantité vendue est requise et doit être un nombre entier positif !'
-        elif not sale_price_str or not (sale_price_str.replace('.', '', 1).isdigit()):
-            error = 'Le prix de vente est requis et doit être un nombre valide !'
-        elif not sale_date:
-            error = 'La date de vente est requise !'
-        elif payment_status not in ['reçu', 'en_attente']:
-            error = 'Le statut de paiement est invalide.'
-        if shipping_cost_str and not shipping_cost_str.replace('.', '', 1).isdigit():
-            error = 'Les frais de port doivent être un nombre valide.'
-        if fees_str and not fees_str.replace('.', '', 1).isdigit():
-            error = 'Les frais de plateforme/commission doivent être un nombre valide.'
-
-        if error is None:
-            conn = g.db
-            try:
-                quantity_sold = int(quantity_sold_str)
-                sale_price_float = float(sale_price_str)
-                shipping_cost_float = float(shipping_cost_str) if shipping_cost_str else 0.0
-                fees_float = float(fees_str) if fees_str else 0.0
-
-                purchase_price_at_sale = 0.0
-                product_sku = "N/A"
-                product_image_url = None
-
-                # Début de la transaction
-                cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-                if product_id:
-                    # ÉTAPE 1: Vérification et récupération du prix d'achat/SKU du produit existant
-                    cur.execute(
-                        'SELECT purchase_price, sku, image_url FROM products WHERE id = %s AND user_id = %s',
-                        (product_id, current_user.id))
-                    product_data_for_sale = cur.fetchone()
-
-                    if not product_data_for_sale:
-                        cur.close()
-                        # Si l'ID est fourni mais ne correspond à rien, c'est une erreur de stock/sécurité
-                        raise Exception(f"Produit avec ID {product_id} introuvable en stock.")
-
-                    purchase_price_at_sale = float(product_data_for_sale['purchase_price'])
-                    product_sku = product_data_for_sale['sku']
-                    product_image_url = product_data_for_sale['image_url']
-
-                # Le cursor doit être en mode standard pour les commandes de base (INSERT/DELETE)
-                cur.close()
-                cur = conn.cursor()
-
-                profit = sale_price_float - purchase_price_at_sale - shipping_cost_float - fees_float
-
-                # ÉTAPE 2 : Insérer la Vente
-                cur.execute(
-                    'INSERT INTO sales (user_id, product_id, item_name, quantity, sale_price, purchase_price_at_sale, sale_date, notes, sale_channel, shipping_cost, fees, profit, payment_status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id',
-                    (current_user.id, product_id, item_name, quantity_sold, sale_price_float, purchase_price_at_sale,
-                     sale_date, notes, platform, shipping_cost_float, fees_float, profit, payment_status)
-                )
-                new_sale_id = cur.fetchone()[0]
-
-                # ÉTAPE 3 : Supprimer le produit du stock (S'IL Y AVAIT UN LIEN DE STOCK)
-                if product_id:
-                    cur.execute(
-                        'DELETE FROM products WHERE id = %s AND user_id = %s',
-                        (product_id, current_user.id)
-                    )
-
-                    # Vérification critique : 1 ligne DOIT avoir été supprimée
-                    if cur.rowcount == 0:
-                        conn.rollback()
-                        cur.close()
-                        # Annuler la vente insérée si la suppression du stock échoue
-                        raise Exception(
-                            f"Échec critique de la suppression du produit (ID: {product_id}) du stock. Transaction annulée.")
-
-                # ... [Le code de notification Discord et classement (si réintégré)] ...
-
-                conn.commit()  # Valider la transaction (Insertion de vente + Suppression de stock)
-                flash("Vente enregistrée et stock mis à jour avec succès.", 'success')
-                return redirect(url_for('sale_success', sale_id=new_sale_id))
-
-            except ValueError:
-                conn.rollback()
-                error = "Erreur de format pour les montants ou la quantité. Veuillez entrer des nombres valides."
-                flash(error, 'danger')
-            except Exception as e:
-                conn.rollback()
-                error = f'Une erreur est survenue lors de l\'enregistrement de la vente : {e}'
-                print(f"DEBUG: Erreur détaillée lors de l'enregistrement de la vente : {e}")
-                flash(error, 'danger')
-            finally:
-                if cur and not cur.closed:
-                    cur.close()
-        else:
-            flash(error, 'danger')
-
-    # 3. Rendu du template (GET ou POST avec erreur)
-
-    # Mise en forme des données pour l'affichage (pour les ré-afficher après une erreur POST)
-    display_sale_price = '{:.2f}'.format(float(form_data['sale_price'])) if form_data['sale_price'] and form_data[
-        'sale_price'].replace('.', '', 1).isdigit() else ''
-    display_shipping_cost = '{:.2f}'.format(float(form_data['shipping_cost'])) if form_data['shipping_cost'] and \
-                                                                                  form_data['shipping_cost'].replace(
-                                                                                      '.', '', 1).isdigit() else ''
-    display_fees = '{:.2f}'.format(float(form_data['fees'])) if form_data['fees'] and form_data['fees'].replace('.', '',
-                                                                                                                1).isdigit() else ''
-
-    return render_template('add_sale.html',
-                           products=products_for_dropdown,
-                           sale={
-                               'product_id': form_data['product_id'],
-                               'item_name': form_data['item_name'],
-                               'quantity': form_data['quantity'],
-                               'sale_price': display_sale_price,
-                               'sale_date': form_data['sale_date'],
-                               'platform': form_data['platform'],
-                               'shipping_cost': display_shipping_cost,
-                               'fees': display_fees,
-                               'notes': form_data['notes'],
-                               'payment_status': form_data['payment_status']
-                           })
+    # GET
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT * FROM products WHERE user_id = %s AND quantity > 0", (current_user.id,))
+    products = cur.fetchall()
+    cur.close()
+    return render_template('add_sale.html', products=products, today=date.today())
 @app.route('/leaderboard')
 @login_required # Pour que seuls les utilisateurs connectés puissent voir le classement
 def leaderboard():
@@ -1876,67 +1665,70 @@ def leaderboard():
             cur.close()
 
     return render_template('leaderboard.html', leaderboard=leaderboard_data)
+
+
 @app.route('/sale_success/<int:sale_id>')
 @login_required
-@key_active_required
 def sale_success(sale_id):
     conn = g.db
     cur = None
-    sale_details = None
-    product_image_url = None # Initialise à None
-
     try:
+        # Utilisation de DictCursor pour appeler les colonnes par leur nom
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        # Récupérer les détails de la vente et l'URL de l'image du produit si disponible
-        cur.execute('''
-            SELECT
-                s.item_name,
-                s.sale_price,
-                s.purchase_price_at_sale,
-                s.shipping_cost,
-                s.fees,
-                s.profit,
-                p.image_url,
-                p.sku,
-                p.size
-            FROM sales s
-            LEFT JOIN products p ON s.product_id = p.id
-            WHERE s.id = %s AND s.user_id = %s
-        ''', (sale_id, current_user.id))
-        sale_details = cur.fetchone()
-        cur.close()
 
-        if sale_details:
-            # Assurer que les valeurs sont au bon format pour l'affichage (float pour le formatage)
-            sale_details['sale_price_formatted'] = '{:.2f}€'.format(float(sale_details['sale_price'] or 0.0))
-            sale_details['purchase_price_formatted'] = '{:.2f}€'.format(float(sale_details['purchase_price_at_sale'] or 0.0))
-            sale_details['profit_formatted'] = '{:+.2f}€'.format(float(sale_details['profit'] or 0.0)) # Pour afficher + ou -
+        # ÉTAPE 1 : On récupère TOUT de la vente
+        cur.execute("SELECT * FROM sales WHERE id = %s AND user_id = %s", (sale_id, current_user.id))
+        sale_row = cur.fetchone()
 
-            # Gérer l'URL de l'image du produit
-            if sale_details['image_url']:
-                product_image_url = sale_details['image_url']
-            else:
-                # Si pas d'image spécifique pour le produit, utiliser une image par défaut ou gérer l'absence
-                product_image_url = url_for('static', filename='placeholder_product.png') # Assurez-vous d'avoir cette image par défaut
+        if not sale_row:
+            print("--- DEBUG : Vente introuvable dans la table sales ---")
+            return redirect(url_for('dashboard'))
 
-        else:
-            flash("Détails de la vente introuvables.", "danger")
-            return redirect(url_for('dashboard')) # Redirige si la vente n'est pas trouvée
+        # ÉTAPE 2 : On cherche l'image spécifiquement (Priorité Produits, puis SKU)
+        # On ne fait pas de JOIN pour éviter l'erreur de tuple
+        image_url = None
+        product_id = sale_row.get('product_id')
+        item_name = sale_row.get('item_name')
+
+        if product_id:
+            cur.execute("SELECT image_url FROM products WHERE id = %s", (product_id,))
+            p_row = cur.fetchone()
+            if p_row:
+                image_url = p_row.get('image_url')
+
+        # Si toujours pas d'image, on fouille dans la sku_database via le nom
+        if not image_url and item_name:
+            cur.execute("SELECT image_url FROM sku_database WHERE product_name ILIKE %s LIMIT 1", (f"%{item_name}%",))
+            sd_row = cur.fetchone()
+            if sd_row:
+                image_url = sd_row.get('image_url')
+
+        # ÉTAPE 3 : Préparation propre pour le HTML
+        # On crée un dictionnaire propre pour ne pas dépendre des index de la base
+        sale_display = {
+            'item_name': item_name or "Produit inconnu",
+            'sale_price_formatted': f"{float(sale_row.get('sale_price') or 0):.2f}€",
+            'purchase_price_formatted': f"{float(sale_row.get('purchase_price_at_sale') or 0):.2f}€",
+            'profit': float(sale_row.get('profit') or 0),
+            'profit_formatted': f"{float(sale_row.get('profit') or 0):+.2f}€"
+        }
+
+        final_image = image_url if image_url else url_for('static', filename='placeholder_product.png')
+
+        print(f"--- DEBUG SUCCESS : Image trouvée -> {final_image} ---")
+
+        return render_template('sale_success.html',
+                               sale=sale_display,
+                               product_image_url=final_image,
+                               success_checkmark_url=url_for('static', filename='success_checkmark.png'))
 
     except Exception as e:
-        flash(f"Erreur lors du chargement des détails de la vente : {e}", 'danger')
-        print(f"DEBUG: Erreur de chargement sale_success : {e}")
-        return redirect(url_for('dashboard'))
+        import traceback
+        print("--- ERREUR CRITIQUE ---")
+        print(traceback.format_exc())  # Ça va te dire la LIGNE exacte du crash
+        return f"Erreur interne : {e}"
     finally:
-        if cur is not None and not cur.closed:
-            cur.close()
-
-    return render_template('sale_success.html',
-                           sale=sale_details,
-                           product_image_url=product_image_url,
-                           success_checkmark_url=url_for('static', filename='success_checkmark.png')) # Assurez-vous que le chemin est correct
-
-
+        if cur: cur.close()
 @app.route('/sales')
 @login_required
 @key_active_required

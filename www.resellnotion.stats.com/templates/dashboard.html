@@ -282,29 +282,38 @@
         {% for sale in latest_sales %}
         <div class="col-12 col-md-6 col-lg-4 animated-item" style="--animation-delay: {{ 1.2 + loop.index0 * 0.1 }}s;">
             <div class="card latest-sale-card">
-                <div class="card-body d-flex flex-column">
-                    <h5 class="latest-sale-title">{{ sale.item_name }}</h5>
+                <div class="card-body d-flex flex-row justify-content-between align-items-center">
                     <div class="flex-grow-1">
-                        <p class="latest-sale-info mb-1 d-none d-md-block"><strong>SKU:</strong> {{ sale.sku }}</p>
-                        <p class="latest-sale-info mb-1"><strong>Prix Vente:</strong> {{ sale.sale_price_formatted }}</p>
-                        <p class="latest-sale-info mb-1 d-none d-md-block"><strong>Taille:</strong> {{ sale.size }}</p>
-                        <p class="latest-sale-info mb-1 d-md-none">
-                            <span class="badge {% if sale.profit > 0 %}bg-success{% elif sale.profit < 0 %}bg-danger{% else %}bg-secondary{% endif %}">
+                        <h5 class="latest-sale-title mb-1" style="font-size: 1.1rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            {{ sale.item_name }}
+                        </h5>
+                        <p class="latest-sale-info mb-0"><strong>SKU:</strong> {{ sale.sku }}</p>
+                        <p class="latest-sale-info mb-0"><strong>Prix Vente:</strong> {{ sale.sale_price_formatted }}</p>
+                        <p class="latest-sale-info mb-1"><strong>Taille:</strong> {{ sale.size }}</p>
+
+                        <div class="mt-2">
+                            <span class="badge {% if sale.profit > 0 %}bg-success{% elif sale.profit < 0 %}bg-danger{% else %}bg-secondary{% endif %}" style="padding: 6px 12px; font-size: 0.85rem;">
                                 Bénéfice: {{ sale.profit_formatted }}
                             </span>
-                        </p>
-                        <p class="latest-sale-info mb-1 d-none d-md-block"><strong>Bénéfice:</strong>
-                            <span class="badge {% if sale.profit > 0 %}bg-success{% elif sale.profit < 0 %}bg-danger{% else %}bg-secondary{% endif %}">
-                                {{ sale.profit_formatted }}
-                            </span>
-                        </p>
+                        </div>
                     </div>
+
+                    <div class="ms-2" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
+                        {% if sale.image_url %}
+                            <img src="{{ sale.image_url }}" alt="Sneaker" style="max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3));">
+                        {% else %}
+                            <i class="bi bi-box-seam text-muted" style="font-size: 2rem; opacity: 0.3;"></i>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="px-3 pb-2">
                     {% set profit_percentage = (sale.profit / sale.sale_price) * 100 if sale.sale_price and sale.sale_price != 0 else 0 %}
-                    <div class="profit-progress-bar-container mt-3 d-none d-md-block">
+                    <div class="profit-progress-bar-container mt-1 d-none d-md-block" style="height: 4px;">
                         <div class="profit-progress-bar" style="width: {{ profit_percentage if profit_percentage >= 0 else 0 }}%;"></div>
                     </div>
-                    <div class="text-end mt-2">
-                        <small class="text-muted">{{ sale.sale_date }}</small>
+                    <div class="text-end mt-1">
+                        <small class="text-muted" style="font-size: 0.7rem;">{{ sale.sale_date }}</small>
                     </div>
                 </div>
             </div>

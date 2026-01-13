@@ -7,7 +7,7 @@ import os
 import time
 
 # --- Configuration du fichier JSON d'entrée ---
-JSON_FILE_PATH = "database_sku.json"
+JSON_FILE_PATH = "shoes_by_whentocop.json"
 
 # --- Configuration PostgreSQL (vos identifiants Render) ---
 DB_HOST = "dpg-d1v824qdbo4c73f9onog-a.oregon-postgres.render.com"

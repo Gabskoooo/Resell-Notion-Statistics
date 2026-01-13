@@ -9,23 +9,23 @@
     <style>
         /* Styles spécifiques pour cette page */
         body {
-            background: linear-gradient(135deg, #1A2A4C 0%, #301934 100%); /* Dégradé de l'image de référence */
+            background: linear-gradient(135deg, #1A2A4C 0%, #301934 100%);
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh; /* Garde la hauteur à 100vh pour que le bouton soit en dessous de l'écran initialement */
+            min-height: 100vh;
             margin: 0;
-            overflow-y: auto; /* Permet le défilement vertical si nécessaire */
+            overflow-y: auto;
             color: #fff;
             font-family: 'Arial', sans-serif;
         }
 
         .success-container {
             text-align: center;
-            opacity: 0; /* Caché au début */
-            transform: scale(0.8); /* Petitement au début */
-            animation: fadeInScale 0.8s forwards ease-out; /* Animation d'apparition */
-            animation-delay: 0.2s; /* Petit délai */
+            opacity: 0;
+            transform: scale(0.8);
+            animation: fadeInScale 0.8s forwards ease-out;
+            animation-delay: 0.2s;
             padding: 20px;
             max-width: 90%;
             display: flex;
@@ -44,10 +44,10 @@
             animation-delay: 0.5s;
         }
 
-        .got-em-text { /* La classe CSS garde le nom 'got-em-text' mais le contenu est 'SOLD'EM !' */
-            font-size: 4.5em; /* Grande taille */
+        .got-em-text {
+            font-size: 4.5em;
             font-weight: bold;
-            color: #4CAF50; /* Vert "succès" */
+            color: #4CAF50;
             text-shadow: 0 0 10px rgba(76, 175, 80, 0.7);
             margin-bottom: 30px;
             opacity: 0;
@@ -58,14 +58,11 @@
         }
 
         .product-image {
-            max-width: 60%; /* MODIFIÉ: Rend l'image plus petite */
-            max-height: 200px; /* MODIFIÉ: Rend l'image plus petite */
+            max-width: 60%;
+            max-height: 200px;
             width: auto;
             height: auto;
             object-fit: contain;
-            /* border-radius: 10px; -- SUPPRIMÉ */
-            /* box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); -- SUPPRIMÉ */
-            /* margin-bottom: 40px; -- SUPPRIMÉ */
             opacity: 0;
             transform: translateY(50px);
             animation: slideInFade 0.7s forwards ease-out;
@@ -75,34 +72,32 @@
         .sale-details-cards {
             display: flex;
             justify-content: center;
-            gap: 10px; /* Réduit l'espace entre les cartes pour aider à les garder sur une ligne */
-            /* flex-wrap: wrap; est supprimé ici pour que les cartes restent sur une seule ligne */
-            margin-top: 60px; /* AJOUTÉ: Augmente l'espace au-dessus des cartes */
+            gap: 10px;
+            margin-top: 60px;
             margin-bottom: 40px;
-            width: 100%; /* S'assure que le conteneur prend toute la largeur disponible */
-            box-sizing: border-box; /* Inclut padding et border dans la largeur totale */
-            padding: 0 10px; /* Un peu de padding pour éviter qu'elles ne collent aux bords sur mobile */
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0 10px;
         }
 
         .detail-card {
             background-color: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
-            padding: 10px 15px; /* Réduit le padding pour économiser de l'espace */
+            padding: 10px 15px;
             backdrop-filter: blur(5px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            font-size: 1em; /* Réduit un peu la taille de la police pour les petits écrans */
+            font-size: 1em;
             font-weight: bold;
             opacity: 0;
             transform: translateY(30px);
             animation: slideInFade 0.6s forwards ease-out;
-            flex: 1; /* Permet aux cartes de prendre une part égale de l'espace disponible */
-            min-width: 90px; /* Largeur minimale pour éviter un écrasement excessif */
-            max-width: 150px; /* Largeur maximale pour éviter qu'elles ne soient trop larges sur de grands écrans */
-            text-align: center; /* Centre le texte dans chaque carte */
+            flex: 1;
+            min-width: 90px;
+            max-width: 150px;
+            text-align: center;
         }
 
-        /* Délais spécifiques pour les cartes */
         .detail-card:nth-child(1) { animation-delay: 1.5s; }
         .detail-card:nth-child(2) { animation-delay: 1.7s; }
         .detail-card:nth-child(3) { animation-delay: 1.9s; }
@@ -129,7 +124,7 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 1.1em;
-            text-decoration: none; /* Pour le a-tag */
+            text-decoration: none;
             transition: background-color 0.3s ease;
         }
 
@@ -137,7 +132,6 @@
             background-color: #0056b3;
         }
 
-        /* Animations */
         @keyframes fadeInScale {
             from { opacity: 0; transform: scale(0.8); }
             to { opacity: 1; transform: scale(1); }
@@ -159,33 +153,21 @@
             to { opacity: 1; }
         }
 
-        /* Media Queries pour petits écrans */
         @media (max-width: 768px) {
-            .got-em-text {
-                font-size: 3em;
-            }
-            .product-image {
-                max-width: 50%; /* Ajuste pour les tablettes */
-                max-height: 180px; /* Ajuste la hauteur max */
-            }
-            /* Les règles pour .detail-card et .sale-details-cards sont retirées ici pour conserver l'affichage horizontal */
+            .got-em-text { font-size: 3em; }
+            .product-image { max-width: 50%; max-height: 180px; }
         }
 
         @media (max-width: 480px) {
-            .got-em-text {
-                font-size: 2.5em;
-            }
-            .product-image {
-                max-width: 70%; /* Prend plus de place sur les très petits écrans si nécessaire */
-                max-height: 150px; /* Ajuste la hauteur max */
-            }
-            /* Les règles pour .detail-card et .sale-details-cards sont retirées ici pour conserver l'affichage horizontal */
+            .got-em-text { font-size: 2.5em; }
+            .product-image { max-width: 70%; max-height: 150px; }
         }
     </style>
 </head>
 <body>
     <div class="success-container">
         <img src="{{ success_checkmark_url }}" alt="Succès" class="checkmark-icon">
+
         <div class="got-em-text">SOLD'EM !</div>
 
         {% if sale.item_name %}
@@ -194,6 +176,8 @@
 
         {% if product_image_url %}
             <img src="{{ product_image_url }}" alt="Image du Produit" class="product-image">
+        {% else %}
+             <img src="{{ url_for('static', filename='placeholder_product.png') }}" alt="Sneaker" class="product-image">
         {% endif %}
 
         <div class="sale-details-cards">
@@ -207,7 +191,9 @@
             </div>
             <div class="detail-card">
                 <span class="label">Bénéfice</span>
-                <span style="color: {% if sale.profit >= 0 %}#4CAF50{% else %}#FF5722{% endif %};">{{ sale.profit_formatted }}</span>
+                <span style="color: {% if sale.profit|float >= 0 %}#4CAF50{% else %}#FF5722{% endif %};">
+                    {{ sale.profit_formatted }}
+                </span>
             </div>
         </div>
 
@@ -221,7 +207,7 @@
             // Redirection automatique après 10 secondes
             setTimeout(function() {
                 window.location.href = "{{ url_for('dashboard') }}";
-            }, 10000); // 10000 millisecondes = 10 secondes
+            }, 10000);
         });
     </script>
 </body>

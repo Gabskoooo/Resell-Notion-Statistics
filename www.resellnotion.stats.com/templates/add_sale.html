@@ -1,337 +1,317 @@
 {% extends 'base.html' %}
 
-{% block title %}Enregistrer Vente{% endblock %}
+{% block title %}Enregistrer Ventes{% endblock %}
 
 {% block content %}
+<div id="success-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; flex-direction:column; align-items:center; justify-content:center;">
+    <div class="success-animation">
+        <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+            <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
+            <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+        </svg>
+    </div>
+    <h2 style="color:white; margin-top:20px; font-family:'Poppins', sans-serif; font-weight: 600;">Vente enregistrée !</h2>
+</div>
+
 <style>
-    /* Règle temporaire pour forcer l'affichage des cartes de produits */
+    /* Animation du V vert */
+    .checkmark__circle {
+        stroke-dasharray: 166;
+        stroke-dashoffset: 166;
+        stroke-width: 2;
+        stroke-miterlimit: 10;
+        stroke: #7ac142;
+        fill: none;
+        animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+    }
+    .checkmark {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: block;
+        stroke-width: 2;
+        stroke: #fff;
+        stroke-miterlimit: 10;
+        box-shadow: inset 0px 0px 0px #7ac142;
+        animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s cubic-bezier(0.47, 0, 0.745, 0.715) forwards;
+    }
+    .checkmark__check {
+        transform-origin: 50% 50%;
+        stroke-dasharray: 48;
+        stroke-dashoffset: 48;
+        animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+    }
+    @keyframes stroke { 100% { stroke-dashoffset: 0; } }
+    @keyframes scale { 0%, 100% { transform: none; } 50% { transform: scale3d(1.1, 1.1, 1); } }
+    @keyframes fill { 100% { box-shadow: inset 0px 0px 0px 40px #7ac142; } }
+
+    /* LOGIQUE DE FORÇAGE D'AFFICHAGE */
+    .step-card {
+        display: none;
+    }
+    .step-card.active-step {
+        display: block !important;
+    }
+
+    /* GRILLE ET CARTES PRODUITS */
+    .product-selection-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 20px;
+        max-height: 500px;
+        overflow-y: auto;
+        padding: 10px;
+    }
+
     .product-card {
+        background: rgba(255, 255, 255, 0.1) !important;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: block !important;
         opacity: 1 !important;
         visibility: visible !important;
     }
-    /* Styles pour les boutons de statut de paiement */
-    .status-button {
+
+    .product-card:hover {
+        background: rgba(255, 255, 255, 0.2) !important;
+        transform: translateY(-5px);
+        border-color: #007bff;
+    }
+
+    .product-card.selected {
+        border-color: #007bff;
+        background: rgba(0, 123, 255, 0.2) !important;
+        box-shadow: 0 0 15px rgba(0, 123, 255, 0.5);
+    }
+
+    .product-card-img {
         width: 100%;
-        padding: 15px;
-        font-size: 1.1em;
-        font-weight: bold;
-        border: 2px solid transparent;
-        transition: all 0.2s ease-in-out;
+        height: 120px;
+        object-fit: contain;
         margin-bottom: 10px;
+        border-radius: 8px;
     }
-    .status-button.selected {
-        /* Encadrement et mise en évidence de la sélection */
-        box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-        transform: scale(1.02);
+
+    /* BOUTONS ERGONOMIQUES POUR MULTI-VENTE */
+    .btn-choice {
+        background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1);
+        color: white; padding: 12px; border-radius: 10px; cursor: pointer; transition: 0.2s;
+        text-align: center; font-size: 0.85rem;
     }
-    .status-button:hover:not(.selected) {
-        opacity: 0.8;
-    }
-    .btn-received {
-        background-color: #4CAF50; /* Vert */
-        border-color: #4CAF50;
+    .btn-choice.selected { border-color: #007bff; background: rgba(0,123,255,0.2); }
+
+    #bulkSummary {
+        background: rgba(0, 123, 255, 0.2);
+        border: 1px solid #007bff;
         color: white;
-    }
-    .btn-pending {
-        background-color: #FFC107; /* Jaune/Orange */
-        border-color: #FFC107;
-        color: black;
+        border-radius: 10px;
     }
 </style>
 
 <div class="form-steps-container">
-    <h1 class="text-white text-center mb-5 dashboard-section-fadein dashboard-card-delay-1">Enregistrer une nouvelle vente</h1>
+    <h1 class="text-white text-center mb-4">Vente Multi-Paires</h1>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flashes mb-4 dashboard-section-fadein dashboard-card-delay-2">
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
+    <div id="bulkSummary" class="alert d-none mb-4">
+        <i class="bi bi-cart-check-fill me-2"></i>
+        <strong>Ventes ajoutées :</strong> <span id="saleCount">0</span> paire(s)
+    </div>
 
-    <form method="post" id="add-sale-form">
-        <input type="hidden" id="product_id" name="product_id" value="{{ sale.product_id if sale.product_id }}">
-        <input type="hidden" id="product_name_hidden" name="product_name_hidden" value="">
-        <input type="hidden" id="sku_hidden" name="sku_hidden" value="">
-        <input type="hidden" id="payment_status_hidden" name="payment_status" value="{{ sale.payment_status if sale.payment_status }}">
-
-        {# Étape 1: Sélectionner le produit #}
-        <div class="step-card dashboard-card-delay-3" id="step-1">
-            <div class="step-header" data-step="1">
+    <form id="multi-sale-form">
+        {# Étape 1: Sélection du Produit #}
+        <div class="step-card active-step" id="step-1">
+            <div class="step-header">
                 <div class="step-number">1</div>
                 <h3 class="step-title">Sélectionner le produit</h3>
             </div>
             <div class="step-content">
-                <div class="mb-3">
-                    <input type="text" id="productSearch" class="form-control form-control-lg" placeholder="Rechercher un produit par nom ou SKU..." autocomplete="off">
-                </div>
-
-                {% if products %}
+                <input type="text" id="productSearch" class="form-control mb-4" placeholder="Rechercher un modèle ou SKU...">
                 <div class="product-selection-grid" id="productGrid">
                     {% for product in products %}
-                    <div class="product-card animated-card"
-                         data-product-id="{{ product.id }}"
-                         data-product-name="{{ product.name }}"
-                         data-product-sku="{{ product.sku }}"
-                         data-product-price="{{ product.purchase_price }}"
-                         data-product-image="{{ product.image_url }}"
-                         data-product-size="{{ product.size }}"
-                         data-animation-delay="{{ loop.index * 0.05 }}s">
-                        <i class="bi bi-check-circle-fill selected-icon"></i>
+                    <div class="product-card"
+                         data-id="{{ product.id }}"
+                         data-name="{{ product.name }}"
+                         data-sku="{{ product.sku }}">
                         {% if product.image_url %}
-                        <img src="{{ product.image_url }}" alt="{{ product.name }}" class="product-card-img">
+                            <img src="{{ product.image_url }}" class="product-card-img" onerror="this.src='/static/placeholder_product.png'">
                         {% else %}
-                        <i class="bi bi-box2" style="font-size: 3em; color: #8e9297; margin-bottom: 0.5rem;"></i>
+                            <div style="height:120px; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.2); border-radius:8px; margin-bottom:10px;">
+                                <i class="bi bi-box-seam" style="font-size: 2.5rem; color: #6c757d;"></i>
+                            </div>
                         {% endif %}
-                        <h6 class="card-title mb-1">{{ product.name }}</h6>
-                        <small class="text-muted">SKU: {{ product.sku }}</small>
-                        <p class="text-muted mb-0"><small>Taille: {{ product.size }}</small></p>
+                        <h6 class="text-white mb-1" style="font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            {{ product.name }}
+                        </h6>
+                        <div class="text-muted small">Taille: {{ product.size }}</div>
+                        <div class="text-primary small fw-bold">{{ product.sku }}</div>
                     </div>
                     {% endfor %}
                 </div>
-                <div id="no-products-found" class="text-center text-muted" style="display: none;">
-                    Aucun produit ne correspond à votre recherche.
-                </div>
-                {% else %}
-                <div class="text-center text-white p-4">
-                    <h3>Aucun produit n'est disponible.</h3>
-                    <p>Veuillez d'abord <a href="{{ url_for('add_product') }}">ajouter un produit</a>.</p>
-                </div>
-                {% endif %}
             </div>
         </div>
 
-        {# Étape 2: Détails de la vente #}
-        <div class="step-card mt-4 dashboard-card-delay-4" id="step-2">
-            <div class="step-header" data-step="2">
+        {# Étape 2: Détails #}
+        <div class="step-card mt-4" id="step-2">
+            <div class="step-header">
                 <div class="step-number">2</div>
                 <h3 class="step-title">Détails de la vente</h3>
             </div>
             <div class="step-content">
-                <div class="alert alert-info mt-3" id="selected-product-info-panel" style="display: none;">
-                    <button type="button" class="btn btn-sm btn-dark float-end" id="changeProductBtn">Changer de produit</button>
-                    <p class="mb-0"><strong>Produit sélectionné:</strong> <span id="selected-product-name"></span></p>
-                    <p class="mb-0"><strong>SKU:</strong> <span id="selected-product-sku"></span></p>
+                <div class="alert alert-info mb-4">
+                    <strong>Modèle :</strong> <span id="display-name">-</span>
                 </div>
-
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label for="sale_price" class="form-label">Prix de vente (€):</label>
-                        <input type="number" step="0.01" class="form-control" id="sale_price" name="sale_price" value="{{ sale.sale_price }}" required>
+                        <label class="form-label text-white">Prix de vente (€)</label>
+                        <input type="number" step="0.01" class="form-control" id="sale_price">
                     </div>
                     <div class="col-md-6">
-                        <label for="sale_date" class="form-label">Date de la vente:</label>
-                        <input type="date" class="form-control" id="sale_date" name="sale_date" value="{{ sale.sale_date }}" required>
+                        <label class="form-label text-white">Date</label>
+                        <input type="date" class="form-control" id="sale_date" value="{{ today }}">
                     </div>
-                    <div class="col-md-6">
-                        <label for="shipping_cost" class="form-label">Frais de port (€):</label>
-                        <input type="number" step="0.01" class="form-control" id="shipping_cost" name="shipping_cost" value="{{ sale.shipping_cost }}" required>
+                    <div class="col-12">
+                        <label class="form-label text-white">Plateforme</label>
+                        <div class="row g-2">
+                            {% set platform_list = ['StockX', 'Vinted', 'Alias', 'LBC', 'Ebay', 'Discord', 'Limited Resell', 'Laced', 'Units Supply', 'Wethenew', 'Autre'] %}
+                            {% for p in platform_list %}
+                            <div class="col-4 col-md-3">
+                                <div class="btn-choice platform-opt" data-val="{{ p }}">{{ p }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <label for="fees" class="form-label">Frais de plateforme (€):</label>
-                        <input type="number" step="0.01" class="form-control" id="fees" name="fees" value="{{ sale.fees }}" required>
+                    <div class="col-12">
+                        <label class="form-label text-white">Statut du Paiement</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="btn-choice status-opt fw-bold" data-val="reçu" style="color:#4CAF50;">REÇU</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="btn-choice status-opt fw-bold" data-val="en_attente" style="color:#FFC107;">ATTENTE</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <button type="button" class="btn btn-secondary w-100 mt-4" id="goToStep3">Continuer vers le statut de paiement</button>
+                <button type="button" class="btn btn-primary w-100 mt-5 py-3 fw-bold" id="btnNextTo3">SUIVANT</button>
             </div>
         </div>
 
-        {# Étape 3: Statut du paiement #}
-        <div class="step-card mt-4 dashboard-card-delay-5" id="step-3">
-            <div class="step-header" data-step="3">
+        {# Étape 3: Choix Final #}
+        <div class="step-card mt-4 text-center" id="step-3">
+            <div class="step-header">
                 <div class="step-number">3</div>
-                <h3 class="step-title">Statut du Paiement</h3>
+                <h3 class="step-title">Vente prête !</h3>
             </div>
-            <div class="step-content">
-                <p class="text-white-50">Veuillez indiquer le statut de paiement de cette vente.</p>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <button type="button" class="btn status-button btn-received" data-status="reçu">
-                            <i class="bi bi-check-circle-fill me-2"></i>Paiement Reçu
-                        </button>
-                    </div>
-                    <div class="col-md-6">
-                        <button type="button" class="btn status-button btn-pending" data-status="en_attente">
-                            <i class="bi bi-clock-fill me-2"></i>Paiement en Attente
-                        </button>
-                    </div>
+            <div class="step-content py-4">
+                <div class="mb-4"><i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i></div>
+                <div class="d-grid gap-3">
+                    <button type="button" class="btn btn-outline-light py-3" id="addAnother">
+                        <i class="bi bi-plus-circle me-2"></i> VENDRE UN AUTRE PRODUIT
+                    </button>
+                    <button type="button" class="btn btn-success py-3 fw-bold" id="saveAll">
+                        <i class="bi bi-check-all me-2"></i> ENREGISTRER TOUT ET TERMINER
+                    </button>
                 </div>
-                <button type="submit" class="btn btn-primary w-100 mt-4" id="submitSaleBtn" style="display: none;">Enregistrer la vente</button>
             </div>
         </div>
     </form>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Form Elements
-        const form = document.getElementById('add-sale-form');
-        const productSearchInput = document.getElementById('productSearch');
-        const productIdHiddenInput = document.getElementById('product_id');
-        const productNameHiddenInput = document.getElementById('product_name_hidden');
-        const skuHiddenInput = document.getElementById('sku_hidden');
-        const paymentStatusHiddenInput = document.getElementById('payment_status_hidden'); // Nouveau champ
-        const productGrid = document.getElementById('productGrid');
-        const productCards = productGrid ? productGrid.querySelectorAll('.product-card') : [];
-        const noProductsMessage = document.getElementById('no-products-found');
+document.addEventListener('DOMContentLoaded', function() {
+    let allSales = [];
+    let currentSale = {};
+    const cards = document.querySelectorAll('.product-card');
 
-        // Step Containers
-        const step1Card = document.getElementById('step-1');
-        const step2Card = document.getElementById('step-2');
-        const step3Card = document.getElementById('step-3'); // Nouvelle étape
-        const allSteps = [step1Card, step2Card, step3Card];
-        const selectedProductInfoPanel = document.getElementById('selected-product-info-panel');
-        const changeProductBtn = document.getElementById('changeProductBtn');
-        const goToStep3Btn = document.getElementById('goToStep3'); // Nouveau bouton
-        const submitSaleBtn = document.getElementById('submitSaleBtn'); // Bouton de soumission
+    function goToStep(n) {
+        document.querySelectorAll('.step-card').forEach(s => s.classList.remove('active-step'));
+        document.getElementById('step-' + n).classList.add('active-step');
+        window.scrollTo(0, 0);
+    }
 
-        // Status Buttons
-        const statusButtons = document.querySelectorAll('.status-button');
+    // 1. Sélection du produit
+    cards.forEach(card => {
+        card.addEventListener('click', function() {
+            cards.forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
 
-        // --- Step & Status Logic ---
-
-        function activateStep(stepCard) {
-            allSteps.forEach(s => s.classList.remove('active-step'));
-            stepCard.classList.add('active-step');
-        }
-
-        function completeStep(stepCard) {
-            stepCard.classList.add('completed');
-        }
-
-        function uncompleteStep(stepCard) {
-            stepCard.classList.remove('completed');
-        }
-
-        function selectStatus(button) {
-            statusButtons.forEach(b => b.classList.remove('selected'));
-            button.classList.add('selected');
-
-            paymentStatusHiddenInput.value = button.dataset.status;
-            completeStep(step3Card);
-            submitSaleBtn.style.display = 'block'; // Afficher le bouton de soumission
-        }
-
-        // Product Selection
-        function selectProduct(card) {
-            productCards.forEach(c => c.classList.remove('selected'));
-            card.classList.add('selected');
-
-            productIdHiddenInput.value = card.dataset.productId;
-            productNameHiddenInput.value = card.dataset.productName;
-            skuHiddenInput.value = card.dataset.productSku;
-            document.getElementById('selected-product-name').textContent = card.dataset.productName;
-            document.getElementById('selected-product-sku').textContent = card.dataset.productSku;
-
-            selectedProductInfoPanel.style.display = 'block';
-
-            completeStep(step1Card);
-            activateStep(step2Card);
-        }
-
-        function clearProductSelection() {
-            productCards.forEach(c => c.classList.remove('selected'));
-            productIdHiddenInput.value = '';
-            productNameHiddenInput.value = '';
-            skuHiddenInput.value = '';
-            paymentStatusHiddenInput.value = ''; // Réinitialiser le statut
-            selectedProductInfoPanel.style.display = 'none';
-
-            // Réinitialiser les étapes
-            allSteps.forEach(uncompleteStep);
-            statusButtons.forEach(b => b.classList.remove('selected'));
-            submitSaleBtn.style.display = 'none';
-            activateStep(step1Card);
-        }
-
-        // Product Search and Filter (inchangé)
-        function filterProductCards() {
-            const searchTerm = productSearchInput.value.toLowerCase();
-            let hasVisibleProducts = false;
-            productCards.forEach(card => {
-                const productName = card.dataset.productName.toLowerCase();
-                const productSku = card.dataset.productSku.toLowerCase();
-                const productSize = card.dataset.productSize.toLowerCase(); // Ajout de la recherche par taille
-
-                if (productName.includes(searchTerm) || productSku.includes(searchTerm) || productSize.includes(searchTerm)) {
-                    card.style.display = 'block';
-                    hasVisibleProducts = true;
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-
-            if (noProductsMessage) {
-                if (hasVisibleProducts) {
-                    noProductsMessage.style.display = 'none';
-                } else {
-                    noProductsMessage.style.display = 'block';
-                }
-            }
-        }
-
-        // --- Event Listeners ---
-
-        productCards.forEach(card => {
-            card.addEventListener('click', function() {
-                selectProduct(this);
-            });
+            currentSale = {
+                product_id: this.dataset.id,
+                item_name: this.dataset.name
+            };
+            document.getElementById('display-name').textContent = this.dataset.name;
+            goToStep(2);
         });
-
-        changeProductBtn.addEventListener('click', clearProductSelection);
-        productSearchInput.addEventListener('input', filterProductCards);
-
-        // Listener pour aller à l'étape 3
-        goToStep3Btn.addEventListener('click', function() {
-            // Petite validation rapide avant de passer à l'étape suivante
-            const salePrice = document.getElementById('sale_price').value;
-            if (!productIdHiddenInput.value) {
-                alert("Veuillez d'abord sélectionner un produit.");
-            } else if (!salePrice || isNaN(parseFloat(salePrice))) {
-                alert("Veuillez saisir un prix de vente valide.");
-            } else {
-                completeStep(step2Card);
-                activateStep(step3Card);
-            }
-        });
-
-        // Listeners pour les boutons de statut
-        statusButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                selectStatus(this);
-            });
-        });
-
-
-        // --- Initial setup ---
-        activateStep(step1Card);
-
-        const initialProductId = productIdHiddenInput.value;
-        const initialPaymentStatus = paymentStatusHiddenInput.value;
-
-        if (initialProductId) {
-            const initialSelectedCard = document.querySelector(`.product-card[data-product-id="${initialProductId}"]`);
-            if (initialSelectedCard) {
-                selectProduct(initialSelectedCard);
-
-                // Si la vente a déjà des données (venant d'un POST raté), on avance
-                completeStep(step2Card);
-                activateStep(step3Card);
-            }
-        }
-
-        // Si un statut est déjà défini (POST raté), le présélectionner
-        if (initialPaymentStatus) {
-            const initialStatusBtn = document.querySelector(`.status-button[data-status="${initialPaymentStatus}"]`);
-            if (initialStatusBtn) {
-                selectStatus(initialStatusBtn);
-            }
-        }
-
-        filterProductCards();
     });
+
+    // 2. Sélection Plateforme & Statut
+    document.querySelectorAll('.platform-opt, .status-opt').forEach(opt => {
+        opt.addEventListener('click', function() {
+            const isPlat = this.classList.contains('platform-opt');
+            document.querySelectorAll(isPlat ? '.platform-opt' : '.status-opt').forEach(o => o.classList.remove('selected'));
+            this.classList.add('selected');
+
+            if(isPlat) currentSale.platform = this.dataset.val;
+            else currentSale.payment_status = this.dataset.val;
+        });
+    });
+
+    // 3. Bouton Suivant
+    document.getElementById('btnNextTo3').addEventListener('click', function() {
+        currentSale.sale_price = document.getElementById('sale_price').value;
+        currentSale.sale_date = document.getElementById('sale_date').value;
+
+        if (!currentSale.sale_price || !currentSale.platform || !currentSale.payment_status) {
+            alert("Veuillez remplir tous les champs.");
+            return;
+        }
+
+        allSales.push({...currentSale});
+        document.getElementById('bulkSummary').classList.remove('d-none');
+        document.getElementById('saleCount').textContent = allSales.length;
+        goToStep(3);
+    });
+
+    // 4. Vendre un autre
+    document.getElementById('addAnother').addEventListener('click', () => {
+        document.getElementById('sale_price').value = "";
+        document.querySelectorAll('.platform-opt, .status-opt').forEach(s => s.classList.remove('selected'));
+        currentSale = {};
+        goToStep(1);
+    });
+
+    // 5. Envoi final avec animation
+    document.getElementById('saveAll').addEventListener('click', async function() {
+        this.disabled = true;
+        const res = await fetch('/sales/add', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({sales: allSales})
+        });
+        const data = await res.json();
+
+        if(data.success) {
+            document.getElementById('success-overlay').style.display = 'flex';
+            setTimeout(() => {
+                window.location.href = data.redirect;
+            }, 2500);
+        } else {
+            alert("Erreur: " + data.message);
+            this.disabled = false;
+        }
+    });
+
+    // Recherche
+    document.getElementById('productSearch').addEventListener('input', function() {
+        const term = this.value.toLowerCase();
+        cards.forEach(card => {
+            const content = (card.dataset.name + card.dataset.sku).toLowerCase();
+            card.style.display = content.includes(term) ? 'block' : 'none';
+        });
+    });
+});
 </script>
 {% endblock %}
