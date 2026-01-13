@@ -2,6 +2,7 @@ import os
 import decimal
 import psycopg2 # Importez psycopg2
 import psycopg2.extras # Pour RealDictCursor
+
 from urllib.parse import urlparse # Pour parser l'URL de la DB
 from datetime import datetime, timedelta
 from functools import wraps
@@ -28,6 +29,7 @@ from PIL import Image, ImageDraw, ImageFont
 import io
 import requests
 import time
+import datetime as dt
 from dateutil.relativedelta import relativedelta
 from discord_webhook import DiscordWebhook, DiscordEmbed
 from werkzeug.utils import secure_filename # Assurez-vous d'avoir cet import au début du fichier
@@ -1971,276 +1973,122 @@ def wtb_wts_gen():
 
 
 @app.route('/statistics')
-@login_required  # Décommentez si ces décorateurs sont nécessaires
-
+@login_required
 def statistics():
     conn = g.db
-    user_id = current_user.id
-    cur = None  # Initialisation du curseur
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-    selected_period = request.args.get('period', 'this_month')  # Default to 'this_month'
+    period = request.args.get('period', 'month')
+    start_str = request.args.get('start_date')
+    end_str = request.args.get('end_date')
+    current_cash = float(request.args.get('current_cash', 0))
 
-    today = datetime.now()
+    now_dt = dt.datetime.now()
+    today_date = now_dt.date()
 
-    current_start_date = None
-    current_end_date = None
-    previous_start_date = None
-    previous_end_date = None
+    # --- Logique de filtrage de date ---
+    filter_start = dt.datetime.combine(today_date, dt.time.min)
+    filter_end = dt.datetime.combine(today_date, dt.time.max)
 
-    # MODIFICATION DÉBUT : On force la granularité du graphique à 'jour' pour toutes les périodes
-    graph_granularity = 'day'
+    if period == 'day':
+        pass
+    elif period == 'week':
+        monday = today_date - dt.timedelta(days=today_date.weekday())
+        filter_start = dt.datetime.combine(monday, dt.time.min)
+        filter_end = dt.datetime.combine(monday + dt.timedelta(days=6), dt.time.max)
+    elif period == 'month':
+        first_day = today_date.replace(day=1)
+        filter_start = dt.datetime.combine(first_day, dt.time.min)
+        if today_date.month == 12:
+            last_day = dt.date(today_date.year + 1, 1, 1) - dt.timedelta(days=1)
+        else:
+            last_day = dt.date(today_date.year, today_date.month + 1, 1) - dt.timedelta(days=1)
+        filter_end = dt.datetime.combine(last_day, dt.time.max)
+    elif period == 'year':
+        filter_start = dt.datetime(today_date.year, 1, 1, 0, 0, 0)
+        filter_end = dt.datetime(today_date.year, 12, 31, 23, 59, 59)
+    elif period == 'custom' and start_str and end_str:
+        try:
+            filter_start = dt.datetime.strptime(start_str, '%Y-%m-%d')
+            filter_end = dt.datetime.strptime(end_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+        except:
+            period = 'month'
 
-    if selected_period == 'this_week':
-        current_start_date = today - timedelta(days=today.weekday())
-        current_end_date = current_start_date + timedelta(days=6)
-        previous_start_date = current_start_date - timedelta(days=7)
-        previous_end_date = current_end_date - timedelta(days=7)
-    elif selected_period == 'last_week':
-        current_start_date = today - timedelta(days=today.weekday() + 7)
-        current_end_date = current_start_date + timedelta(days=6)
-        previous_start_date = current_start_date - timedelta(days=7)
-        previous_end_date = current_end_date - timedelta(days=7)
-    elif selected_period == 'this_month':
-        current_start_date = today.replace(day=1)
-        next_month_first_day = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
-        current_end_date = next_month_first_day - timedelta(days=1)
-        previous_end_date = current_start_date - timedelta(days=1)
-        previous_start_date = previous_end_date.replace(day=1)
-    elif selected_period == 'last_month':
-        current_start_date = (today.replace(day=1) - timedelta(days=1)).replace(day=1)
-        current_end_date = today.replace(day=1) - timedelta(days=1)
-        previous_end_date = current_start_date - timedelta(days=1)
-        previous_start_date = previous_end_date.replace(day=1)
-    elif selected_period == 'this_year':
-        current_start_date = today.replace(month=1, day=1)
-        current_end_date = today.replace(month=12, day=31)
-        previous_start_date = current_start_date.replace(year=current_start_date.year - 1)
-        previous_end_date = current_end_date.replace(year=current_end_date.year - 1)
-    elif selected_period == 'last_year':
-        current_start_date = today.replace(year=today.year - 1, month=1, day=1)
-        current_end_date = today.replace(year=today.year - 1, month=12, day=31)
-        previous_start_date = current_start_date.replace(year=current_start_date.year - 1)
-        previous_end_date = current_end_date.replace(year=current_end_date.year - 1)
-    else:  # Fallback to 'this_month'
-        current_start_date = today.replace(day=1)
-        next_month_first_day = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
-        current_end_date = next_month_first_day - timedelta(days=1)
-        previous_end_date = current_start_date - timedelta(days=1)
-        previous_start_date = previous_end_date.replace(day=1)
+    # 1. RÉCUPÉRATION DES VENTES
+    cur.execute("SELECT * FROM sales WHERE user_id = %s AND sale_date >= %s AND sale_date <= %s ORDER BY sale_date ASC",
+                (current_user.id, filter_start, filter_end))
+    sales = cur.fetchall()
 
-    # FIN DE MODIFICATION
+    total_revenue = sum(float(s['sale_price'] or 0) for s in sales)
+    total_profit = sum(float(s['profit'] or 0) for s in sales)
+    total_purchase_cost = sum(float(s['purchase_price_at_sale'] or 0) for s in sales)
+    volume = len(sales)
 
-    current_start_date_str = current_start_date.strftime('%Y-%m-%d')
-    current_end_date_str = current_end_date.strftime('%Y-%m-%d')
-    previous_start_date_str = previous_start_date.strftime('%Y-%m-%d')
-    previous_end_date_str = previous_end_date.strftime('%Y-%m-%d')
+    roi_avg = (total_profit / total_purchase_cost * 100) if total_purchase_cost > 0 else 0
+    health_score = round((min(6, roi_avg / 5) if roi_avg > 0 else 0) + min(4, volume / 2), 1)
 
-    try:
-        cur = conn.cursor()
-        cur.execute("SELECT COUNT(id) FROM sales WHERE user_id = %s AND sale_date BETWEEN %s AND %s",
-                    (user_id, current_start_date_str, current_end_date_str))
-        total_sales_count_query = cur.fetchone()
-        total_sales_count = total_sales_count_query[0] if total_sales_count_query and total_sales_count_query[
-            0] is not None else 0
-        cur.close()
+    # 2. PAIEMENTS EN ATTENTE (Méthode adaptée)
+    cur.execute(
+        "SELECT COALESCE(SUM(sale_price), 0) as total FROM sales WHERE user_id = %s AND payment_status = 'en_attente'",
+        (current_user.id,))
+    res_pending = cur.fetchone()
+    pending_payments = float(res_pending['total'] or 0)
 
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT SUM((s.sale_price - s.purchase_price_at_sale) * s.quantity) FROM sales s WHERE s.user_id = %s AND s.sale_date BETWEEN %s AND %s",
-            (user_id, current_start_date_str, current_end_date_str))
-        total_sales_profit_query = cur.fetchone()
-        total_sales_profit = total_sales_profit_query[0] if total_sales_profit_query and total_sales_profit_query[
-            0] is not None else 0.0
-        cur.close()
+    # 3. STOCK (quantité = 1)
+    cur.execute(
+        "SELECT SUM(purchase_price) as total_val, SUM(quantity) as total_qty FROM products WHERE user_id = %s AND quantity = 1",
+        (current_user.id,))
+    stock_info = cur.fetchone()
+    valeur_achat_stock = float(stock_info['total_val'] or 0)
+    stock_qty = stock_info['total_qty'] or 0
 
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT SUM(s.sale_price * s.quantity) FROM sales s WHERE s.user_id = %s AND s.sale_date BETWEEN %s AND %s",
-            (user_id, current_start_date_str, current_end_date_str))
-        total_sales_revenue_query = cur.fetchone()
-        total_sales_revenue = total_sales_revenue_query[0] if total_sales_revenue_query and total_sales_revenue_query[
-            0] is not None else 0.0
-        cur.close()
+    # 4. TRÉSORERIE ENTIÈRE
+    total_base_cash = current_cash + valeur_achat_stock + pending_payments
 
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT SUM(s.purchase_price_at_sale * s.quantity) FROM sales s WHERE s.user_id = %s AND s.sale_date BETWEEN %s AND %s",
-            (user_id, current_start_date_str, current_end_date_str))
-        total_cogs_for_sold_items_query = cur.fetchone()
-        total_cogs_for_sold_items = total_cogs_for_sold_items_query[0] if total_cogs_for_sold_items_query and \
-                                                                          total_cogs_for_sold_items_query[
-                                                                              0] is not None else 0.0
-        cur.close()
+    # 5. PROJECTIONS
+    cur.execute("SELECT MIN(sale_date) as first_sale, SUM(sale_price) as total_ca_all FROM sales WHERE user_id = %s",
+                (current_user.id,))
+    all_stats = cur.fetchone()
+    first_date = (all_stats['first_sale'].date() if isinstance(all_stats['first_sale'], dt.datetime) else all_stats[
+        'first_sale']) if all_stats['first_sale'] else today_date
+    weeks_active = max(1, (today_date - first_date).days / 7)
+    avg_ca_weekly = float(all_stats['total_ca_all'] or 0) / weeks_active
+    net_flow_weekly = avg_ca_weekly * 0.25
 
-        margin_rate = 0.0
-        if total_sales_revenue > 0:
-            margin_rate = (total_sales_profit / total_sales_revenue) * 100
+    proj_1w = total_base_cash + net_flow_weekly
+    proj_1m = total_base_cash + (net_flow_weekly * 4.3)
+    proj_1y = total_base_cash + (net_flow_weekly * 52)
 
-        cur = conn.cursor()
-        # MODIFICATION ICI : Utilisation de (s.sale_date - p.date_added) pour PostgreSQL
-        cur.execute('''
-            SELECT AVG(EXTRACT(EPOCH FROM (s.sale_date - p.date_added))) / (60*60*24) AS avg_days
-            FROM sales s
-            JOIN products p ON s.product_id = p.id
-            WHERE s.user_id = %s
-              AND s.product_id IS NOT NULL
-              AND p.date_added IS NOT NULL
-              AND s.sale_date BETWEEN %s AND %s
-        ''', (user_id, current_start_date_str, current_end_date_str))
-        average_days_to_sell_query = cur.fetchone()
-        average_days_to_sell = average_days_to_sell_query[0] if average_days_to_sell_query and \
-                                                                average_days_to_sell_query[0] is not None else 0.0
-        average_days_to_sell = round(average_days_to_sell, 2)
-        cur.close()
+    # 6. STOCK MANAGEMENT (Latent)
+    cur.execute(
+        "SELECT AVG((profit / NULLIF(purchase_price_at_sale, 0)) * 100) as avg_roi_all FROM sales WHERE user_id = %s",
+        (current_user.id,))
+    avg_roi_all_time = float(cur.fetchone()['avg_roi_all'] or 20.0)
 
-        graph_labels = []
-        graph_revenue_values = []
-        graph_cogs_values = []
-        graph_profit_values = []
+    profit_latent = valeur_achat_stock * (avg_roi_all_time / 100)
+    ca_latent = valeur_achat_stock + profit_latent
 
-        # DÉBUT DE LA MODIFICATION PRINCIPALE : L'ensemble du code de génération de graphique est maintenant inconditionnel
-        # et utilise toujours la granularité 'jour'.
-        graph_query = '''
-            SELECT
-                TO_CHAR(sale_date, 'YYYY-MM-DD') AS period_label,
-                SUM(sale_price * quantity) AS revenue,
-                SUM(purchase_price_at_sale * quantity) AS cogs,
-                SUM((sale_price - purchase_price_at_sale) * quantity) AS profit
-            FROM sales
-            WHERE user_id = %s AND sale_date BETWEEN %s AND %s
-            GROUP BY period_label
-            ORDER BY period_label
-        '''
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(graph_query, (user_id, current_start_date_str, current_end_date_str))
-        graph_data = cur.fetchall()
-        cur.close()
+    cur.execute("SELECT date_added FROM products WHERE user_id = %s AND quantity = 1", (current_user.id,))
+    stock_items = cur.fetchall()
+    ages = [
+        (today_date - (i['date_added'].date() if isinstance(i['date_added'], dt.datetime) else i['date_added'])).days
+        for i in stock_items if i['date_added']]
+    stock_avg_age = sum(ages) / len(ages) if ages else 0
 
-        current_day_iter = current_start_date
-        while current_day_iter <= current_end_date:
-            day_str = current_day_iter.strftime('%Y-%m-%d')
-            found_data = next((row for row in graph_data if row['period_label'] == day_str), None)
+    # Avis Expert Résumé
+    expert_txt = f"Analyse globale : Votre capital total (Cash + Stock + Attente) est de {int(total_base_cash)}€. Le stock représente {int((valeur_achat_stock / total_base_cash) * 100) if total_base_cash > 0 else 0}% de vos actifs. Vos projections à 30 jours indiquent une croissance vers {int(proj_1m)}€."
 
-            graph_labels.append(day_str)
-            graph_revenue_values.append(found_data['revenue'] if found_data else 0)
-            graph_cogs_values.append(found_data['cogs'] if found_data else 0)
-            graph_profit_values.append(found_data['profit'] if found_data else 0)
-            current_day_iter += timedelta(days=1)
-        # FIN DE LA MODIFICATION PRINCIPALE
-
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(
-            "SELECT SUM(s.sale_price * s.quantity) AS prev_revenue, "
-            "SUM(s.purchase_price_at_sale * s.quantity) AS prev_cogs, "
-            "SUM((s.sale_price - s.purchase_price_at_sale) * s.quantity) AS prev_profit "
-            "FROM sales s "
-            "WHERE s.user_id = %s AND s.sale_date BETWEEN %s AND %s",
-            (user_id, previous_start_date_str, previous_end_date_str)
-        )
-        previous_period_totals = cur.fetchone()
-        cur.close()
-
-        prev_total_revenue = previous_period_totals['prev_revenue'] if previous_period_totals and \
-                                                                       previous_period_totals[
-                                                                           'prev_revenue'] is not None else 0.0
-        prev_total_cogs = previous_period_totals['prev_cogs'] if previous_period_totals and previous_period_totals[
-            'prev_cogs'] is not None else 0.0
-        prev_total_profit = previous_period_totals['prev_profit'] if previous_period_totals and previous_period_totals[
-            'prev_profit'] is not None else 0.0
-
-        def calculate_evolution_rate(current_value, previous_value):
-            if previous_value == 0:
-                if current_value > 0:
-                    return 'infinity'
-                else:
-                    return 0.0
-            return ((current_value - previous_value) / previous_value) * 100
-
-        evolution_rate_cogs = calculate_evolution_rate(total_cogs_for_sold_items, prev_total_cogs)
-        evolution_rate_revenue = calculate_evolution_rate(total_sales_revenue, prev_total_revenue)
-        evolution_rate_profit = calculate_evolution_rate(total_sales_profit, prev_total_profit)
-
-        # --- DÉBUT DU CODE MATPLOTLIB ---
-        plot_base64 = None
-        if total_sales_count >= 5:  # Génère le graphique uniquement s'il y a assez de données
-            fig, ax = plt.subplots(figsize=(10, 6))  # Taille de la figure
-
-            # Définir l'arrière-plan de la figure et des axes comme transparent
-            fig.patch.set_alpha(0)
-            ax.patch.set_alpha(0)
-
-            # Tracé des données
-            ax.plot(graph_labels, graph_cogs_values, label='Coût d\'achat', color='#FF6384', marker='o')
-            ax.plot(graph_labels, graph_revenue_values, label='Prix de Vente', color='#36A2EB', marker='o')
-            ax.plot(graph_labels, graph_profit_values, label='Bénéfice Net', color='#4BC0C0', marker='o')
-
-            # Titres et étiquettes avec couleur pour le thème sombre
-            ax.set_title('Évolution des Ventes et Bénéfices (Période Actuelle)', color='#f8f9fa')
-            # MODIFICATION ICI pour l'étiquette de l'axe X
-            ax.set_xlabel('Jour', color='#f8f9fa')
-            ax.set_ylabel('Montant (€)', color='#f8f9fa')
-
-            # Couleur des ticks des axes
-            ax.tick_params(axis='x', colors='#f8f9fa')
-            ax.tick_params(axis='y', colors='#f8f9fa')
-
-            # Lignes de grille
-            ax.grid(True, color='#333', linestyle='--')
-
-            # Légende
-            ax.legend(facecolor='none', edgecolor='none', labelcolor='white')
-
-            # Formatage de l'axe Y en monnaie
-            formatter = mticker.FormatStrFormatter(
-                '%d€')  # Format entier pour l'exemple, ajustez si besoin (ex: '%.2f€' pour 2 décimales)
-            ax.yaxis.set_major_formatter(formatter)
-
-            plt.tight_layout()  # Ajuster la mise en page pour éviter les chevauchements
-
-            # Ajout de cette ligne pour formater automatiquement les étiquettes de l'axe X
-            fig.autofmt_xdate()
-
-            # Sauvegardez le graphique dans un objet BytesIO (en mémoire)
-            buffer = io.BytesIO()
-            plt.savefig(buffer, format='png', bbox_inches='tight', transparent=True)
-            buffer.seek(0)  # Remettre le curseur au début du buffer
-
-            # Encodez le contenu du buffer en base64
-            plot_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-
-            plt.close(fig)  # Fermez la figure pour libérer la mémoire
-        # --- FIN DU CODE MATPLOTLIB ---
-
-        return render_template('statistics.html',
-                               total_sales_count=total_sales_count,
-                               total_sales_profit=total_sales_profit,
-                               total_sales_revenue=total_sales_revenue,
-                               margin_rate=margin_rate,
-                               average_days_to_sell=average_days_to_sell,
-                               selected_period=selected_period,
-
-                               graph_labels=graph_labels,
-                               graph_revenue_values=graph_revenue_values,
-                               graph_cogs_values=graph_cogs_values,
-                               graph_profit_values=graph_profit_values,
-                               graph_granularity=graph_granularity,
-
-                               evolution_rate_cogs=evolution_rate_cogs,
-                               evolution_rate_revenue=evolution_rate_revenue,
-                               evolution_rate_profit=evolution_rate_profit,
-                               plot_base64=plot_base64  # Passez l'image encodée au template
-                               )
-    except Exception as e:
-        flash(f"Une erreur est survenue lors du chargement des statistiques : {e}", 'danger')
-        print(f"Erreur statistiques: {e}")
-        return redirect(url_for('dashboard'))  # Redirige vers le tableau de bord ou une page d'erreur
-    finally:
-        if cur and not cur.closed:  # S'assurer que le curseur est fermé
-            cur.close()
-
-
-
-
+    return render_template('statistics.html',
+                           sales=sales, revenue=total_revenue, profit=total_profit,
+                           volume=volume, roi_avg=roi_avg, health_score=health_score,
+                           stock_value=valeur_achat_stock, stock_qty=stock_qty,
+                           period=period, start_date=start_str, end_date=end_str,
+                           valeur_achat_stock=valeur_achat_stock, profit_latent=profit_latent,
+                           ca_latent=ca_latent, stock_avg_age=int(stock_avg_age),
+                           expert_txt=expert_txt, current_cash=current_cash,
+                           pending_payments=pending_payments,
+                           total_base_cash=total_base_cash,
+                           proj_1w=proj_1w, proj_1m=proj_1m, proj_1y=proj_1y)
 @app.route('/sales/<int:id>/delete', methods=('POST',))
 @login_required
 

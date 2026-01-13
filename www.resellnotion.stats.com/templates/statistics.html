@@ -1,135 +1,297 @@
-{# templates/statistics.html #}
 {% extends 'base.html' %}
 
-{% block title %}Statistiques{% endblock %}
+{% block title %}Statistiques Calendaires{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1 class="text-center mb-5 dashboard-section-fadein dashboard-card-delay-1">Tableau de Bord des Statistiques</h1>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <div class="d-flex justify-content-center mb-5 dashboard-section-fadein dashboard-card-delay-2">
-        <div class="form-group">
-            <label for="periodSelect" class="sr-only">Sélectionner la Période</label>
-            <select class="form-control" id="periodSelect">
-                <option value="this_week" {% if selected_period == 'this_week' %}selected{% endif %}>Cette Semaine</option>
-                <option value="last_week" {% if selected_period == 'last_week' %}selected{% endif %}>Semaine Dernière</option>
-                <option value="this_month" {% if selected_period == 'this_month' %}selected{% endif %}>Ce Mois-ci</option>
-                <option value="last_month" {% if selected_period == 'last_month' %}selected{% endif %}>Mois Dernier</option>
-                <option value="this_year" {% if selected_period == 'this_year' %}selected{% endif %}>Cette Année</option>
-                <option value="last_year" {% if selected_period == 'last_year' %}selected{% endif %}>Année Dernière</option>
-                <option value="all" {% if selected_period == 'all' %}selected{% endif %}>Toutes les données</option>
-            </select>
+<style>
+    .stats-container { padding: 30px; color: #fff; background: #0b0e11; min-height: 100vh; font-family: 'Poppins', sans-serif; }
+    .glass-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 25px;
+        height: 100%;
+    }
+    .kpi-label { color: #848e9c; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
+    .kpi-value { font-size: 2rem; font-weight: 700; margin-top: 5px; }
+
+    .period-btn {
+        background: #1e2329; border: none; color: #848e9c;
+        padding: 10px 18px; border-radius: 12px; text-decoration: none; transition: 0.3s;
+        font-size: 0.9rem;
+    }
+    .period-btn.active { background: #007bff; color: white; box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3); }
+
+    .custom-date-form {
+        display: flex; gap: 10px; align-items: center;
+        background: rgba(255,255,255,0.05); padding: 5px 15px; border-radius: 12px;
+    }
+    .custom-date-form input { background: transparent; border: none; color: white; font-size: 0.85rem; outline: none; }
+
+    .health-circle {
+        width: 120px; height: 120px; border-radius: 50%;
+        border: 8px solid rgba(255,255,255,0.05);
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto; position: relative;
+    }
+    .score-inner { font-size: 2rem; font-weight: 800; }
+
+    .expert-box {
+        background: #111a21;
+        border-left: 4px solid #007bff;
+        padding: 25px; border-radius: 4px;
+    }
+    .cash-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 10px; padding: 5px 12px; width: 120px; outline: none; }
+    .projection-card { background: linear-gradient(145deg, rgba(0, 123, 255, 0.1), rgba(0, 0, 0, 0)); border: 1px solid rgba(0, 123, 255, 0.2); }
+</style>
+
+<div class="stats-container">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-5 gap-3">
+        <div>
+            <h1 class="fw-bold mb-1">Rapport de Performance</h1>
+            <p class="text-muted small">Données calées sur le calendrier civil.</p>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <form action="/statistics" method="GET" class="d-flex gap-2 align-items-center bg-dark p-2 rounded-3 me-2">
+                <span class="small text-muted ms-1">Liquidités :</span>
+                <input type="number" step="0.01" name="current_cash" value="{{ current_cash }}" class="cash-input" placeholder="0.00€">
+                <input type="hidden" name="period" value="{{ period }}">
+                <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3">Actualiser</button>
+            </form>
+
+            <div class="d-flex gap-1 bg-dark p-1 rounded-3">
+                <a href="?period=day&current_cash={{ current_cash }}" class="period-btn {{ 'active' if period == 'day' }}">Jour</a>
+                <a href="?period=week&current_cash={{ current_cash }}" class="period-btn {{ 'active' if period == 'week' }}">Semaine</a>
+                <a href="?period=month&current_cash={{ current_cash }}" class="period-btn {{ 'active' if period == 'month' }}">Mois</a>
+                <a href="?period=year&current_cash={{ current_cash }}" class="period-btn {{ 'active' if period == 'year' }}">Année</a>
+            </div>
+
+            <form action="/statistics" method="GET" class="custom-date-form">
+                <input type="hidden" name="period" value="custom">
+                <input type="hidden" name="current_cash" value="{{ current_cash }}">
+                <input type="date" name="start_date" value="{{ start_date }}" required>
+                <span class="text-muted">→</span>
+                <input type="date" name="end_date" value="{{ end_date }}" required>
+                <button type="submit" class="btn btn-sm btn-primary rounded-pill"><i class="bi bi-search"></i></button>
+            </form>
         </div>
     </div>
 
-    <h2 class="mb-4 text-center dashboard-section-fadein dashboard-card-delay-3">Résumé des Performances de la Période</h2>
-    <div class="stat-container mb-5">
-        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-4">
-            <h5>Nb Ventes</h5>
-            <p class="stat-value">{{ total_sales_count }}</p>
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="glass-card text-center">
+                <span class="kpi-label">Business Health</span>
+                <div class="health-circle mt-3" style="border-color: {% if health_score > 7 %}#02c076{% elif health_score > 4 %}#f3ba2f{% else %}#ff5252{% endif %};">
+                    <div class="score-inner">{{ health_score }}<span style="font-size: 1rem; opacity: 0.5;">/10</span></div>
+                </div>
+            </div>
         </div>
-        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-5">
-            <h5>Prix Vente Total</h5>
-            <p class="stat-value">{{ "%.2f"|format(total_sales_revenue) }}€</p>
+        <div class="col-md-3">
+            <div class="glass-card">
+                <span class="kpi-label">CA Période</span>
+                <div class="kpi-value text-primary">{{ "%.2f"|format(revenue) }}€</div>
+                <div class="text-muted small mt-2">{{ volume }} ventes</div>
+            </div>
         </div>
-        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-6">
-            <h5>Bénéfice Total</h5>
-            <p class="stat-value">{{ "%.2f"|format(total_sales_profit) }}€</p>
+        <div class="col-md-3">
+            <div class="glass-card">
+                <span class="kpi-label">Bénéfice Brut</span>
+                <div class="kpi-value text-success">+{{ "%.2f"|format(profit) }}€</div>
+                <div class="text-muted small mt-2">ROI: {{ "%.1f"|format(roi_avg) }}%</div>
+            </div>
         </div>
-        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-7">
-            <h5>Taux Marge (%)</h5>
-            <p class="stat-value">{{ "%.2f"|format(margin_rate) }}%</p>
-        </div>
-        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-8">
-            <h5>Jours Moy. Vente</h5>
-            <p class="stat-value">{{ "%.2f"|format(average_days_to_sell) }} jours</p>
-        </div>
-        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-9">
-            <h5>Évolution Taux</h5>
-            <p class="stat-value">N/A</p>
-        </div>
-    </div>
-
-    <div class="chart-section mb-5 dashboard-section-fadein dashboard-card-delay-10">
-        <h3 class="text-center mb-3">Évolution des Ventes et Bénéfices (Période Actuelle)</h3>
-
-        <div id="dynamicSalesChartContainer">
-            <img id="dynamicSalesChart" src="data:image/png;base64,{{ plot_base64 }}"
-                 style="max-width: 100%; height: auto; display: block; border-radius: 0.5rem; border: 1px solid var(--border-color);">
-        </div>
-
-        <div class="blurred-chart-container" id="blurredChartMessageContainer">
-            <div class="blurred-message">
-                Veuillez enregistrer au moins 5 ventes pour obtenir ce graphique.
+        <div class="col-md-3">
+            <div class="glass-card">
+                <span class="kpi-label">Valeur du Stock</span>
+                <div class="kpi-value text-warning">{{ "%.0f"|format(stock_value) }}€</div>
+                <div class="text-muted small mt-2">{{ stock_qty }} paires en stock</div>
             </div>
         </div>
     </div>
 
-    <h2 class="mt-5 mb-4 text-center dashboard-section-fadein dashboard-card-delay-11">Taux d'Évolution vs. Période Précédente</h2>
-    <div class="stat-container">
-        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-12">
-            <h5>Évolution Coût d'achat (PA)</h5>
-            <p class="stat-value">
-                {% if evolution_rate_cogs is string and evolution_rate_cogs == 'infinity' %}
-                    N/A (croissance infinie)
-                {% elif evolution_rate_cogs is not string and evolution_rate_cogs is defined %}
-                    <span class="{% if evolution_rate_cogs > 0 %}evolution-negative{% elif evolution_rate_cogs < 0 %}evolution-positive{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_cogs) }}%</span>
-                {% else %}
-                    N/A
-                {% endif %}
-            </p>
+    <div class="row g-4 mb-4">
+        <div class="col-md-8">
+            <div class="glass-card">
+                <h6 class="kpi-label mb-4">Évolution des Flux</h6>
+                <canvas id="evolutionChart" style="max-height: 280px;"></canvas>
+            </div>
         </div>
-
-        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-13">
-            <h5>Évolution Prix de Vente (PV)</h5>
-            <p class="stat-value">
-                {% if evolution_rate_revenue is string and evolution_rate_revenue == 'infinity' %}
-                    N/A (croissance infinie)
-                {% elif evolution_rate_revenue is not string and evolution_rate_revenue is defined %}
-                    <span class="{% if evolution_rate_revenue > 0 %}evolution-positive{% elif evolution_rate_revenue < 0 %}evolution-negative{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_revenue) }}%</span>
-                {% else %}
-                    N/A
-                {% endif %}
-            </p>
+        <div class="col-md-4">
+            <div class="glass-card d-flex flex-column justify-content-center" style="background: linear-gradient(90deg, rgba(0,123,255,0.15) 0%, rgba(0,123,255,0.05) 100%); border-left: 4px solid #007bff;">
+                <h5 class="text-white fw-bold mb-3 text-uppercase" style="letter-spacing: 1px;">
+                    <i class="bi bi-robot me-2 text-primary"></i>CONSEIL EXPERT
+                </h5>
+                <p class="small text-muted" style="line-height: 1.6;">
+                    {% if health_score >= 8 %}
+                        Performances exceptionnelles sur cette période. Votre stratégie d'achat est parfaite, continuez sur ce segment.
+                    {% elif health_score >= 5 %}
+                        Période stable. Vous pourriez optimiser votre rentabilité en vendant sur des canaux avec moins de frais.
+                    {% else %}
+                        La période affiche une sous-performance. Vérifiez si vous ne détenez pas trop de stock "mort" qui plombe votre score.
+                    {% endif %}
+                </p>
+            </div>
         </div>
+    </div>
 
-        <div class="stat-block-v5 dashboard-section-fadein dashboard-card-delay-14">
-            <h5>Évolution Bénéfice</h5>
-            <p class="stat-value">
-                {% if evolution_rate_profit is string and evolution_rate_profit == 'infinity' %}
-                    N/A (croissance infinie)
-                {% elif evolution_rate_profit is not string and evolution_rate_profit is defined %}
-                    <span class="{% if evolution_rate_profit > 0 %}evolution-positive{% elif evolution_rate_profit < 0 %}evolution-negative{% else %}evolution-neutral{% endif %}">{{ "%.2f"|format(evolution_rate_profit) }}%</span>
-                {% else %}
-                    N/A
-                {% endif %}
-            </p>
+    <div class="mt-5 mb-4">
+        <h3 class="fw-bold mb-1">Trésorerie Entière</h3>
+        <p class="text-muted small">Vue globale de votre capital (Total : {{ "%.2f"|format(total_base_cash) }}€)</p>
+    </div>
+    <div class="row g-4 mb-4">
+        <div class="col-md-3"><div class="glass-card"><span class="kpi-label">Liquidités</span><div class="kpi-value text-white">{{ "%.2f"|format(current_cash) }}€</div></div></div>
+        <div class="col-md-3"><div class="glass-card"><span class="kpi-label">Stock (Achat)</span><div class="kpi-value text-white">{{ "%.2f"|format(valeur_achat_stock) }}€</div></div></div>
+        <div class="col-md-3"><div class="glass-card border-warning"><span class="kpi-label text-warning">Paiements en attente</span><div class="kpi-value text-white">{{ "%.2f"|format(pending_payments) }}€</div></div></div>
+        <div class="col-md-3"><div class="glass-card border-primary"><span class="kpi-label text-primary fw-bold">Trésorerie Totale</span><div class="kpi-value text-primary">{{ "%.2f"|format(total_base_cash) }}€</div></div></div>
+    </div>
+
+    <div class="mt-5 mb-4">
+        <h3 class="fw-bold mb-1">Projections de Capital</h3>
+        <p class="text-muted small">Croissance estimée basée sur votre flux net hebdomadaire.</p>
+    </div>
+    <div class="row g-4 mb-4">
+        <div class="col-md-4"><div class="glass-card projection-card"><span class="kpi-label text-primary">À 1 Semaine</span><div class="kpi-value text-white">{{ "%.2f"|format(proj_1w) }}€</div></div></div>
+        <div class="col-md-4"><div class="glass-card projection-card" style="border-color: rgba(2, 192, 118, 0.3);"><span class="kpi-label text-success">À 1 Mois</span><div class="kpi-value text-white">{{ "%.2f"|format(proj_1m) }}€</div></div></div>
+        <div class="col-md-4"><div class="glass-card projection-card" style="border-color: rgba(243, 186, 47, 0.3);"><span class="kpi-label text-warning">À 1 An</span><div class="kpi-value text-info">{{ "%.0f"|format(proj_1y) }}€</div></div></div>
+    </div>
+
+    <div class="row mb-5 mt-4">
+        <div class="col-12">
+            <div class="expert-box">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-robot text-primary fs-3 me-3"></i>
+                    <h5 class="text-white fw-bold m-0 text-uppercase" style="letter-spacing: 1px;">Conseil Expert Global</h5>
+                </div>
+                <p class="text-muted fs-5 mb-0">{{ expert_txt }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-5 mb-4">
+        <h3 class="fw-bold mb-1">Stock Management</h3>
+        <p class="text-muted small">Analyse du potentiel de ton inventaire actuel.</p>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="glass-card text-center">
+                <span class="kpi-label">Valeur d'Achat Stock</span>
+                <div class="kpi-value text-white">{{ "%.2f"|format(valeur_achat_stock) }}€</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="glass-card text-center text-success">
+                <span class="kpi-label">Profit Latent</span>
+                <div class="kpi-value text-success">+{{ "%.2f"|format(profit_latent) }}€</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="glass-card text-center text-info">
+                <span class="kpi-label">Vente Latente (CA)</span>
+                <div class="kpi-value text-info">{{ "%.2f"|format(ca_latent) }}€</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="glass-card">
+                <h6 class="kpi-label mb-3">Vitalité & Flux</h6>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="small">Âge moyen du stock :</span>
+                    <span class="badge {% if stock_avg_age > 40 %}bg-danger{% else %}bg-success{% endif %} rounded-pill">
+                        {{ stock_avg_age }} jours
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="small">Capacité réinvestissement :</span>
+                    <span class="fw-bold text-white">{{ "%.2f"|format(ca_latent * 0.85) }}€</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="glass-card expert-box h-100" style="background: linear-gradient(90deg, rgba(0,123,255,0.15) 0%, rgba(0,123,255,0.05) 100%); border-left: 4px solid #007bff;">
+                <h5 class="text-white fw-bold mb-3 text-uppercase" style="letter-spacing: 1px;">
+                    <i class="bi bi-robot me-2 text-primary"></i>CONSEIL EXPERT
+                </h5>
+                <p class="text-muted" style="line-height: 1.6; font-style: italic;">" {{ expert_txt }} "</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="glass-card">
+        <h6 class="kpi-label mb-4">Mouvements détaillés</h6>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover border-0 align-middle">
+                <thead>
+                    <tr class="text-muted small">
+                        <th>DATE</th><th>ITEM</th><th>VENTE</th><th>PROFIT</th><th>ROI</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in sales %}
+                    <tr>
+                        <td class="text-muted small">{{ sale.sale_date.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <img src="{{ sale.image_url }}" width="40" class="rounded me-3" onerror="this.src='/static/placeholder.png'">
+                                <div>
+                                    <div class="fw-bold" style="font-size: 0.9rem;">{{ sale.item_name }}</div>
+                                    <div class="text-muted small">{{ sale.sku }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="fw-bold">{{ "%.2f"|format(sale.sale_price) }}€</td>
+                        <td class="text-success fw-bold">+{{ "%.2f"|format(sale.profit) }}€</td>
+                        <td>
+                            {% set current_roi = (sale.profit / sale.purchase_price_at_sale * 100) if sale.purchase_price_at_sale > 0 else 0 %}
+                            <span class="badge {% if current_roi > 20 %}bg-success{% else %}bg-secondary{% endif %}">{{ "%.0f"|format(current_roi) }}%</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const periodSelect = document.getElementById('periodSelect');
-        if (periodSelect) {
-            periodSelect.addEventListener('change', function() {
-                const selectedPeriod = this.value;
-                window.location.href = "{{ url_for('statistics') }}?period=" + selectedPeriod;
-            });
-        }
+    const ctx = document.getElementById('evolutionChart').getContext('2d');
+    const labels = [{% for s in sales %}"{{ s.sale_date.strftime('%d/%m') }}",{% endfor %}];
+    const revenueData = [{% for s in sales %}{{ s.sale_price }},{% endfor %}];
+    const profitData = [{% for s in sales %}{{ s.profit }},{% endfor %}];
 
-        const totalSalesCount = {{ total_sales_count | tojson }};
-        const chartImageContainer = document.getElementById('dynamicSalesChartContainer');
-        const blurredMessageContainer = document.getElementById('blurredChartMessageContainer');
-
-        if (totalSalesCount >= 5) {
-            chartImageContainer.style.display = 'block';
-            blurredMessageContainer.style.display = 'none';
-        } else {
-            chartImageContainer.style.display = 'none';
-            blurredMessageContainer.style.display = 'flex';
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Vente',
+                data: revenueData,
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.05)',
+                fill: true,
+                tension: 0.4
+            }, {
+                label: 'Profit',
+                data: profitData,
+                borderColor: '#02c076',
+                borderDash: [5, 5],
+                fill: false,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#848e9c' } },
+                x: { grid: { display: false }, ticks: { color: '#848e9c' } }
+            }
         }
     });
 </script>

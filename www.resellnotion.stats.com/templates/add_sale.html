@@ -128,13 +128,14 @@
                 <h3 class="step-title">Sélectionner le produit</h3>
             </div>
             <div class="step-content">
-                <input type="text" id="productSearch" class="form-control mb-4" placeholder="Rechercher un modèle ou SKU...">
+                <input type="text" id="productSearch" class="form-control mb-4" placeholder="Rechercher par nom, taille ou SKU...">
                 <div class="product-selection-grid" id="productGrid">
                     {% for product in products %}
                     <div class="product-card"
                          data-id="{{ product.id }}"
                          data-name="{{ product.name }}"
-                         data-sku="{{ product.sku }}">
+                         data-sku="{{ product.sku }}"
+                         data-size="{{ product.size }}">
                         {% if product.image_url %}
                             <img src="{{ product.image_url }}" class="product-card-img" onerror="this.src='/static/placeholder_product.png'">
                         {% else %}
@@ -304,12 +305,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Recherche
+    // Recherche multi-critères (Nom, SKU, Taille)
     document.getElementById('productSearch').addEventListener('input', function() {
-        const term = this.value.toLowerCase();
+        const term = this.value.toLowerCase().trim();
         cards.forEach(card => {
-            const content = (card.dataset.name + card.dataset.sku).toLowerCase();
-            card.style.display = content.includes(term) ? 'block' : 'none';
+            const name = card.getAttribute('data-name').toLowerCase();
+            const sku = card.getAttribute('data-sku').toLowerCase();
+            const size = card.getAttribute('data-size').toLowerCase();
+
+            if (name.includes(term) || sku.includes(term) || size.includes(term)) {
+                card.style.setProperty('display', 'block', 'important');
+            } else {
+                card.style.setProperty('display', 'none', 'important');
+            }
         });
     });
 });
