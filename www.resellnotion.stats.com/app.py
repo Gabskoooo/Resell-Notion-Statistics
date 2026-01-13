@@ -758,7 +758,7 @@ import psycopg2.extras # Assurez-vous que cet import est présent en haut de vot
 
 @app.route('/')
 @login_required
-@key_active_required
+
 def dashboard():
     conn = g.db
     cur = None
@@ -1458,7 +1458,7 @@ def generate_wtb_wts_image():
 
 @app.route('/products/<int:id>/edit', methods=('GET', 'POST'))
 @login_required
-@key_active_required
+
 def edit_product(id):
     conn = g.db
     cur = None # Initialisation du curseur
@@ -1522,7 +1522,7 @@ def edit_product(id):
 
 @app.route('/products/<int:id>/delete', methods=('POST',))
 @login_required
-@key_active_required
+
 def delete_product(id):
     conn = g.db
     cur = None # Initialisation du curseur
@@ -1731,7 +1731,7 @@ def sale_success(sale_id):
         if cur: cur.close()
 @app.route('/sales')
 @login_required
-@key_active_required
+
 def sales():
     conn = g.db
     cur = None
@@ -1795,7 +1795,7 @@ def sales():
 
 @app.route('/sales/<int:sale_id>/update_status', methods=['POST'])
 @login_required
-@key_active_required
+
 def update_sale_status(sale_id):
     conn = g.db
     cur = None
@@ -1840,7 +1840,7 @@ def update_sale_status(sale_id):
             cur.close()
 @app.route('/sales/<int:id>/edit', methods=('GET', 'POST'))
 @login_required
-@key_active_required
+
 def edit_sale(id):
     conn = g.db
     cur = None  # Initialisation du curseur
@@ -1943,7 +1943,7 @@ def edit_sale(id):
 
 @app.route('/wtb_wts_gen', methods=('GET', 'POST'))
 @login_required
-@key_active_required
+
 def wtb_wts_gen():
     conn = g.db
     cur = None
@@ -1972,7 +1972,7 @@ def wtb_wts_gen():
 
 @app.route('/statistics')
 @login_required  # Décommentez si ces décorateurs sont nécessaires
-@key_active_required  # Décommentez si ces décorateurs sont nécessaires
+
 def statistics():
     conn = g.db
     user_id = current_user.id
@@ -2243,7 +2243,7 @@ def statistics():
 
 @app.route('/sales/<int:id>/delete', methods=('POST',))
 @login_required
-@key_active_required
+
 def delete_sale(id):
     conn = g.db
     cur = None # Initialisation du curseur
@@ -2332,7 +2332,6 @@ def supplementary_operations():
 
 @app.route('/add_supplementary_operation', methods=('GET', 'POST'))
 @login_required
-@key_active_required
 def add_supplementary_operation():
     # La ligne ci-dessous est corrigée pour récupérer 'type' des données POST du formulaire.
     operation_type = request.form.get('type')
