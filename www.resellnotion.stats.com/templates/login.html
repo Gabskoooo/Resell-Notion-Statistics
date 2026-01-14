@@ -1,34 +1,159 @@
 {% extends 'base.html' %}
 
-{% block title %}Connexion{% endblock %}
+{% block title %}Connexion | ResellNotion{% endblock %}
 
 {% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --primary-glow: #8a2be2;
+        --success-glow: #00ffa3;
+    }
+
+    body {
+        background: #0b0e14;
+        background-image:
+            radial-gradient(circle at 0% 0%, rgba(138, 43, 226, 0.1) 0%, transparent 35%),
+            radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.05) 0%, transparent 35%);
+        color: #f8f9fa;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        min-height: 100vh;
+    }
+
+    /* --- TITRE --- */
+    .section-title {
+        font-weight: 700;
+        letter-spacing: -1px;
+        text-transform: uppercase;
+    }
+    .section-title span {
+        background: var(--glass-bg);
+        padding: 2px 10px;
+        border-radius: 8px;
+        color: #8e9297;
+    }
+
+    /* --- LOGIN CARD --- */
+    .premium-card {
+        background: var(--glass-bg) !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 24px;
+        padding: 40px;
+        backdrop-filter: blur(10px);
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+    }
+
+    /* --- INPUTS --- */
+    .form-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #8e9297;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+    .form-control {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid var(--glass-border) !important;
+        color: #fff !important;
+        border-radius: 12px !important;
+        padding: 12px 15px !important;
+        transition: 0.3s;
+    }
+    .form-control:focus {
+        border-color: var(--primary-glow) !important;
+        box-shadow: 0 0 15px rgba(138, 43, 226, 0.2) !important;
+    }
+
+    .form-check-label {
+        font-size: 0.85rem;
+        color: #8e9297;
+    }
+    .form-check-input {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-color: var(--glass-border);
+    }
+    .form-check-input:checked {
+        background-color: var(--primary-glow);
+        border-color: var(--primary-glow);
+    }
+
+    /* --- BUTTONS --- */
+    .btn-success {
+        background: var(--success-glow) !important;
+        border: none !important;
+        color: #0b0e14 !important;
+        border-radius: 16px !important;
+        padding: 14px !important;
+        font-weight: 700 !important;
+        transition: 0.3s !important;
+        letter-spacing: 1px;
+    }
+    .btn-success:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 20px rgba(0, 255, 163, 0.4);
+    }
+
+    .register-link {
+        color: var(--primary-glow) !important;
+        text-decoration: none;
+        font-weight: 600;
+        transition: 0.2s;
+    }
+    .register-link:hover {
+        text-shadow: 0 0 10px var(--primary-glow);
+    }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in { animation: fadeInUp 0.6s ease-out forwards; }
+
+    @media (max-width: 576px) {
+        .premium-card { padding: 30px 20px; }
+    }
+</style>
+
+<div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <h1 class="mb-4 text-center">Connexion</h1>
-            <div class="card p-4 shadow-sm">
+        <div class="col-md-7 col-lg-5">
+            <div class="text-center mb-5 animate-in">
+                <h1 class="text-white section-title">Accès <span>ELITE</span></h1>
+                <p class="text-muted small mt-2">Connectez-vous pour gérer votre inventaire.</p>
+            </div>
+
+            <div class="premium-card animate-in" style="animation-delay: 0.1s;">
                 <form method="POST">
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <label for="email" class="form-label">Adresse Email</label>
-                        <input type="email" class="form-control" id="email" name="email" required autofocus>
+                        <input type="email" class="form-control" id="email" name="email" required autofocus placeholder="votre@email.com">
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <label for="password" class="form-label">Mot de passe</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
+                        <input type="password" class="form-control" id="password" name="password" required placeholder="••••••••">
                     </div>
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                    <div class="mb-4 form-check d-flex align-items-center gap-2">
+                        <input type="checkbox" class="form-check-input m-0" id="remember" name="remember">
                         <label class="form-check-label" for="remember">Se souvenir de moi</label>
                     </div>
-                    <button type="submit" class="btn btn-success w-100 mb-3">Se connecter</button>
+                    <button type="submit" class="btn btn-success w-100 py-3 shadow-lg mb-3">
+                        SE CONNECTER
+                    </button>
                 </form>
 
-                {# La section pour la connexion Discord a été retirée d'ici #}
-
-                <p class="text-center mt-3">
-                    Pas encore de compte ? <a href="{{ url_for('register') }}">Inscrivez-vous ici</a>.
-                </p>
+                <div class="text-center mt-4 pt-3 border-top border-secondary">
+                    <p class="text-muted small mb-0">
+                        Pas encore de compte ? <a href="{{ url_for('register') }}" class="register-link ms-1">Inscrivez-vous ici</a>
+                    </p>
+                </div>
             </div>
         </div>
     </div>
+</div>
 {% endblock %}

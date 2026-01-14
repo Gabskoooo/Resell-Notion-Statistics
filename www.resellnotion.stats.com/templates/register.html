@@ -1,41 +1,168 @@
 {% extends 'base.html' %}
 
-{% block title %}Inscription{% endblock %}
+{% block title %}Inscription | ResellNotion{% endblock %}
 
 {% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --primary-glow: #8a2be2;
+        --success-glow: #00ffa3;
+    }
+
+    body {
+        background: #0b0e14;
+        background-image:
+            radial-gradient(circle at 0% 0%, rgba(138, 43, 226, 0.1) 0%, transparent 35%),
+            radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.05) 0%, transparent 35%);
+        color: #f8f9fa;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        min-height: 100vh;
+    }
+
+    /* --- TITRE --- */
+    .section-title {
+        font-weight: 700;
+        letter-spacing: -1px;
+        text-transform: uppercase;
+    }
+    .section-title span {
+        background: var(--glass-bg);
+        padding: 2px 10px;
+        border-radius: 8px;
+        color: #8e9297;
+    }
+
+    /* --- REGISTER CARD --- */
+    .premium-card {
+        background: var(--glass-bg) !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 24px;
+        padding: 40px;
+        backdrop-filter: blur(10px);
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+    }
+
+    /* --- INPUTS --- */
+    .form-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #8e9297;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+    .form-control {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid var(--glass-border) !important;
+        color: #fff !important;
+        border-radius: 12px !important;
+        padding: 12px 15px !important;
+        transition: 0.3s;
+    }
+    .form-control:focus {
+        border-color: var(--primary-glow) !important;
+        box-shadow: 0 0 15px rgba(138, 43, 226, 0.2) !important;
+    }
+
+    .form-text {
+        font-size: 0.7rem;
+        color: #6c757d !important;
+        line-height: 1.4;
+    }
+
+    /* --- BUTTONS --- */
+    .btn-primary {
+        background: var(--primary-glow) !important;
+        border: none !important;
+        border-radius: 16px !important;
+        padding: 14px !important;
+        font-weight: 700 !important;
+        transition: 0.3s !important;
+        letter-spacing: 1px;
+    }
+    .btn-primary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 20px rgba(138, 43, 226, 0.4);
+    }
+
+    .login-link {
+        color: var(--primary-glow) !important;
+        text-decoration: none;
+        font-weight: 600;
+        transition: 0.2s;
+    }
+    .login-link:hover {
+        text-shadow: 0 0 10px var(--primary-glow);
+    }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in { animation: fadeInUp 0.6s ease-out forwards; }
+
+    @media (max-width: 576px) {
+        .premium-card { padding: 30px 20px; }
+    }
+</style>
+
+<div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <h1 class="mb-4 text-center">Créer un compte</h1>
-            <div class="card p-4 shadow-sm">
+        <div class="col-md-7 col-lg-6">
+            <div class="text-center mb-5 animate-in">
+                <h1 class="text-white section-title">Rejoindre <span>L'ELITE</span></h1>
+                <p class="text-muted small mt-2">Créez votre compte ResellNotion et commencez à tracker.</p>
+            </div>
+
+            <div class="premium-card animate-in" style="animation-delay: 0.1s;">
                 <form method="POST">
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <label for="email" class="form-label">Adresse Email</label>
-                        <input type="email" class="form-control" id="email" name="email" value="{{ request.form['email'] or '' }}" required autofocus>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ request.form['email'] or '' }}" required autofocus placeholder="votre@email.com">
                     </div>
-                    <div class="mb-3">
+
+                    <div class="mb-4">
                         <label for="username" class="form-label">Nom d'utilisateur</label>
-                        <input type="text" class="form-control" id="username" name="username" value="{{ request.form['username'] or '' }}" required>
+                        <input type="text" class="form-control" id="username" name="username" value="{{ request.form['username'] or '' }}" required placeholder="Ex: SneakerLord">
                     </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Mot de passe</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label for="password" class="form-label">Mot de passe</label>
+                            <input type="password" class="form-control" id="password" name="password" required placeholder="••••••••">
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <label for="confirm_password" class="form-label">Confirmation</label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required placeholder="••••••••">
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="confirm_password" class="form-label">Confirmer le mot de passe</label>
-                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="discord_id" class="form-label">Votre ID Discord</label>
+
+                    <div class="mb-5">
+                        <label for="discord_id" class="form-label">ID Discord (Activation)</label>
                         <input type="text" class="form-control" id="discord_id" name="discord_id" value="{{ request.form['discord_id'] or '' }}" placeholder="Ex: 123456789012345678" required>
-                        <div class="form-text">Vous pouvez trouver votre ID Discord en activant le mode développeur dans Discord et en faisant un clic droit sur votre nom d'utilisateur > Copier l'ID.</div>
+                        <div class="form-text mt-2">
+                            <i class=\"bi bi-info-circle me-1\"></i> Activez le mode développeur sur Discord, puis faites un clic droit sur votre profil pour "Copier l'ID".
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100 mb-3">S'inscrire</button>
+
+                    <button type="submit" class="btn btn-primary w-100 py-3 shadow-lg mb-3">
+                        S'INSCRIRE MAINTENANT
+                    </button>
                 </form>
 
-                <p class="text-center mt-3">
-                    Vous avez déjà un compte ? <a href="{{ url_for('login') }}">Connectez-vous ici</a>.
-                </p>
+                <div class="text-center mt-4 pt-3 border-top border-secondary">
+                    <p class="text-muted small mb-0">
+                        Vous avez déjà un compte ? <a href="{{ url_for('login') }}" class="login-link ms-1">Connectez-vous ici</a>
+                    </p>
+                </div>
             </div>
         </div>
     </div>
+</div>
 {% endblock %}

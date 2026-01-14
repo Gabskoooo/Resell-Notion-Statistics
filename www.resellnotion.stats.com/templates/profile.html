@@ -1,71 +1,202 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Mon Profil{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    {% extends 'base.html' %} {# S'assure que ce fichier étend bien base.html #}
+{# templates/profile.html #}
+{% extends 'base.html' %}
 
-    {% block content %}
-    <h1 class="mb-4">Mon Profil</h1>
+{% block title %}Mon Profil | ResellNotion{% endblock %}
+
+{% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --primary-glow: #8a2be2;
+        --success-glow: #00ffa3;
+        --danger-glow: #ff4d4d;
+    }
+
+    body {
+        background: #0b0e14;
+        background-image: 
+            radial-gradient(circle at 0% 0%, rgba(138, 43, 226, 0.1) 0%, transparent 35%),
+            radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.05) 0%, transparent 35%);
+        color: #f8f9fa;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        min-height: 100vh;
+    }
+
+    /* --- TITRE --- */
+    .section-title {
+        font-weight: 700;
+        letter-spacing: -1px;
+        text-transform: uppercase;
+    }
+    .section-title span {
+        background: var(--glass-bg);
+        padding: 2px 10px;
+        border-radius: 8px;
+        color: #8e9297;
+    }
+
+    /* --- PROFILE CARD --- */
+    .premium-card {
+        background: var(--glass-bg) !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 24px;
+        padding: 40px;
+        margin-bottom: 25px;
+        backdrop-filter: blur(10px);
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+    }
+
+    /* --- AVATAR BUBBLE --- */
+    .profile-avatar-large {
+        width: 80px;
+        height: 80px;
+        background: var(--primary-glow);
+        border-radius: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: 800;
+        color: white;
+        margin: 0 auto 25px auto;
+        box-shadow: 0 0 25px rgba(138, 43, 226, 0.4);
+        border: 2px solid rgba(255,255,255,0.1);
+    }
+
+    /* --- INPUTS --- */
+    .form-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #8e9297;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+    .form-control {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid var(--glass-border) !important;
+        color: #fff !important;
+        border-radius: 12px !important;
+        padding: 12px 15px !important;
+        transition: 0.3s;
+    }
+    .form-control:focus {
+        border-color: var(--primary-glow) !important;
+        box-shadow: 0 0 15px rgba(138, 43, 226, 0.2) !important;
+    }
+    .form-control[readonly] {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    /* --- BUTTONS --- */
+    .btn-primary {
+        background: var(--primary-glow) !important;
+        border: none !important;
+        border-radius: 16px !important;
+        padding: 14px 25px !important;
+        font-weight: 700 !important;
+        transition: 0.3s !important;
+    }
+    .btn-primary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 20px rgba(138, 43, 226, 0.4);
+    }
+    .btn-secondary-outline {
+        background: rgba(255, 255, 255, 0.05) !important;
+        color: #fff !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 16px !important;
+        padding: 12px 20px !important;
+        font-weight: 600 !important;
+        transition: 0.3s;
+    }
+    .btn-secondary-outline:hover {
+        background: rgba(255, 255, 255, 0.1) !important;
+        border-color: #fff !important;
+    }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in { animation: fadeInUp 0.6s ease-out forwards; }
+</style>
+
+<div class="container py-5" style="max-width: 700px;">
+    <div class="text-center mb-5 animate-in">
+        <h1 class="text-white section-title">Mon <span>Profil</span></h1>
+        <p class="text-muted small mt-2">Gérez vos informations personnelles et préférences</p>
+    </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-            <div class="flashes">
+            <div class="flashes mb-4 animate-in">
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                    <div class="alert alert-{{ category }} bg-dark border-secondary text-white rounded-4 shadow-sm">
+                        {{ message }}
+                    </div>
                 {% endfor %}
             </div>
         {% endif %}
     {% endwith %}
 
-    <div class="card p-4">
-        <div class="card-body">
-            <form method="post">
-                {# Champ pour le nom d'utilisateur #}
-                <div class="mb-3">
-                    <label for="username" class="form-label">Nom d'utilisateur :</label>
-                    <input type="text" class="form-control" id="username" name="username"
-                           value="{{ current_user.username if current_user.username else '' }}" required>
-                </div>
+    <div class="premium-card animate-in" style="animation-delay: 0.1s;">
+        <div class="profile-avatar-large">
+            {{ current_user.username[0] | upper if current_user.username else 'U' }}
+        </div>
 
-                {# Champ pour l'email (généralement en lecture seule ou avec une procédure de modification spécifique) #}
-                <div class="mb-3">
-                    <label for="email" class="form-label">Email :</label>
-                    <input type="email" class="form-control" id="email" name="email"
-                           value="{{ current_user.email }}" readonly> {# Lecture seule #}
-                </div>
-
-                {# Champ pour l'ID Discord #}
-                <div class="mb-3">
-                    <label for="discord_id" class="form-label">Votre ID Discord (pour l'activation de la clé) :</label>
-                    <input type="text" class="form-control" id="discord_id" name="discord_id"
-                           value="{{ current_user.discord_id if current_user.discord_id else '' }}"
-                           placeholder="Ex: 123456789012345678">
-                    <small class="form-text text-muted">
-                        Pour trouver votre ID Discord : activez le mode développeur sur Discord (Paramètres Utilisateur > Avancé),
-                        puis cliquez droit sur votre nom d'utilisateur ou celui de n'importe qui dans Discord et sélectionnez "Copier l'ID".
-                    </small>
-                </div>
-
-                <button type="submit" class="btn btn-primary">Mettre à jour le profil</button>
-            </form>
-
-            {# NOUVEAU : Lien pour gérer les préférences de bilan #}
-            <div class="mt-4 pt-3 border-top">
-                <h5 class="mb-3">Préférences de Bilan de Performance</h5>
-                <p>Gérez la fréquence à laquelle vous souhaitez recevoir les bilans de performance par e-mail.</p>
-                <a href="{{ url_for('report_preferences') }}" class="btn btn-secondary">Gérer les préférences de bilan</a>
+        <form method="post">
+            {# Champ pour le nom d'utilisateur #}
+            <div class="mb-4">
+                <label for="username" class="form-label">Nom d'utilisateur</label>
+                <input type="text" class="form-control" id="username" name="username"
+                       value="{{ current_user.username if current_user.username else '' }}" required>
             </div>
 
+            {# Champ pour l'email #}
+            <div class="mb-4">
+                <label for="email" class="form-label">Adresse Email</label>
+                <input type="email" class="form-control" id="email" name="email"
+                       value="{{ current_user.email }}" readonly title="L'email ne peut pas être modifié ici.">
+            </div>
+
+            {# Champ pour l'ID Discord #}
+            <div class="mb-5">
+                <label for="discord_id" class="form-label">ID Discord (Activation Clé)</label>
+                <input type="text" class="form-control" id="discord_id" name="discord_id"
+                       value="{{ current_user.discord_id if current_user.discord_id else '' }}"
+                       placeholder="Ex: 123456789012345678">
+                <div class="mt-2 p-3 bg-dark bg-opacity-50 rounded-3 border border-white border-opacity-10">
+                    <small class="text-muted" style="font-size: 0.75rem; line-height: 1.5; display: block;">
+                        <i class="bi bi-info-circle me-1 text-primary"></i>
+                        Activez le <strong>mode développeur</strong> sur Discord (Paramètres > Avancé), puis clic-droit sur votre nom > "Copier l'ID".
+                    </small>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-3 shadow-lg">
+                <i class="bi bi-check2-circle me-2"></i> METTRE À JOUR LE PROFIL
+            </button>
+        </form>
+
+        {# Préférences de bilan #}
+        <div class="mt-5 pt-4 border-top border-secondary">
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <div style="width: 40px; height: 40px; background: rgba(0, 255, 163, 0.1); color: var(--success-glow); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                    <i class="bi bi-envelope-paper"></i>
+                </div>
+                <h5 class="m-0 text-white fw-bold" style="font-size: 1rem;">Bilan de Performance</h5>
+            </div>
+            <p class="text-muted small mb-4">Gérez la fréquence de réception de vos rapports détaillés par e-mail.</p>
+            <a href="{{ url_for('report_preferences') }}" class="btn btn-secondary-outline w-100 py-3">
+                <i class="bi bi-gear me-2"></i> Gérer les préférences d'envoi
+            </a>
         </div>
     </div>
-    {% endblock %}
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+</div>
+{% endblock %}

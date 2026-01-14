@@ -1,135 +1,214 @@
 {% extends 'base.html' %}
 
-{% block title %}Ajouter Produit{% endblock %}
+{% block title %}Ajouter au Stock | ResellNotion{% endblock %}
 
 {% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+
 <style>
-    /* 1. FORCER LA VISIBILITÉ DU CONTENU */
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --primary-glow: #8a2be2;
+        --success-glow: #00ffa3;
+        --danger-glow: #ff4d4d;
+    }
+
+    body {
+        background: #0b0e14;
+        background-image:
+            radial-gradient(circle at 0% 0%, rgba(138, 43, 226, 0.1) 0%, transparent 35%),
+            radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.05) 0%, transparent 35%);
+        color: #f8f9fa;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        min-height: 100vh;
+    }
+
+    /* --- TITRE --- */
+    .section-title {
+        font-weight: 700;
+        letter-spacing: -1px;
+        text-transform: uppercase;
+    }
+    .section-title span {
+        background: var(--glass-bg);
+        padding: 2px 10px;
+        border-radius: 8px;
+        color: #8e9297;
+    }
+
+    /* --- STEP CARDS --- */
     .step-card {
-        background-color: #2a2a4a !important;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 15px;
-        padding: 25px;
-        margin-bottom: 20px;
+        background: var(--glass-bg) !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 24px;
+        padding: 30px;
+        margin-bottom: 25px;
+        backdrop-filter: blur(10px);
         display: none; /* Géré par JS */
     }
 
-    /* Cette règle assure que le contenu est visible quand l'étape est active */
-    .step-card.active-step, .step-card[style*="display: block"] {
+    .step-card.active-step {
         display: block !important;
+        animation: fadeIn 0.4s ease;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        background: rgba(255, 255, 255, 0.05) !important;
     }
 
-    .step-content {
-        display: block !important; /* Force l'affichage du contenu interne */
-        opacity: 1 !important;
-        visibility: visible !important;
+    .step-header {
+        margin-bottom: 25px;
+        border-bottom: 1px solid var(--glass-border);
+        padding-bottom: 15px;
     }
 
-    /* 2. STYLES RECAPITULATIF */
-    .recap-container { max-height: 400px; overflow-y: auto; margin-bottom: 20px; padding: 5px; }
+    .step-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .step-number-badge {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+    }
+
+    /* --- INPUTS --- */
+    .form-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #8e9297;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+    .form-control {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid var(--glass-border) !important;
+        color: #fff !important;
+        border-radius: 12px !important;
+        padding: 12px 15px !important;
+    }
+    .form-control:focus {
+        border-color: var(--primary-glow) !important;
+        box-shadow: 0 0 15px rgba(138, 43, 226, 0.2) !important;
+    }
+
+    /* --- RECAPITULATIF --- */
+    .recap-container { max-height: 400px; overflow-y: auto; padding-right: 5px; }
     .recap-row {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        padding: 12px;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 16px;
+        padding: 15px;
         margin-bottom: 10px;
         display: flex;
         align-items: center;
         gap: 15px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--glass-border);
     }
-    .recap-img { width: 60px; height: 60px; object-fit: contain; border-radius: 8px; background: #fff; padding: 2px; }
-    .recap-details { flex-grow: 1; }
-    .recap-details h6 { margin: 0; color: #8a2be2; font-weight: bold; font-size: 0.9rem; }
-    .recap-details small { color: #848e9c; }
-    .recap-price-tag { background: rgba(138, 43, 226, 0.2); color: #fff; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; }
+    .recap-img { width: 55px; height: 55px; object-fit: contain; border-radius: 10px; background: #fff; padding: 4px; }
+    .recap-details h6 { margin: 0; font-weight: 700; color: #fff; font-size: 0.9rem; }
+    .recap-details small { color: #8e9297; font-size: 0.75rem; }
+    .recap-price-tag { background: rgba(138, 43, 226, 0.15); color: #fff; padding: 4px 12px; border-radius: 10px; font-weight: 700; font-size: 0.85rem; }
 
-    /* 3. ANIMATION FINALE */
+    /* --- ANIMATION SUCCÈS --- */
     #success-overlay {
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: #1a1a2e;
-        z-index: 9999;
-        display: none;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: #0b0e14; z-index: 10000;
+        display: none; flex-direction: column; align-items: center; justify-content: center;
     }
-    .loader-container { position: relative; width: 160px; height: 160px; }
     .loader-circle-prog {
-        fill: none; stroke: #28a745; stroke-width: 8;
+        fill: none; stroke: var(--success-glow); stroke-width: 8;
         stroke-dasharray: 440; stroke-dashoffset: 440;
         transition: stroke-dashoffset 2s ease-out;
-        transform: rotate(-90deg);
-        transform-origin: 50% 50%;
+        transform: rotate(-90deg); transform-origin: 50% 50%;
     }
+
+    /* --- SUGGESTIONS --- */
+    .list-group { background: #161a2b; border: 1px solid var(--glass-border); border-radius: 12px; margin-top: 5px; }
+    .list-group-item-action { transition: 0.2s; border: none; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .list-group-item-action:hover { background: rgba(255,255,255,0.05) !important; color: #fff; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 
 <div id="success-overlay">
-    <div class="loader-container">
+    <div style="position: relative; width: 160px; height: 160px;">
         <svg width="160" height="160">
             <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="8"></circle>
             <circle id="progress-bar" class="loader-circle-prog" cx="80" cy="80" r="70"></circle>
         </svg>
         <i class="bi bi-box-seam" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 4rem; color: #fff;"></i>
     </div>
-    <h2 class="mt-4 text-white">Produit(s) enregistré(s)</h2>
+    <h2 class="mt-4 text-white fw-bold">Produit(s) enregistré(s)</h2>
 </div>
 
-<div class="form-steps-container mt-4">
-    <h1 class="text-center mb-5 text-white">Ajouter au stock</h1>
+<div class="container py-5" style="max-width: 800px;">
+    <h1 class="text-center mb-5 text-white section-title">Ajouter au <span>STOCK</span></h1>
 
     <form method="post" id="add-product-form">
-        {# Étape 1 #}
+        {# Étape 1: Informations de base #}
         <div class="step-card active-step" id="step-1" style="display: block;">
-            <div class="step-header text-white mb-4">
-                <h3 class="step-title"><span class="badge bg-primary me-2">1</span> Informations de base</h3>
+            <div class="step-header">
+                <h3 class="step-title"><span class="step-number-badge bg-primary text-white">1</span> Informations de base</h3>
             </div>
             <div class="step-content">
-                <div class="mb-3 position-relative">
-                    <label class="form-label text-white">SKU (Référence Unique):</label>
+                <div class="mb-4 position-relative">
+                    <label class="form-label">SKU (Référence Unique)</label>
                     <input type="text" class="form-control" id="current_sku" autocomplete="off" placeholder="Ex: DD1391-100">
                     <div id="sku-suggestions" class="list-group position-absolute w-100" style="display:none; z-index:1000;"></div>
                 </div>
-                <div class="mb-3 position-relative">
-                    <label class="form-label text-white">Nom du produit:</label>
+                <div class="mb-4 position-relative">
+                    <label class="form-label">Nom du produit</label>
                     <input type="text" class="form-control" id="current_name" autocomplete="off" placeholder="Ex: Dunk Low Panda">
                     <div id="name-suggestions" class="list-group position-absolute w-100" style="display:none; z-index:1000;"></div>
                 </div>
                 <input type="hidden" id="current_image_url">
-                <div id="sku-preview-container" class="mt-3 text-center" style="display:none;">
-                    <img id="sku-preview-img" src="" class="img-thumbnail" style="max-width: 150px; background:white;">
+                <div id="sku-preview-container" class="mt-3 text-center" style="display:none; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px;">
+                    <img id="sku-preview-img" src="" class="img-thumbnail" style="max-width: 140px; background:white; border:none; padding: 5px;">
+                    <p class="small text-muted mt-2 mb-0">Image détectée dans la base</p>
                 </div>
-                <div class="d-flex justify-content-end mt-4">
-                    <button type="button" class="btn btn-primary px-4" onclick="validateStep1()">Suivant</button>
+                <div class="d-flex justify-content-end mt-5">
+                    <button type="button" class="btn btn-primary px-5 py-3 rounded-4 fw-bold" onclick="validateStep1()">Suivant <i class="bi bi-arrow-right ms-2"></i></button>
                 </div>
             </div>
         </div>
 
-        {# Étape 2 #}
+        {# Étape 2: Tailles et Prix #}
         <div class="step-card" id="step-2">
-            <div class="step-header text-white mb-4">
-                <h3 class="step-title"><span class="badge bg-secondary me-2">2</span> Tailles et Prix</h3>
+            <div class="step-header">
+                <h3 class="step-title"><span class="step-number-badge bg-secondary text-white">2</span> Tailles et Prix</h3>
             </div>
             <div class="step-content">
                 <div id="dynamic-sizes-container"></div>
-                <button type="button" class="btn btn-outline-primary btn-sm mb-3" onclick="addSizeRow()">+ Ajouter une taille</button>
+                <button type="button" class="btn btn-outline-primary btn-sm mb-4 rounded-pill px-3" onclick="addSizeRow()"><i class="bi bi-plus-lg me-1"></i> Ajouter une taille</button>
                 <div class="d-flex justify-content-between mt-4">
-                    <button type="button" class="btn btn-outline-light" onclick="showStep(1)">Précédent</button>
-                    <button type="button" class="btn btn-primary px-4" onclick="validateStep2()">Suivant</button>
+                    <button type="button" class="btn btn-link text-muted text-decoration-none" onclick="showStep(1)"><i class="bi bi-chevron-left"></i> Retour</button>
+                    <button type="button" class="btn btn-primary px-5 py-3 rounded-4 fw-bold" onclick="validateStep2()">Suivant <i class="bi bi-arrow-right ms-2"></i></button>
                 </div>
             </div>
         </div>
 
-        {# Étape 3 #}
+        {# Étape 3: Récapitulatif #}
         <div class="step-card" id="step-3">
-            <div class="step-header text-white mb-4">
-                <h3 class="step-title"><span class="badge bg-success me-2">3</span> Récapitulatif</h3>
+            <div class="step-header">
+                <h3 class="step-title"><span class="step-number-badge bg-success text-white">3</span> Récapitulatif</h3>
             </div>
             <div class="step-content">
-                <div id="recap-list" class="recap-container"></div>
-                <div class="d-flex flex-column gap-2 mt-4">
-                    <button type="button" class="btn btn-outline-primary py-2" onclick="saveToMemoryAndReset()">Ajouter un autre produit</button>
-                    <button type="submit" class="btn btn-success py-3 fw-bold">Terminer et enregistrer</button>
+                <div id="recap-list" class="recap-container mb-4"></div>
+                <div class="d-flex flex-column gap-3 mt-4">
+                    <button type="button" class="btn btn-outline-primary py-3 rounded-4 fw-bold" onclick="saveToMemoryAndReset()"><i class="bi bi-plus-circle me-2"></i> Ajouter un autre produit différent</button>
+                    <button type="submit" class="btn btn-success py-4 rounded-4 fw-bold shadow-lg" style="font-size: 1.1rem;">
+                        <i class="bi bi-check2-all me-2"></i> TERMINER ET ENREGISTRER TOUT
+                    </button>
                     <button type="button" class="btn btn-link text-muted btn-sm" onclick="showStep(2)">Modifier le dernier produit</button>
                 </div>
             </div>
@@ -142,13 +221,10 @@
     let searchTimer;
 
     function showStep(n) {
-        // Cacher tout et retirer la classe active
         document.querySelectorAll('.step-card').forEach(card => {
             card.style.display = 'none';
             card.classList.remove('active-step');
         });
-
-        // Afficher l'étape cible
         const target = document.getElementById('step-' + n);
         if (target) {
             target.style.display = 'block';
@@ -161,7 +237,7 @@
         if (document.getElementById('current_sku').value.trim() && document.getElementById('current_name').value.trim()) {
             showStep(2);
         } else {
-            alert("Remplissez le SKU et le Nom.");
+            alert("Veuillez remplir le SKU et le Nom.");
         }
     }
 
@@ -169,7 +245,6 @@
         const sizes = document.querySelectorAll('.current-sizes');
         let hasValue = false;
         sizes.forEach(i => { if(i.value.trim() !== "") hasValue = true; });
-
         if (hasValue) {
             updateRecap();
             showStep(3);
@@ -181,11 +256,11 @@
     function addSizeRow(valS = '', valP = '') {
         const container = document.getElementById('dynamic-sizes-container');
         const div = document.createElement('div');
-        div.className = 'row g-2 mb-2 align-items-center';
+        div.className = 'row g-3 mb-3 align-items-center animate__animated animate__fadeIn';
         div.innerHTML = `
-            <div class="col-5"><input type="text" class="form-control current-sizes" placeholder="Taille" value="${valS}" required></div>
-            <div class="col-5"><input type="number" step="0.01" class="form-control current-prices" placeholder="Prix" value="${valP}" required></div>
-            <div class="col-2 text-end"><button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()"><i class="bi bi-trash"></i></button></div>
+            <div class="col-5"><label class="form-label d-md-none">Taille</label><input type="text" class="form-control current-sizes" placeholder="Taille" value="${valS}" required></div>
+            <div class="col-5"><label class="form-label d-md-none">Prix (€)</label><input type="number" step="0.01" class="form-control current-prices" placeholder="Prix" value="${valP}" required></div>
+            <div class="col-2 text-end"><button type="button" class="btn btn-danger btn-sm p-2" onclick="this.parentElement.parentElement.remove()"><i class="bi bi-trash"></i></button></div>
         `;
         container.appendChild(div);
     }
@@ -193,7 +268,6 @@
     function updateRecap() {
         const list = document.getElementById('recap-list');
         list.innerHTML = '';
-
         const current = {
             name: document.getElementById('current_name').value,
             sku: document.getElementById('current_sku').value,
@@ -201,7 +275,6 @@
             sizes: Array.from(document.querySelectorAll('.current-sizes')).map(i => i.value),
             prices: Array.from(document.querySelectorAll('.current-prices')).map(i => i.value)
         };
-
         const all = [...productsInMemory, current];
         all.forEach(p => {
             p.sizes.forEach((s, i) => {
@@ -234,7 +307,6 @@
         showStep(1);
     }
 
-    // Recherche SKU & Nom avec Debounce
     function setupSearch(id, suggId) {
         const input = document.getElementById(id);
         const box = document.getElementById(suggId);
@@ -249,8 +321,8 @@
                         data.forEach(item => {
                             const d = document.createElement('div');
                             d.className = 'list-group-item list-group-item-action bg-dark text-white border-secondary d-flex align-items-center';
-                            d.innerHTML = `<img src="${item.image_url}" width="40" class="me-3" style="background:white; border-radius:4px;">
-                                           <div><div class="fw-bold">${item.sku}</div><small>${item.product_name}</small></div>`;
+                            d.innerHTML = `<img src="${item.image_url}" width="40" height="40" class="me-3" style="background:white; border-radius:4px; object-fit:contain;">
+                                           <div class="overflow-hidden"><div class="fw-bold text-truncate">${item.sku}</div><small class="text-muted text-truncate d-block">${item.product_name}</small></div>`;
                             d.onclick = () => {
                                 document.getElementById('current_sku').value = item.sku;
                                 document.getElementById('current_name').value = item.product_name;
@@ -268,7 +340,6 @@
         });
     }
 
-    // Soumission
     document.getElementById('add-product-form').onsubmit = async function(e) {
         e.preventDefault();
         const lastName = document.getElementById('current_name').value;

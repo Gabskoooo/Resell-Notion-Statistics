@@ -18,6 +18,7 @@
 
     body {
         background: #0b0e14;
+        /* Note : Utiliser des fichiers .png si des images de fond sont ajoutées */
         background-image:
             radial-gradient(circle at 0% 0%, rgba(138, 43, 226, 0.1) 0%, transparent 35%),
             radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.05) 0%, transparent 35%);
@@ -58,6 +59,7 @@
         display: flex;
         flex-direction: column;
         justify-content: space-between;
+        min-width: 0; /* Anti-débordement flex */
     }
     .sale-card:hover {
         background: rgba(255, 255, 255, 0.04);
@@ -76,25 +78,48 @@
     .meta-item { font-size: 0.75rem; color: #8e9297; display: flex; align-items: center; font-weight: 500; }
     .meta-item i { margin-right: 8px; width: 14px; text-align: center; opacity: 0.7; }
 
-    .card-footer-flex { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.05); }
-    .sale-price-large { font-size: 1.3rem; font-weight: 800; color: #fff; }
+    .card-footer-flex { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.05); gap: 5px; }
+    .sale-price-large { font-size: 1.2rem; font-weight: 800; color: #fff; }
 
-    .status-badge { padding: 5px 12px; border-radius: 30px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+    .status-badge { padding: 5px 10px; border-radius: 30px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
     .status-reçu { background: rgba(0, 255, 163, 0.15); color: #00ffa3; }
     .status-attente { background: rgba(255, 204, 0, 0.15); color: #ffcc00; }
 
-    .profit-pill { padding: 6px 14px; border-radius: 30px; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; }
+    .profit-pill { padding: 6px 10px; border-radius: 30px; font-weight: 700; font-size: 0.75rem; display: flex; align-items: center; white-space: nowrap; }
     .profit-pos { background: rgba(0, 255, 163, 0.1); color: var(--success-glow); }
     .profit-neg { background: rgba(255, 77, 77, 0.1); color: var(--danger-glow); }
 
+    /* --- ACTION PANEL RESPONSIVE --- */
     #actionPanel {
-        position: fixed; top: 0; right: -450px; width: 400px; height: 100vh;
-        background: rgba(22, 26, 43, 0.98); backdrop-filter: blur(20px);
+        position: fixed; top: 0; right: -100%; width: 400px; max-width: 100%; height: 100vh;
+        background: rgba(11, 14, 20, 0.98); backdrop-filter: blur(20px);
         border-left: 1px solid var(--glass-border); padding: 30px; z-index: 1050;
         transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
     #actionPanel.show { right: 0; }
 
+    /* --- MEDIA QUERIES --- */
+
+    /* Typographie fluide pour le titre principal */
+    h1 { font-size: clamp(1.5rem, 6vw, 2.5rem); }
+
+    @media (max-width: 768px) {
+        .stat-numb { font-size: 1.5rem; }
+        .premium-card { padding: 15px; }
+        #actionPanel { padding: 20px; }
+        .card-footer-flex { flex-direction: column; align-items: flex-start; }
+    }
+
+    @media (max-width: 576px) {
+        .col-6 { padding-left: 8px; padding-right: 8px; }
+        .sale-card { padding: 15px; border-radius: 18px; }
+        .sale-title { font-size: 0.85rem; }
+        .meta-item { font-size: 0.7rem; }
+        .sale-price-large { font-size: 1.1rem; }
+        .profit-pill { font-size: 0.7rem; padding: 4px 8px; }
+    }
+
+    /* Animation */
     @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     .animate-in { animation: fadeInUp 0.6s ease-out forwards; }
 </style>
@@ -105,16 +130,16 @@
         <p class="text-muted">Suivez vos performances en temps réel.</p>
     </div>
 
-    <div class="row g-4 mb-5 animate-in" style="animation-delay: 0.1s">
-        <div class="col-md-4"><div class="premium-card"><div class="stat-label">Ventes</div><div class="stat-numb" id="total-sales-count">0</div></div></div>
-        <div class="col-md-4"><div class="premium-card"><div class="stat-label">CA</div><div class="stat-numb text-glow-purple" id="total-revenue">0,00 €</div></div></div>
-        <div class="col-md-4"><div class="premium-card"><div class="stat-label">Bénéfice</div><div class="stat-numb text-glow-green" id="total-profit">0,00 €</div></div></div>
+    <div class="row g-3 g-md-4 mb-5 animate-in" style="animation-delay: 0.1s">
+        <div class="col-12 col-md-4"><div class="premium-card"><div class="stat-label">Ventes</div><div class="stat-numb" id="total-sales-count">0</div></div></div>
+        <div class="col-6 col-md-4"><div class="premium-card"><div class="stat-label">CA</div><div class="stat-numb text-glow-purple" id="total-revenue" style="font-size: 1.4rem;">0,00 €</div></div></div>
+        <div class="col-6 col-md-4"><div class="premium-card"><div class="stat-label">Bénéfice</div><div class="stat-numb text-glow-green" id="total-profit" style="font-size: 1.4rem;">0,00 €</div></div></div>
     </div>
 
     <div class="premium-card mb-5 animate-in" style="animation-delay: 0.2s; padding: 15px;">
         <div class="row g-3">
-            <div class="col-md-4"><input type="text" id="salesSearch" class="form-control filter-input" placeholder="Recherche..."></div>
-            <div class="col-md-4">
+            <div class="col-12 col-md-4"><input type="text" id="salesSearch" class="form-control filter-input" placeholder="Recherche..."></div>
+            <div class="col-6 col-md-4">
                 <select id="periodFilter" class="form-select filter-input">
                     <option value="all">Toutes les périodes</option>
                     <option value="today">Aujourd'hui</option>
@@ -122,7 +147,7 @@
                     <option value="this_month">Ce mois-ci</option>
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-6 col-md-4">
                 <select id="paymentStatusFilter" class="form-select filter-input">
                     <option value="all">Tous les statuts</option>
                     <option value="reçu">Reçu</option>
@@ -149,13 +174,16 @@
                 <div>
                     <div class="card-header-flex">
                         <h6 class="sale-title text-truncate" title="{{ sale.item_name }}">{{ sale.item_name }}</h6>
+                    </div>
+
+                    <div class="mb-2">
                         <span class="status-badge {% if sale.payment_status == 'reçu' %}status-reçu{% else %}status-attente{% endif %}">
                             {{ 'Reçu' if sale.payment_status == 'reçu' else 'Attente' }}
                         </span>
                     </div>
 
                     <div class="card-meta">
-                        <div class="meta-item"><i class="bi bi-upc-scan"></i><span>{{ sale.sku }}</span></div>
+                        <div class="meta-item text-truncate"><i class="bi bi-upc-scan"></i><span>{{ sale.sku }}</span></div>
                         <div class="meta-item"><i class="bi bi-rulers"></i><span>Taille: {{ sale.size }}</span></div>
                         <div class="meta-item"><i class="bi bi-calendar2-event"></i><span>{{ sale.sale_date.strftime('%d %b %Y') }}</span></div>
                     </div>
@@ -164,7 +192,7 @@
                 <div class="card-footer-flex">
                     <div class="sale-price-large">{{ "%.2f"|format(sale.sale_price) }} €</div>
                     <div class="profit-pill {% if sale.profit >= 0 %}profit-pos{% else %}profit-neg{% endif %}">
-                        <i class="bi bi-graph-up-arrow me-2" style="font-size: 0.7rem;"></i>{{ "%.2f"|format(sale.profit) }} €
+                         {{ "%.2f"|format(sale.profit) }} €
                     </div>
                 </div>
             </div>
@@ -179,12 +207,12 @@
             <button id="hideActionPanelBtn" class="btn btn-link text-muted p-0"><i class="bi bi-x-lg fs-5"></i></button>
         </div>
         <div class="premium-card mb-4" style="background: rgba(255,255,255,0.02)">
-            <h5 id="selected-sale-name-display" class="text-primary fw-bold mb-2"></h5>
+            <h5 id="selected-sale-name-display" class="text-primary fw-bold mb-2" style="font-size: 1.1rem; word-break: break-word;"></h5>
             <div id="current-status-display"></div>
         </div>
         <div class="d-grid gap-2 mb-4">
-            <button type="button" class="btn btn-success py-3" id="setReceivedBtn">Marquer comme Reçu</button>
-            <button type="button" class="btn btn-warning py-3 text-dark" id="setPendingBtn">Mettre en attente</button>
+            <button type="button" class="btn btn-success py-3 fw-bold" id="setReceivedBtn">Marquer comme Reçu</button>
+            <button type="button" class="btn btn-warning py-3 text-dark fw-bold" id="setPendingBtn">Mettre en attente</button>
         </div>
         <div class="d-grid gap-2">
             <a id="editSaleLink" href="#" class="btn btn-outline-info py-2">Modifier</a>

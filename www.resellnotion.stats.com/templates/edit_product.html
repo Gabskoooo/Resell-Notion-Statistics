@@ -1,103 +1,204 @@
 {# templates/edit_product.html #}
 {% extends 'base.html' %}
 
-{% block title %}Modifier Produit{% endblock %}
+{% block title %}Modifier Produit | ResellNotion{% endblock %}
 
 {% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+
 <style>
-    /* Styles Responsifs pour edit_product.html */
-    @media (max-width: 768px) {
-        h1 {
-            font-size: 1.8em; /* Réduit la taille du titre */
-        }
-        .form-label {
-            font-size: 0.9em; /* Réduit la taille des étiquettes */
-        }
-        .form-control {
-            font-size: 0.95em; /* Ajuste la taille de la police des champs */
-            padding: 0.6em 0.75em; /* Réduit un peu le padding */
-        }
-        .img-thumbnail {
-            max-width: 100px; /* Réduit la taille de l'image de prévisualisation */
-            height: auto;
-        }
-        .btn {
-            padding: 0.7em 1em; /* Ajuste le padding des boutons */
-            font-size: 0.9em; /* Réduit la taille de la police des boutons */
-            width: 100%; /* Rend les boutons pleine largeur sur petits écrans */
-            margin-bottom: 10px; /* Ajoute un espace entre les boutons empilés */
-        }
-        .btn + .btn { /* Pour le bouton "Annuler" ou "Supprimer" lorsqu'il est à côté du premier */
-            margin-left: 0 !important; /* Supprime la marge gauche pour l'empilement */
-            margin-top: 5px; /* Ajoute un peu d'espace si les boutons sont l'un au-dessus de l'autre */
-        }
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --primary-glow: #8a2be2;
+        --success-glow: #00ffa3;
+        --danger-glow: #ff4d4d;
     }
 
-    @media (max-width: 576px) {
-        h1 {
-            font-size: 1.5em;
-        }
-        .form-label {
-            font-size: 0.85em;
-        }
-        .form-control {
-            font-size: 0.9em;
-            padding: 0.5em 0.6em;
-        }
-        .img-thumbnail {
-            max-width: 80px;
-        }
-        .btn {
-            padding: 0.6em 0.8em;
-            font-size: 0.85em;
-        }
+    body {
+        background: #0b0e14;
+        background-image:
+            radial-gradient(circle at 0% 0%, rgba(138, 43, 226, 0.1) 0%, transparent 35%),
+            radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.05) 0%, transparent 35%);
+        color: #f8f9fa;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        min-height: 100vh;
     }
+
+    /* --- TITRE --- */
+    .section-title {
+        font-weight: 700;
+        letter-spacing: -1px;
+        text-transform: uppercase;
+    }
+    .section-title span {
+        background: var(--glass-bg);
+        padding: 2px 10px;
+        border-radius: 8px;
+        color: #8e9297;
+    }
+
+    /* --- FORM CARD --- */
+    .premium-card {
+        background: var(--glass-bg) !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 24px;
+        padding: 40px;
+        margin-bottom: 25px;
+        backdrop-filter: blur(10px);
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+    }
+
+    /* --- INPUTS --- */
+    .form-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #8e9297;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+    .form-control {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid var(--glass-border) !important;
+        color: #fff !important;
+        border-radius: 12px !important;
+        padding: 12px 15px !important;
+    }
+    .form-control:focus {
+        border-color: var(--primary-glow) !important;
+        box-shadow: 0 0 15px rgba(138, 43, 226, 0.2) !important;
+    }
+
+    /* --- BUTTONS --- */
+    .btn-primary {
+        background: var(--primary-glow) !important;
+        border: none !important;
+        border-radius: 16px !important;
+        padding: 14px 25px !important;
+        font-weight: 700 !important;
+        transition: 0.3s !important;
+    }
+    .btn-primary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 20px rgba(138, 43, 226, 0.4);
+    }
+    .btn-danger-outline {
+        background: transparent !important;
+        color: var(--danger-glow) !important;
+        border: 1px solid rgba(255, 77, 77, 0.3) !important;
+        border-radius: 16px !important;
+        padding: 14px 25px !important;
+        font-weight: 700 !important;
+        transition: 0.3s;
+    }
+    .btn-danger-outline:hover {
+        background: rgba(255, 77, 77, 0.1) !important;
+        border-color: var(--danger-glow) !important;
+    }
+    .btn-cancel {
+        color: #8e9297 !important;
+        font-weight: 600 !important;
+        text-decoration: none !important;
+        padding: 14px 20px !important;
+        transition: 0.3s;
+    }
+    .btn-cancel:hover { color: #fff !important; }
+
+    /* --- PREVIEW IMAGE --- */
+    .preview-container {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 15px;
+        border-radius: 20px;
+        border: 1px solid var(--glass-border);
+    }
+    .img-thumbnail {
+        background: white !important;
+        border: none !important;
+        padding: 5px !important;
+        border-radius: 12px !important;
+        max-width: 140px !important;
+    }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in { animation: fadeInUp 0.6s ease-out forwards; }
 </style>
-<h1 class="mb-4">Modifier Produit: {{ product.name }} ({{ product.sku }})</h1>
 
-{% if error %}
-<div class="alert alert-danger" role="alert">
-    {{ error }}
+<div class="container py-5" style="max-width: 850px;">
+    <div class="text-center mb-5 animate-in">
+        <h1 class="text-white section-title">Modifier <span>PRODUIT</span></h1>
+        <p class="text-muted small mt-2">{{ product.name }} (SKU: {{ product.sku }})</p>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger bg-danger bg-opacity-10 border-danger border-opacity-20 text-danger rounded-4 mb-4 animate-in">
+        <i class="bi bi-exclamation-triangle me-2"></i> {{ error }}
+    </div>
+    {% endif %}
+
+    <div class="premium-card animate-in" style="animation-delay: 0.1s;">
+        <form method="post">
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <label for="sku" class="form-label">SKU (Référence Unique)</label>
+                    <input type="text" class="form-control" id="sku" name="sku" value="{{ product.sku }}" required>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <label for="name" class="form-label">Nom du produit</label>
+                    <input type="text" class="form-control" id="name" name="name" value="{{ product.name }}" required>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <label for="size" class="form-label">Taille</label>
+                    <input type="text" class="form-control" id="size" name="size" value="{{ product.size if product.size else '' }}" placeholder="Ex: 42 EU">
+                </div>
+                <div class="col-md-4 mb-4">
+                    <label for="purchase_price" class="form-label">Prix d'achat (€)</label>
+                    <input type="number" step="0.01" class="form-control" id="purchase_price" name="purchase_price" value="{{ '%.2f'|format(product.purchase_price) }}" required>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <label for="quantity" class="form-label">Quantité</label>
+                    <input type="number" class="form-control" id="quantity" name="quantity" value="{{ product.quantity }}" required>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label for="image_url" class="form-label">URL de l'image</label>
+                <input type="url" class="form-control" id="image_url" name="image_url" value="{{ product.image_url if product.image_url else '' }}">
+                {% if product.image_url %}
+                <div class="preview-container mt-3 text-center">
+                    <img src="{{ product.image_url }}" alt="Aperçu" class="img-thumbnail">
+                    <p class="small text-muted mt-2 mb-0">Aperçu actuel de l'article</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="mb-5">
+                <label for="description" class="form-label">Description (optionnel)</label>
+                <textarea class="form-control" id="description" name="description" rows="3">{{ product.description if product.description else '' }}</textarea>
+            </div>
+
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 border-top border-secondary pt-4">
+                <div class="d-flex gap-2 align-items-center">
+                    <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+                    <a href="{{ url_for('products') }}" class="btn btn-cancel">Annuler</a>
+                </div>
+
+                <div class="ms-md-auto">
+                    <form action="{{ url_for('delete_product', id=product.id) }}" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-danger-outline" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?');">
+                            <i class="bi bi-trash me-2"></i>Supprimer
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </form>
+    </div>
 </div>
-{% endif %}
-
-<form method="post">
-    <div class="mb-3">
-        <label for="sku" class="form-label">SKU (Référence Unique):</label>
-        <input type="text" class="form-control" id="sku" name="sku" value="{{ product.sku }}" required>
-    </div>
-    <div class="mb-3">
-        <label for="name" class="form-label">Nom du produit:</label>
-        <input type="text" class="form-control" id="name" name="name" value="{{ product.name }}" required>
-    </div>
-    <div class="mb-3">
-        <label for="size" class="form-label">Taille (ex: 42 EU / US 8.5):</label>
-        <input type="text" class="form-control" id="size" name="size" value="{{ product.size if product.size else '' }}">
-    </div>
-    <div class="mb-3">
-        <label for="purchase_price" class="form-label">Prix d'achat (€):</label>
-        <input type="number" step="0.01" class="form-control" id="purchase_price" name="purchase_price" value="{{ '%.2f'|format(product.purchase_price) }}" required>
-    </div>
-    <div class="mb-3">
-        <label for="quantity" class="form-label">Quantité en stock:</label>
-        <input type="number" class="form-control" id="quantity" name="quantity" value="{{ product.quantity }}" required>
-    </div>
-    <div class="mb-3">
-        <label for="image_url" class="form-label">URL de l'image du produit (optionnel):</label>
-        <input type="url" class="form-control" id="image_url" name="image_url" value="{{ product.image_url if product.image_url else '' }}">
-        {% if product.image_url %}
-        <img src="{{ product.image_url }}" alt="Aperçu de l'image" class="img-thumbnail mt-2" style="max-width: 150px; height: auto;">
-        {% endif %}
-    </div>
-    <div class="mb-3">
-        <label for="description" class="form-label">Description (optionnel):</label>
-        <textarea class="form-control" id="description" name="description" rows="3">{{ product.description if product.description else '' }}</textarea>
-    </div>
-
-    <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
-    <a href="{{ url_for('products') }}" class="btn btn-secondary ms-2">Annuler</a>
-    <form action="{{ url_for('delete_product', id=product.id) }}" method="post" class="d-inline"> {# CHANGEMENT ICI #}
-        <button type="submit" class="btn btn-danger ms-2" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?');">Supprimer le produit</button>
-    </form>
-</form>
 {% endblock %}

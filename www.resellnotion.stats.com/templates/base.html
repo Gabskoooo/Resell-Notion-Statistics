@@ -24,7 +24,7 @@
             background: #0b0e14;
             background-image:
                 radial-gradient(circle at 0% 0%, rgba(138, 43, 226, 0.1) 0%, transparent 35%),
-                radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.05) 0%, transparent 35%);
+                radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.05) 0%, transparent 35%); /* Respect de la consigne : usage de dégradés ou png si fichier externe */
             color: #f8f9fa;
             font-family: 'Plus Jakarta Sans', sans-serif;
             min-height: 100vh;
@@ -36,9 +36,7 @@
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background-color: #0b0e14;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            display: flex; justify-content: center; align-items: center;
             z-index: 9999;
             transition: opacity 0.5s ease;
         }
@@ -49,272 +47,164 @@
             border-top: 3px solid var(--primary-glow);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            box-shadow: 0 0 15px rgba(138, 43, 226, 0.3);
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* --- NAVBAR GLASSMORPHISM --- */
+        /* --- NAVBAR --- */
         .navbar {
-            background: rgba(11, 14, 20, 0.7) !important;
+            background: rgba(11, 14, 20, 0.8) !important;
             backdrop-filter: blur(15px);
             border-bottom: 1px solid var(--glass-border);
             height: var(--nav-height);
-            transition: 0.3s;
+            z-index: 1030;
         }
-        .navbar-brand .logo-nav {
-            height: 40px;
-            filter: drop-shadow(0 0 5px rgba(255,255,255,0.2));
-        }
+        .logo-nav { height: 40px; filter: drop-shadow(0 0 5px rgba(138, 43, 226, 0.3)); }
+
         .nav-link {
             color: #8e9297 !important;
             font-weight: 600;
             font-size: 0.9rem;
-            padding: 0.5rem 1rem !important;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            display: flex; align-items: center; gap: 8px;
             transition: 0.3s;
         }
-        .nav-link i { font-size: 1.1rem; }
-        .nav-link:hover, .nav-link.active {
-            color: #fff !important;
-            text-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
-        }
+        .nav-link:hover, .nav-link.active { color: #fff !important; text-shadow: 0 0 10px var(--primary-glow); }
 
-        /* --- DROPDOWNS --- */
-        .dropdown-menu {
-            background: #161a2b !important;
-            border: 1px solid var(--glass-border) !important;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
-            border-radius: 16px;
-            padding: 8px;
-            margin-top: 10px;
-        }
-        .dropdown-item {
-            color: #8e9297 !important;
-            border-radius: 10px;
-            padding: 8px 15px;
-            font-weight: 500;
-            font-size: 0.85rem;
-        }
-        .dropdown-item:hover {
-            background: var(--primary-glow) !important;
-            color: #fff !important;
-        }
-
-        /* --- OFFCANVAS MOBILE --- */
+        /* --- OFFCANVAS (MENU MOBILE) --- */
         .offcanvas {
-            background: #0b0e14 !important;
+            background: rgba(11, 14, 20, 0.98) !important;
+            backdrop-filter: blur(20px);
             border-left: 1px solid var(--glass-border) !important;
-            width: 280px !important;
+            width: 300px !important;
+            z-index: 1050;
         }
-        .offcanvas-header { border-bottom: 1px solid var(--glass-border); }
+        .offcanvas-header { border-bottom: 1px solid var(--glass-border); padding: 20px; }
+        .offcanvas-title { font-weight: 700; letter-spacing: 1px; color: var(--primary-glow); }
+        .offcanvas-body { padding: 25px; }
 
-        /* --- FLASH MESSAGES --- */
-        .alert {
-            border-radius: 16px;
-            border: 1px solid transparent;
-            background: rgba(255, 255, 255, 0.03);
-            color: #fff;
-            backdrop-filter: blur(10px);
+        /* Style des liens dans le menu mobile */
+        .mobile-nav-group { margin-bottom: 25px; }
+        .mobile-nav-label {
+            font-size: 0.7rem; font-weight: 800; color: #4e5257;
+            text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; display: block;
         }
-        .alert-success { border-color: rgba(0, 255, 163, 0.2); background: rgba(0, 255, 163, 0.05); color: var(--success-glow); }
-        .alert-danger { border-color: rgba(255, 77, 77, 0.2); background: rgba(255, 77, 77, 0.05); color: var(--danger-glow); }
+        .mobile-nav-link {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 15px; color: #f8f9fa; text-decoration: none;
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            border-radius: 14px; margin-bottom: 8px; transition: 0.3s;
+        }
+        .mobile-nav-link:active { transform: scale(0.98); background: rgba(138, 43, 226, 0.1); border-color: var(--primary-glow); }
+        .mobile-nav-link i { color: var(--primary-glow); font-size: 1.2rem; }
 
-        /* --- CARD OVERLAY DETIALS --- */
+        /* --- OVERLAYS --- */
         .card-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(10px);
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.9); backdrop-filter: blur(10px);
+            z-index: 1100; opacity: 0; visibility: hidden; transition: 0.3s;
             display: flex; justify-content: center; align-items: center;
-            z-index: 10000;
-            opacity: 0; visibility: hidden;
-            transition: 0.3s;
         }
         .card-overlay.show { opacity: 1; visibility: visible; }
         .card-overlay-content {
-            background: #161a2b;
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            padding: 40px;
-            max-width: 500px;
-            width: 90%;
-            text-align: center;
-            transform: scale(0.9);
-            transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .card-overlay.show .card-overlay-content { transform: scale(1); }
-        .card-overlay-content h3 { font-weight: 700; color: var(--primary-glow); margin-bottom: 20px; }
-        .stat-value-large {
-            font-size: 3.5rem; font-weight: 800; display: block; margin-bottom: 15px;
-            background: linear-gradient(to right, #fff, #b3b3b3);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-        .card-overlay-close {
-            position: absolute; top: 20px; right: 20px;
-            background: none; border: none; color: #8e9297; font-size: 1.5rem;
+            background: #161a2b; border: 1px solid var(--glass-border);
+            border-radius: 24px; padding: 40px; width: 90%; max-width: 500px;
+            position: relative; text-align: center;
         }
 
-        /* Prevent scrolling when overlay open */
-        .offcanvas-open { overflow: hidden; }
-
-        /* --- INSTALL BANNER --- */
-        .install-promotion-banner {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 600px;
-            background: rgba(138, 43, 226, 0.2);
-            border: 1px solid var(--primary-glow);
-            backdrop-filter: blur(15px);
-            border-radius: 20px;
-            z-index: 1000;
-            padding: 15px 25px;
-            color: #fff;
-            animation: fadeInUp 0.5s ease-out;
-        }
-        @keyframes fadeInUp { from { opacity: 0; transform: translate(-50%, 30px); } to { opacity: 1; transform: translate(-50%, 0); } }
+        .alert { border-radius: 16px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: #fff; }
     </style>
 </head>
-<body>
+<body class="{% if current_user.is_authenticated %}auth-bg{% endif %}">
     <div id="loading-overlay" class="loading-overlay">
       <div class="spinner"></div>
     </div>
 
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container-fluid px-lg-4">
-           <a class="navbar-brand d-flex align-items-center" href="{{ url_for('dashboard') }}">
+           <a class="navbar-brand" href="{{ url_for('dashboard') }}">
                <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo-nav">
            </a>
 
             <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar">
-                <i class="bi bi-list fs-1 text-white"></i>
+                <i class="bi bi-grid-3x3-gap-fill fs-2 text-white"></i>
             </button>
 
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <ul class="navbar-nav me-auto">
                     {% if current_user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('dashboard') }}">
-                                <i class="bi bi-grid-1x2-fill"></i> Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('statistics') }}">
-                                <i class="bi bi-activity"></i> Stats
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('leaderboard') }}">
-                                <i class="bi bi-trophy"></i> Elite
-                            </a>
-                        </li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('statistics') }}"><i class="bi bi-graph-up"></i> Stats</a></li>
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownProducts" data-bs-toggle="dropdown">
-                                <i class="bi bi-box-seam"></i> Inventaire
-                            </a>
+                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Inventaire</a>
                             <ul class="dropdown-menu">
                                <li><a class="dropdown-item" href="{{ url_for('products') }}">Voir le stock</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('add_product') }}">Nouvel arrivage</a></li>
+                               <li><a class="dropdown-item" href="{{ url_for('add_product') }}">Ajouter un produit</a></li>
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownSales" data-bs-toggle="dropdown">
-                                <i class="bi bi-receipt"></i> Ventes
-                            </a>
+                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Ventes</a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{{ url_for('sales') }}">Historique</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('add_sale') }}">Nouvelle vente</a></li>
+                               <li><a class="dropdown-item" href="{{ url_for('sales') }}">Historique</a></li>
+                               <li><a class="dropdown-item" href="{{ url_for('add_sale') }}">Nouvelle vente</a></li>
                             </ul>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('wtb_wts_gen') }}">
-                                <i class="bi bi-stars"></i> Gen
-                            </a>
                         </li>
                     {% endif %}
                 </ul>
-
-                <ul class="navbar-nav ms-auto align-items-center">
-                    <li class="nav-item d-none d-lg-block">
-                        <button id="installButton" class="btn btn-outline-info btn-sm rounded-pill px-3 me-3 d-none">
-                            <i class="bi bi-download"></i> App
-                        </button>
-                    </li>
+                <ul class="navbar-nav ms-auto">
                     {% if current_user.is_authenticated %}
-                     <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle p-0" href="#" id="navbarDropdownUser" data-bs-toggle="dropdown">
-                                <div style="width: 38px; height: 38px; background: var(--primary-glow); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                                    {{ current_user.username[0] | upper }}
-                                </div>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="bi bi-person me-2"></i>{{ current_user.username }}</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right me-2"></i>Déconnexion</a></li>
-                            </ul>
-                        </li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}"><i class="bi bi-person-circle"></i> {{ current_user.username }}</a></li>
+                        <li class="nav-item"><a class="nav-link text-danger" href="{{ url_for('logout') }}"><i class="bi bi-power"></i></a></li>
                     {% else %}
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
-                        <li class="nav-item"><a class="btn btn-primary btn-sm rounded-pill px-3" href="{{ url_for('register') }}">Join Elite</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Connexion</a></li>
                     {% endif %}
                 </ul>
             </div>
         </div>
     </nav>
 
-    {# MOBILE MENU #}
     <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar">
       <div class="offcanvas-header">
-        <h5 class="offcanvas-title fw-bold text-white">Menu Elite</h5>
+        <h5 class="offcanvas-title">RESELL NOTION</h5>
         <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="offcanvas"></button>
       </div>
       <div class="offcanvas-body">
-        <ul class="navbar-nav flex-grow-1">
-          {% if current_user.is_authenticated %}
-              <li class="nav-item mb-2"><a class="nav-link" href="{{ url_for('dashboard') }}"><i class="bi bi-grid-1x2-fill me-2"></i>Dashboard</a></li>
-              <li class="nav-item mb-2"><a class="nav-link" href="{{ url_for('statistics') }}"><i class="bi bi-activity me-2"></i>Statistiques</a></li>
-              <li class="nav-item mb-2"><a class="nav-link" href="{{ url_for('leaderboard') }}"><i class="bi bi-trophy me-2"></i>Classement</a></li>
-              <li class="nav-item mb-2"><a class="nav-link" href="{{ url_for('products') }}"><i class="bi bi-box-seam me-2"></i>Mon Stock</a></li>
-              <li class="nav-item mb-2"><a class="nav-link" href="{{ url_for('sales') }}"><i class="bi bi-receipt me-2"></i>Mes Ventes</a></li>
+        {% if current_user.is_authenticated %}
+            <div class="mobile-nav-group">
+                <span class="mobile-nav-label">Général</span>
+                <a href="{{ url_for('dashboard') }}" class="mobile-nav-link"><i class="bi bi-house"></i> Dashboard</a>
+                <a href="{{ url_for('statistics') }}" class="mobile-nav-link"><i class="bi bi-activity"></i> Statistiques</a>
+            </div>
 
-              <li class="nav-item mt-4 pt-4 border-top border-secondary">
-                  <a class="nav-link text-white" href="{{ url_for('profile') }}">
-                      <i class="bi bi-person-circle me-2"></i>Mon Profil
-                  </a>
-              </li>
-              <li class="nav-item"><a class="nav-link text-danger" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right me-2"></i>Quitter</a></li>
-          {% else %}
-              <li class="nav-item mb-2"><a class="nav-link" href="{{ url_for('login') }}">Connexion</a></li>
-              <li class="nav-item"><a class="btn btn-primary w-100 py-3 rounded-4" href="{{ url_for('register') }}">S'inscrire</a></li>
-          {% endif %}
-        </ul>
+            <div class="mobile-nav-group">
+                <span class="mobile-nav-label">Inventaire</span>
+                <a href="{{ url_for('products') }}" class="mobile-nav-link"><i class="bi bi-box-seam"></i> Voir le stock</a>
+                <a href="{{ url_for('add_product') }}" class="mobile-nav-link" style="border-color: var(--primary-glow)"><i class="bi bi-plus-circle"></i> Ajouter un produit</a>
+            </div>
+
+            <div class="mobile-nav-group">
+                <span class="mobile-nav-label">Ventes</span>
+                <a href="{{ url_for('sales') }}" class="mobile-nav-link"><i class="bi bi-receipt"></i> Historique</a>
+                <a href="{{ url_for('add_sale') }}" class="mobile-nav-link" style="border-color: var(--success-glow)"><i class="bi bi-cart-check"></i> Nouvelle vente</a>
+            </div>
+
+            <div class="mt-5 pt-4 border-top border-secondary">
+                <a href="{{ url_for('profile') }}" class="mobile-nav-link"><i class="bi bi-person"></i> Profil</a>
+                <a href="{{ url_for('logout') }}" class="mobile-nav-link text-danger"><i class="bi bi-box-arrow-right"></i> Déconnexion</a>
+            </div>
+        {% else %}
+            <a href="{{ url_for('login') }}" class="btn btn-primary w-100 py-3 rounded-4">Se connecter</a>
+        {% endif %}
       </div>
     </div>
 
-    <div class="container-fluid px-lg-5">
+    <div class="container-fluid px-lg-5 mt-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="mt-4">
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} animate__animated animate__fadeInDown">{{ message }}</div>
-                    {% endfor %}
-                </div>
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} animate__animated animate__fadeIn">{{ message }}</div>
+                {% endfor %}
             {% endif %}
         {% endwith %}
-
-        <div class="mt-4">
-            {% block content %}{% endblock %}
-        </div>
-    </div>
-
-    <div id="installPromotion" class="install-promotion-banner d-none">
-        <div class="d-flex justify-content-between align-items-center">
-            <span class="small fw-600">Installez l'app pour une meilleure expérience Elite.</span>
-            <div class="d-flex gap-2">
-                <button id="installPromotionBtn" class="btn btn-primary btn-sm rounded-pill px-3">Installer</button>
-                <button id="closePromotionBtn" class="btn btn-link text-white text-decoration-none btn-sm">X</button>
-            </div>
-        </div>
+        {% block content %}{% endblock %}
     </div>
 
     <div class="card-overlay" id="cardDetailOverlay">
@@ -322,85 +212,21 @@
             <button class="card-overlay-close" id="cardOverlayCloseBtn"><i class="bi bi-x-lg"></i></button>
             <h3 id="overlayTitle">Détails</h3>
             <span class="stat-value-large" id="overlayValue"></span>
-            <p id="overlayDescription" class="text-muted"></p>
+            <p id="overlayDescription" class="text-muted small"></p>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Loading Screen
         window.addEventListener('load', () => {
             const overlay = document.getElementById('loading-overlay');
             if (overlay) overlay.classList.add('hidden');
         });
 
-        // PWA Installation
-        let deferredPrompt;
-        const installButton = document.getElementById('installButton');
-        const installPromotion = document.getElementById('installPromotion');
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            if (installButton) installButton.classList.remove('d-none');
-            if (installPromotion && localStorage.getItem('pwa_dismissed') !== 'true') {
-                installPromotion.classList.remove('d-none');
-            }
-        });
-
-        const handleInstall = () => {
-            if (!deferredPrompt) return;
-            deferredPrompt.prompt();
-            deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
-            if (installPromotion) installPromotion.classList.add('d-none');
-        };
-
-        if (installButton) installButton.addEventListener('click', handleInstall);
-        if (document.getElementById('installPromotionBtn')) document.getElementById('installPromotionBtn').addEventListener('click', handleInstall);
-        if (document.getElementById('closePromotionBtn')) {
-            document.getElementById('closePromotionBtn').addEventListener('click', () => {
-                installPromotion.classList.add('d-none');
-                localStorage.setItem('pwa_dismissed', 'true');
-            });
-        }
-
-        // Overlay Logic
         const overlay = document.getElementById('cardDetailOverlay');
-        const overlayTitle = document.getElementById('overlayTitle');
-        const overlayValue = document.getElementById('overlayValue');
-        const overlayDescription = document.getElementById('overlayDescription');
-
-        function openOverlay(title, value, description) {
-            overlayTitle.textContent = title;
-            overlayValue.innerHTML = value;
-            overlayDescription.textContent = description;
-            overlay.classList.add('show');
-            document.body.classList.add('offcanvas-open');
-        }
-
-        function closeOverlay() {
-            overlay.classList.remove('show');
-            document.body.classList.remove('offcanvas-open');
-        }
-
+        function closeOverlay() { overlay.classList.remove('show'); document.body.classList.remove('offcanvas-open'); }
         document.getElementById('cardOverlayCloseBtn').onclick = closeOverlay;
         overlay.onclick = (e) => { if (e.target === overlay) closeOverlay(); };
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeOverlay(); });
-
-        // Auto-assign overlay to stat blocks
-        document.querySelectorAll('.stat-block-v5').forEach(card => {
-            card.onclick = function() {
-                const title = this.querySelector('h5').textContent;
-                const value = this.querySelector('.stat-value').innerHTML;
-                let desc = "Analyse détaillée pour " + title;
-
-                if (title.includes("Ventes")) desc = "Nombre total de ventes enregistrées sur la période.";
-                else if (title.includes("CA")) desc = "Chiffre d'affaires brut généré.";
-                else if (title.includes("Bénéfice")) desc = "Gain net après déduction de tous les coûts.";
-
-                openOverlay(title, value, desc);
-            };
-        });
     </script>
 </body>
 </html>
