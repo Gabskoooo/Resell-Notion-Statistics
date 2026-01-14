@@ -7,8 +7,8 @@
 <style>
     /* Styles généraux de la page */
     body {
-        background-color: #1a1a2e; /* Fond sombre */
-        color: #e0e0e0; /* Texte clair */
+        background-color: #1a1a2e;
+        color: #e0e0e0;
     }
 
     .container-fluid {
@@ -17,26 +17,30 @@
     }
 
     h1, h5, h6, p, .text-muted {
-        color: #e0e0e0 !important; /* Force le texte en clair */
+        color: #e0e0e0 !important;
     }
 
-    a {
-        color: #8e9297; /* Liens gris par défaut */
+    /* KPI Summary Cards */
+    .kpi-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
     }
-
-    a:hover {
-        color: #ffffff; /* Liens blancs au survol */
-    }
+    .kpi-label { color: #848e9c; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+    .kpi-value { font-size: 1.5rem; font-weight: 700; color: #8a2be2; }
 
     /* Styles des cartes de produits */
     .product-card-item .card {
-        background-color: #2a2a4a; /* Fond de carte plus foncé */
+        background-color: #2a2a4a;
         border: none;
         border-radius: 12px;
-        overflow: hidden; /* Important pour l'image */
+        overflow: visible;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
-        height: 100%; /* Assure que toutes les cartes ont la même hauteur */
+        height: 100%;
+        position: relative;
     }
 
     .product-card-item .card:hover {
@@ -44,14 +48,83 @@
         box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
     }
 
+    /* Badge Âge du stock */
+    .age-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        color: #fff;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        z-index: 5;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* Menu Actions (...) */
+    .product-options-menu {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
+    }
+
+    .options-btn {
+        background: rgba(0, 0, 0, 0.3);
+        border: none;
+        color: #e0e0e0;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    .options-btn:hover { background: rgba(138, 43, 226, 0.5); }
+
+    .dropdown-menu-custom {
+        background-color: #1e1e36;
+        border: 1px solid #3a3a5a;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    }
+
+    .dropdown-menu-custom .dropdown-item {
+        color: #e0e0e0;
+        padding: 8px 16px;
+        font-size: 0.9rem;
+    }
+
+    .dropdown-menu-custom .dropdown-item:hover {
+        background-color: #3a3a5a;
+        color: #ffffff;
+    }
+
     .product-card-img {
         width: 100%;
-        height: 150px; /* Hauteur plus petite pour l'image */
-        object-fit: contain; /* L'image est entièrement visible et conserve son aspect */
-        background-color: #3a3a5a; /* Fond pour l'image si elle ne remplit pas */
+        height: 150px;
+        object-fit: contain;
+        background-color: #3a3a5a;
         border-top-left-radius: 12px;
         border-top-right-radius: 12px;
-        padding: 10px; /* Pour donner un peu d'espace autour de l'image si elle est petite */
+        padding: 10px;
+    }
+
+    .product-card-placeholder {
+        width: 100%;
+        height: 150px;
+        background-color: #3a3a5a;
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #5a5a7a;
+        font-size: 3rem;
     }
 
     .product-card-item .card-body {
@@ -63,9 +136,9 @@
     .product-card-item .card-title {
         font-size: 1.4rem;
         font-weight: bold;
-        color: #8a2be2 !important; /* Couleur violette pour le titre */
+        color: #8a2be2 !important;
         margin-bottom: 0.25rem;
-        flex-grow: 1; /* Permet au titre de prendre l'espace disponible */
+        flex-grow: 1;
     }
 
     .product-card-item .card-subtitle {
@@ -77,139 +150,45 @@
     .product-card-item .card-text {
         font-size: 1rem;
         color: #e0e0e0 !important;
-        margin-bottom: 0.25rem; /* Réduire l'espacement */
+        margin-bottom: 0.25rem;
     }
 
-    .product-card-item .card-text strong {
-        color: #e0e0e0 !important;
-    }
-
-    /* Styles des boutons d'action */
-    .product-actions-btn {
-        width: 100%;
-        margin-top: 10px;
-        border-radius: 8px; /* Bords légèrement arrondis */
-        font-weight: bold;
-    }
-
-    /* Couleurs spécifiques des boutons */
-    .btn-success {
-        background-color: #28a745; /* Vert */
-        border-color: #28a745;
-    }
-    .btn-success:hover {
-        background-color: #218838;
-        border-color: #1e7e34;
-    }
-
-    .btn-info {
-        background-color: #17a2b8; /* Bleu clair (pour Modifier) */
-        border-color: #17a2b8;
-        color: #fff;
-    }
-    .btn-info:hover {
-        background-color: #138496;
-        border-color: #117a8b;
-    }
-
-    .btn-danger {
-        background-color: #dc3545; /* Rouge */
-        border-color: #dc3545;
-    }
-    .btn-danger:hover {
-        background-color: #c82333;
-        border-color: #bd2130;
-    }
-
-    .btn-warning {
-        background-color: #ffc107; /* Jaune */
-        border-color: #ffc107;
-        color: #000;
-    }
-    .btn-warning:hover {
-        background-color: #e0a800;
-        border-color: #d39e00;
-        color: #000;
-    }
-
-    /* Réinitialisation de l'opacité et des animations si nécessaires pour l'affichage */
-    .product-card-item {
-        opacity: 1; /* S'assure que les cartes sont toujours visibles */
-    }
-    .animated-card {
-        opacity: 1; /* Désactive l'animation fadeIn si elle cause des problèmes */
-        animation: none !important; /* Supprime toute animation fadeIn */
-    }
-    .dashboard-section-fadein {
-        animation: none !important;
-    }
-
-    /* Ajustements pour la mise en page des informations et l'espacement */
-    .d-grid.gap-2.mt-auto {
-        margin-top: auto !important; /* Pousse les boutons vers le bas de la carte */
-    }
-
-    /* Styles pour la modal de cashback */
+    /* Modal Styles */
     .cashback-modal-overlay {
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+        top: 0; left: 0; width: 100%; height: 100%;
         background-color: rgba(0, 0, 0, 0.7);
-        display: none; /* Caché par défaut */
-        justify-content: center;
-        align-items: center;
-        z-index: 1050; /* Au-dessus des autres éléments */
+        display: none; justify-content: center; align-items: center; z-index: 1050;
     }
-
     .cashback-modal-content {
-        background-color: #2a2a4a;
-        padding: 25px;
-        border-radius: 12px;
-        width: 90%;
-        max-width: 400px;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-        color: #e0e0e0;
-        text-align: center;
-        position: relative; /* Nécessaire pour le bouton de fermeture */
+        background-color: #2a2a4a; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; color: #e0e0e0; text-align: center; position: relative;
     }
-
-    .cashback-modal-close {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background: transparent;
-        border: none;
-        font-size: 1.5rem;
-        color: #e0e0e0;
-        cursor: pointer;
-    }
-
-    .cashback-modal-content h4 {
-        color: #8a2be2;
-        margin-bottom: 20px;
-    }
-
-    .cashback-modal-content .form-control {
-        background-color: #3a3a5a;
-        border: 1px solid #5a5a7a;
-        color: #e0e0e0;
-    }
-
-    .cashback-modal-content .btn {
-        margin-top: 15px;
-    }
-
+    .cashback-modal-close { position: absolute; top: 10px; right: 10px; background: transparent; border: none; font-size: 1.5rem; color: #e0e0e0; cursor: pointer; }
 </style>
 
 <div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="text-white">Mes Produits</h1>
         <a href="{{ url_for('add_product') }}" class="btn btn-primary">Ajouter un produit</a>
     </div>
 
-    <div class="row mb-4 animate__animated animate__fadeInUp">
+    <div class="row g-3 mb-4 animate__animated animate__fadeIn">
+        <div class="col-6 col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-label">Stock Actuel</div>
+                <div class="kpi-value text-white">{{ products|length }} <span style="font-size: 0.9rem; opacity: 0.6;">items</span></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-label">Valeur d'Achat</div>
+                {% set total_purchase = products | sum(attribute='purchase_price') %}
+                <div class="kpi-value">{{ "%.2f"|format(total_purchase) }}€</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
         <div class="col-md-6 mb-3">
             <input type="text" id="searchInput" class="form-control" placeholder="Rechercher par nom ou SKU...">
         </div>
@@ -237,38 +216,41 @@
         {% for product in products %}
         <div class="col product-card-item" data-date="{{ product.date_added.strftime('%Y-%m-%d') }}" data-product-size="{{ product.size }}">
             <div class="card h-100">
-                {% if product.image_url %}
-                    <img src="{{ product.image_url }}" alt="{{ product.name }}" class="product-card-img">
-                {% else %}
-                    <img src="https://via.placeholder.com/200x150?text=No+Image" alt="No Image" class="product-card-img">
-                {% endif %}
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h5 class="card-title">{{ product.name | truncate(20, True, '...') }}</h5> {# Truncate pour éviter les débordements si le titre est long #}
-                        {# Le badge "Stock faible" est supprimé ici #}
-                    </div>
 
+                {% set age = (product.date_added.utcnow() - product.date_added).days %}
+                <div class="age-badge">
+                    <i class="bi bi-clock-history me-1"></i>{{ age if age >= 0 else 0 }}j
+                </div>
+
+                <div class="dropdown product-options-menu">
+                    <button class="options-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-custom">
+                        <li><a class="dropdown-item cashback-btn" href="#" data-product-id="{{ product.id }}"><i class="bi bi-coin me-2"></i>Cashback</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('add_sale', product_id=product.id) }}"><i class="bi bi-tag me-2"></i>Vendre</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('edit_product', id=product.id) }}"><i class="bi bi-pencil me-2"></i>Modifier</a></li>
+                        <li><hr class="dropdown-divider" style="border-color: rgba(255,255,255,0.1);"></li>
+                        <li>
+                            <form action="{{ url_for('delete_product', id=product.id) }}" method="post" onsubmit="return confirm('Êtes-vous sûr ?');">
+                                <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Supprimer</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+
+                {% if product.image_url %}
+                    <img src="{{ product.image_url }}" alt="{{ product.name }}" class="product-card-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="product-card-placeholder" style="display: none;"><i class="bi bi-box-seam"></i></div>
+                {% else %}
+                    <div class="product-card-placeholder"><i class="bi bi-box-seam"></i></div>
+                {% endif %}
+
+                <div class="card-body">
+                    <h5 class="card-title">{{ product.name | truncate(20, True, '...') }}</h5>
                     <p class="card-subtitle mb-1">SKU: {{ product.sku }}</p>
                     <p class="card-text mb-1">Taille: {{ product.size }}</p>
                     <p class="card-text mb-3">Prix d'achat: <strong>{{ "%.2f"|format(product.purchase_price) }}€</strong></p>
-                    {# La quantité est supprimée ici #}
-
-                    <div class="d-grid gap-2 mt-auto">
-                        <a href="#" class="btn btn-warning product-actions-btn cashback-btn" data-product-id="{{ product.id }}">
-                            <i class="bi bi-coin"></i> Cashback
-                        </a>
-                        <a href="{{ url_for('add_sale', product_id=product.id) }}" class="btn btn-success product-actions-btn">
-                            <i class="bi bi-tag"></i> Vendre
-                        </a>
-                        <a href="{{ url_for('edit_product', id=product.id) }}" class="btn btn-info product-actions-btn">
-                            <i class="bi bi-pencil"></i> Modifier
-                        </a>
-                        <form action="{{ url_for('delete_product', id=product.id) }}" method="post" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?');" style="display:inline;">
-                            <button type="submit" class="btn btn-danger product-actions-btn">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
-                    </div>
                 </div>
             </div>
         </div>
@@ -276,13 +258,12 @@
     </div>
     {% else %}
     <div class="text-center text-white mt-5">
-        <h3>Vous n'avez pas encore ajouté de produits.</h3>
-        <p>Commencez par <a href="{{ url_for('add_product') }}">ajouter votre premier produit</a>.</p>
+        <h3>Aucun produit en stock.</h3>
     </div>
     {% endif %}
 
     <div id="no-products-found" class="text-center text-muted mt-5" style="display: none;">
-        <h3>Aucun produit ne correspond à votre recherche.</h3>
+        <h3>Aucun résultat trouvé.</h3>
     </div>
 </div>
 
@@ -294,7 +275,7 @@
         <form id="cashbackForm">
             <input type="hidden" id="cashbackProductId" name="product_id">
             <div class="form-group mb-3">
-                <label for="cashbackAmount" class="form-label">Montant du Cashback (€)</label>
+                <label class="form-label">Montant du Cashback (€)</label>
                 <input type="number" id="cashbackAmount" name="amount" class="form-control" step="0.01" min="0" required>
             </div>
             <button type="submit" class="btn btn-primary w-100">Valider</button>
@@ -307,7 +288,6 @@
         const searchInput = document.getElementById('searchInput');
         const sizeFilter = document.getElementById('sizeFilter');
         const dateFilter = document.getElementById('dateFilter');
-        const productItems = document.querySelectorAll('.product-card-item');
         const noProductsFound = document.getElementById('no-products-found');
         const allProductCards = document.querySelectorAll('.product-card-item');
 
@@ -331,25 +311,12 @@
                     const today = new Date();
                     const dateAdded = new Date(productDate);
                     let filterDate = new Date();
-
                     switch(selectedDateFilter) {
-                        case 'last7days':
-                            filterDate.setDate(today.getDate() - 7);
-                            isDateMatch = dateAdded >= filterDate && dateAdded <= today;
-                            break;
-                        case 'last30days':
-                            filterDate.setDate(today.getDate() - 30);
-                            isDateMatch = dateAdded >= filterDate && dateAdded <= today;
-                            break;
-                        case 'thismonth':
-                            isDateMatch = dateAdded.getMonth() === today.getMonth() && dateAdded.getFullYear() === today.getFullYear();
-                            break;
-                        case 'thisyear':
-                            isDateMatch = dateAdded.getFullYear() === today.getFullYear();
-                            break;
+                        case 'last7days': filterDate.setDate(today.getDate() - 7); isDateMatch = dateAdded >= filterDate; break;
+                        case 'last30days': filterDate.setDate(today.getDate() - 30); isDateMatch = dateAdded >= filterDate; break;
+                        case 'thismonth': isDateMatch = dateAdded.getMonth() === today.getMonth(); break;
+                        case 'thisyear': isDateMatch = dateAdded.getFullYear() === today.getFullYear(); break;
                     }
-                } else if (selectedDateFilter !== 'all' && !dateAdded) {
-                    isDateMatch = false;
                 }
 
                 if (isSearchMatch && isSizeMatch && isDateMatch) {
@@ -359,95 +326,29 @@
                     cardItem.style.display = "none";
                 }
             });
-
-            if (found) {
-                noProductsFound.style.display = 'none';
-            } else {
-                noProductsFound.style.display = 'block';
-            }
+            noProductsFound.style.display = found ? 'none' : 'block';
         }
 
-        if (searchInput) {
-            searchInput.addEventListener('keyup', applyFilters);
-        }
-        if (sizeFilter) {
-            sizeFilter.addEventListener('change', applyFilters);
-        }
-        if (dateFilter) {
-            dateFilter.addEventListener('change', applyFilters);
-        }
-
-        applyFilters();
+        if (searchInput) searchInput.addEventListener('keyup', applyFilters);
+        if (sizeFilter) sizeFilter.addEventListener('change', applyFilters);
+        if (dateFilter) dateFilter.addEventListener('change', applyFilters);
     });
 
-    // Nouveau script pour le cashback
-    const cashbackButtons = document.querySelectorAll('.cashback-btn');
     const cashbackModal = document.getElementById('cashbackModal');
     const cashbackModalCloseBtn = document.querySelector('.cashback-modal-close');
     const cashbackForm = document.getElementById('cashbackForm');
-    const cashbackProductIdInput = document.getElementById('cashbackProductId');
-    const cashbackProductInfo = document.getElementById('cashbackProductInfo');
 
-    cashbackButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.cashback-btn')) {
             e.preventDefault();
-            const productId = this.getAttribute('data-product-id');
-            const card = this.closest('.product-card-item');
-            const productName = card.querySelector('.card-title').textContent.trim();
-
-            cashbackProductIdInput.value = productId;
-            cashbackProductInfo.textContent = `Produit: ${productName}`;
+            const btn = e.target.closest('.cashback-btn');
+            const card = btn.closest('.product-card-item');
+            document.getElementById('cashbackProductId').value = btn.getAttribute('data-product-id');
+            document.getElementById('cashbackProductInfo').textContent = `Produit: ${card.querySelector('.card-title').textContent.trim()}`;
             cashbackModal.style.display = 'flex';
-        });
-    });
-
-    cashbackModalCloseBtn.addEventListener('click', function() {
-        cashbackModal.style.display = 'none';
-        cashbackForm.reset();
-    });
-
-    window.addEventListener('click', function(e) {
-        if (e.target === cashbackModal) {
-            cashbackModal.style.display = 'none';
-            cashbackForm.reset();
         }
     });
 
-    cashbackForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        const productId = cashbackProductIdInput.value;
-        const amount = document.getElementById('cashbackAmount').value;
-
-        if (!productId || amount === "" || parseFloat(amount) <= 0) {
-            alert("Veuillez entrer un montant de cashback valide.");
-            return;
-        }
-
-        fetch(`/add_cashback/${productId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ amount: parseFloat(amount) })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert("Cashback ajouté avec succès!");
-                window.location.reload(); // Recharger la page pour voir la mise à jour
-            } else {
-                alert(`Erreur: ${data.message}`);
-            }
-            cashbackModal.style.display = 'none';
-            cashbackForm.reset();
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-            alert("Une erreur est survenue lors de l'ajout du cashback.");
-            cashbackModal.style.display = 'none';
-            cashbackForm.reset();
-        });
-    });
+    cashbackModalCloseBtn.addEventListener('click', () => cashbackModal.style.display = 'none');
 </script>
 {% endblock %}

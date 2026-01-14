@@ -1,327 +1,309 @@
 {# templates/dashboard.html #}
 {% extends 'base.html' %}
 
-{% block title %}Tableau de Bord{% endblock %}
+{% block title %}Tableau de Bord | ResellNotion{% endblock %}
 
 {% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --primary-glow: #8a2be2;
+        --success-glow: #00ffa3;
+        --danger-glow: #ff4d4d;
+        --pending-glow: #ffcc00;
+    }
 
     body {
-        background: radial-gradient(circle at 15% 15%, #2a2c4e, #1a1a2e);
-        color: #e0e0e0;
-        font-family: 'Poppins', sans-serif;
-        padding: 20px;
+        background: #0b0e14; /* Fond encore plus sombre et profond */
+        background-image:
+            radial-gradient(circle at 0% 0%, rgba(138, 43, 226, 0.1) 0%, transparent 35%),
+            radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.05) 0%, transparent 35%);
+        color: #f8f9fa;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        min-height: 100vh;
     }
 
-    /* Animations d'entrée sur la page */
-    @keyframes fadeInSlideUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .animated-item {
-        animation: fadeInSlideUp 0.6s ease-out forwards;
-        animation-delay: var(--animation-delay);
-        opacity: 0;
-    }
-
-    /* Effet de brillance pour les chiffres, réduit */
-    @keyframes glow-positive {
-        from { text-shadow: 0 0 2px #9cff9c; }
-        to { text-shadow: 0 0 8px #9cff9c; }
-    }
-    @keyframes glow-negative {
-        from { text-shadow: 0 0 2px #ff6666; }
-        to { text-shadow: 0 0 8px #ff6666; }
-    }
-    /* NOUVEAU: Effet de brillance pour les paiements en attente (Jaune) */
-    @keyframes glow-pending {
-        from { text-shadow: 0 0 2px #ffdd66; } /* Jaune clair */
-        to { text-shadow: 0 0 8px #ffdd66; }
-    }
-
-    /* Cartes de statistiques */
-    .stat-card {
+    /* --- HERO SECTION --- */
+    .dashboard-hero {
+        background: linear-gradient(135deg, rgba(138, 43, 226, 0.2), rgba(0, 0, 0, 0));
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 40px;
+        margin-bottom: 40px;
         backdrop-filter: blur(10px);
-        border-radius: 20px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        padding: 20px;
-        text-align: center;
         position: relative;
         overflow: hidden;
-        transition: transform 0.3s ease, box-shadow 0.3s ease, border 0.3s ease;
     }
-    .stat-card-positive {
-        background: rgba(40, 167, 69, 0.05); /* Vert succès semi-transparent */
-        border: 1px solid rgba(40, 167, 69, 0.2);
-    }
-    .stat-card-negative {
-        background: rgba(220, 53, 69, 0.05); /* Rouge semi-transparent */
-        border: 1px solid rgba(220, 53, 69, 0.2);
-    }
-    .stat-card:hover {
-        transform: translateY(-8px) scale(1.02);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-    }
-
-    .stat-card-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #b3b3b3;
-    }
-
-    .stat-value {
-        font-size: 2.8rem;
-        font-weight: 700;
-        margin-top: 10px;
-        color: #fff;
-    }
-    .stat-value-positive {
-        color: #9cff9c; /* Vert clair pour le chiffre */
-        animation: glow-positive 1.5s infinite alternate;
-    }
-    .stat-value-negative {
-        color: #ff6666; /* Rouge clair pour le chiffre */
-        animation: glow-negative 1.5s infinite alternate;
-    }
-    /* NOUVEAU: Style Jaune pour la valeur "Paiements en Attente" */
-    .stat-value-pending {
-        color: #ffdd66;
-        animation: glow-pending 1.5s infinite alternate;
-    }
-
-    .stat-description {
-        font-size: 0.8rem;
-        color: #999;
-        margin-top: 10px;
-        font-style: italic;
-    }
-
-    .stat-footer {
-        margin-top: 20px;
-    }
-
-    /* Boutons */
-    .btn-stat {
-        background: rgba(40, 167, 69, 0.8); /* Bouton vert par défaut */
-        border: none;
-        color: #fff;
-        padding: 10px 20px;
-        border-radius: 50px;
+    .hero-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 22px;
+        background: var(--primary-glow);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
         font-weight: bold;
-        transition: background 0.3s ease;
-    }
-    .btn-stat:hover {
-        background: #28a745;
-    }
-    .btn-stat-negative {
-        background: rgba(220, 53, 69, 0.8); /* Bouton rouge si la carte est négative */
-    }
-    .btn-stat-negative:hover {
-        background: #dc3545;
+        box-shadow: 0 0 20px rgba(138, 43, 226, 0.4);
+        border: 2px solid rgba(255,255,255,0.1);
     }
 
-    /* Cartes des dernières ventes */
-    .latest-sale-card {
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(5px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 15px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        height: 100%; /* Important pour que toutes les cartes aient la même hauteur */
-    }
-
-    .latest-sale-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-    }
-
-    .latest-sale-title {
-        font-size: 1.5rem;
+    /* --- QUICK ACTIONS --- */
+    .quick-action-btn {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        color: #fff;
+        padding: 12px 24px;
+        border-radius: 16px;
+        transition: 0.3s all cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 10px;
         font-weight: 600;
-        margin-bottom: 5px;
     }
-    .latest-sale-info {
-        font-size: 0.9rem;
-    }
-    .latest-sale-info strong {
-        color: #b3b3b3;
-        margin-right: 5px;
+    .quick-action-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-3px);
+        color: var(--primary-glow);
+        border-color: var(--primary-glow);
     }
 
-    .badge {
-        font-size: 0.9em;
-        padding: 5px 10px;
-        border-radius: 5px;
-    }
-
-    .bg-success { background-color: #28a745 !important; }
-    .bg-danger { background-color: #dc3545 !important; }
-    .bg-secondary { background-color: #6c757d !important; }
-
-    /* Barres de progression */
-    .profit-progress-bar-container {
-        height: 8px;
-        background-color: rgba(255, 255, 255, 0.1);
-        border-radius: 5px;
-        overflow: hidden;
-        margin-top: 10px;
-    }
-    .profit-progress-bar {
+    /* --- STAT CARDS --- */
+    .premium-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 24px;
+        transition: 0.4s all;
         height: 100%;
-        background-color: #4CAF50;
-        transition: width 0.5s ease-out;
+        position: relative;
+    }
+    .premium-card:hover {
+        border-color: rgba(255,255,255,0.2);
+        background: rgba(255, 255, 255, 0.05);
+        transform: scale(1.02);
+    }
+    .card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+    }
+    .stat-label {
+        color: #8e9297;
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .stat-numb {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin: 10px 0;
+        background: linear-gradient(to right, #fff, #b3b3b3);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
 
-    /* Responsive pour les cartes de statistiques (2x2 sur mobile) */
-    @media (max-width: 768px) {
-        .stat-card-container {
-            flex: 0 0 50%;
-            max-width: 50%;
-        }
-        .stat-value { font-size: 2rem; }
+    /* Glows spécifiques */
+    .glow-purple { color: var(--primary-glow); text-shadow: 0 0 15px rgba(138, 43, 226, 0.3); }
+    .glow-green { color: var(--success-glow); text-shadow: 0 0 15px rgba(0, 255, 163, 0.3); }
+    .glow-gold { color: var(--pending-glow); text-shadow: 0 0 15px rgba(255, 204, 0, 0.3); }
 
-        /* Réduire le contenu des cartes de vente sur mobile */
-        .latest-sale-card .card-body {
-            padding: 10px;
-        }
-        .latest-sale-title {
-            font-size: 0.9rem;
-        }
-        .latest-sale-info {
-            font-size: 0.7rem;
-            margin-bottom: 0.1rem;
-        }
-        .latest-sale-info strong {
-            display: none; /* Cache le label pour gagner de la place */
-        }
-        .latest-sale-info .badge {
-            font-size: 0.6rem;
-        }
-        .profit-progress-bar-container {
-            display: none; /* Cache la barre de progression sur mobile */
-        }
+    /* --- LATEST SALES GRID --- */
+    .sale-row-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        padding: 16px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        transition: 0.3s;
+    }
+    .sale-row-card:hover {
+        background: rgba(255,255,255,0.06);
+        border-color: var(--primary-glow);
+    }
+    .product-thumb {
+        width: 65px;
+        height: 65px;
+        background: #fff;
+        border-radius: 15px;
+        padding: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .product-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+    .profit-badge {
+        background: rgba(0, 255, 163, 0.1);
+        color: var(--success-glow);
+        padding: 6px 12px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        border: 1px solid rgba(0, 255, 163, 0.2);
+    }
+    .profit-badge.negative {
+        background: rgba(255, 77, 77, 0.1);
+        color: var(--danger-glow);
+        border-color: rgba(255, 77, 77, 0.2);
+    }
+
+    /* --- ANIMATIONS --- */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in { animation: fadeInUp 0.6s ease-out forwards; }
+
+    @media (max-width: 768px) {
+        .stat-numb { font-size: 1.5rem; }
+        .dashboard-hero { padding: 25px; }
+        .hero-avatar { width: 60px; height: 60px; }
     }
 </style>
 
-<div class="container-fluid py-4">
-    <div class="row">
-        <div class="col-12 text-center animated-item" style="--animation-delay: 0s;">
-            <h1 class="text-white fw-bold display-4">Bienvenue, {{ current_user.username }} !</h1>
-            <p class="text-white-50 lead">Votre tableau de bord en un coup d'œil.</p>
-        </div>
-    </div>
+<div class="container py-5">
 
-    <div class="row mt-5 g-2">
-        <div class="col-6 col-md-6 col-lg-3 mb-4 animated-item stat-card-container" style="--animation-delay: 0.2s;">
-            <div class="stat-card stat-card-positive">
-                <div class="stat-card-title">Valeur Totale du Stock</div>
-                <div class="stat-value stat-value-positive">{{ '%.2f'|format(total_stock_value) }}€</div>
-                <div class="stat-description d-none d-md-block">Coût total des articles en stock.</div>
-                <div class="stat-footer">
-                    <a href="{{ url_for('products') }}" class="btn btn-stat btn-sm">Voir les produits</a>
+    <div class="dashboard-hero animate-in" style="animation-delay: 0.1s;">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-4">
+            <div class="d-flex align-items-center gap-4">
+                <div class="hero-avatar">
+                    {{ current_user.username[0] | upper }}
+                </div>
+                <div>
+                    <h1 class="fw-bold mb-1">Salut, {{ current_user.username }} ! 👋</h1>
+                    <p class="text-white-50 mb-0">Ravi de vous revoir. Voici l'état de votre business sneaker.</p>
                 </div>
             </div>
-        </div>
-        <div class="col-6 col-md-6 col-lg-3 mb-4 animated-item stat-card-container" style="--animation-delay: 0.4s;">
-            <div class="stat-card {% if total_sales_profit >= 0 %}stat-card-positive{% else %}stat-card-negative{% endif %}">
-                <div class="stat-card-title">Bénéfice Total des Ventes</div>
-                <div class="stat-value {% if total_sales_profit >= 0 %}stat-value-positive{% else %}stat-value-negative{% endif %}">
-                    {% if total_sales_profit is not none %}
-                        {{ '%.2f'|format(total_sales_profit) }}€
-                    {% else %}
-                        0.00€
-                    {% endif %}
-                </div>
-                <div class="stat-description d-none d-md-block">Bénéfice net cumulé de vos ventes.</div>
-                <div class="stat-footer">
-                    <a href="{{ url_for('sales') }}" class="btn btn-stat btn-sm {% if total_sales_profit < 0 %}btn-stat-negative{% endif %}">Voir les ventes</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-6 col-lg-3 mb-4 animated-item stat-card-container" style="--animation-delay: 0.6s;">
-            <div class="stat-card stat-card-positive">
-                <div class="stat-card-title">Chiffre d'Affaires Total</div>
-                <div class="stat-value stat-value-positive">
-                    {% if total_revenue is not none %}
-                        {{ '%.2f'|format(total_revenue) }}€
-                    {% else %}
-                        0.00€
-                    {% endif %}
-                </div>
-                <div class="stat-description d-none d-md-block">Total des revenus bruts de vos ventes.</div>
-                <div class="stat-footer">
-                    <a href="{{ url_for('sales') }}" class="btn btn-stat btn-sm">Gérer les ventes</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-6 col-lg-3 mb-4 animated-item stat-card-container" style="--animation-delay: 0.8s;">
-            <div class="stat-card stat-card-positive"> <div class="stat-card-title">Paiements en Attente</div> <div class="stat-value stat-value-pending"> {% if total_pending_payments is not none %}
-                        {{ '%.2f'|format(total_pending_payments) }}€
-                    {% else %}
-                        0.00€
-                    {% endif %}
-                </div>
-                <div class="stat-description d-none d-md-block">Total des ventes dont le paiement est en attente.</div> <div class="stat-footer">
-                    <a href="{{ url_for('sales') }}" class="btn btn-stat btn-sm">Gérer les paiements</a> </div>
+            <div class="d-flex gap-3">
+                <a href="{{ url_for('add_product') }}" class="quick-action-btn">
+                    <i class="bi bi-plus-lg"></i> Ajouter un produit
+                </a>
+                <a href="{{ url_for('statistics') }}" class="quick-action-btn d-none d-md-flex">
+                    <i class="bi bi-graph-up"></i> Rapports
+                </a>
             </div>
         </div>
     </div>
 
-    <h2 class="mt-5 mb-4 text-white animated-item" style="--animation-delay: 1.0s;">Dernières Ventes</h2>
-    {% if latest_sales %}
-    <div class="row g-2 latest-sales-grid">
-        {% for sale in latest_sales %}
-        <div class="col-12 col-md-6 col-lg-4 animated-item" style="--animation-delay: {{ 1.2 + loop.index0 * 0.1 }}s;">
-            <div class="card latest-sale-card">
-                <div class="card-body d-flex flex-row justify-content-between align-items-center">
-                    <div class="flex-grow-1">
-                        <h5 class="latest-sale-title mb-1" style="font-size: 1.1rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                            {{ sale.item_name }}
-                        </h5>
-                        <p class="latest-sale-info mb-0"><strong>SKU:</strong> {{ sale.sku }}</p>
-                        <p class="latest-sale-info mb-0"><strong>Prix Vente:</strong> {{ sale.sale_price_formatted }}</p>
-                        <p class="latest-sale-info mb-1"><strong>Taille:</strong> {{ sale.size }}</p>
+    <div class="row g-4">
+        <div class="col-6 col-md-6 col-lg-3 animate-in" style="animation-delay: 0.2s;">
+            <div class="premium-card">
+                <div class="card-icon" style="background: rgba(138, 43, 226, 0.1); color: var(--primary-glow);">
+                    <i class="bi bi-box-seam"></i>
+                </div>
+                <div class="stat-label">Valeur du Stock</div>
+                <div class="stat-numb glow-purple">{{ '%.2f'|format(total_stock_value) }}€</div>
+                <div class="small text-muted mt-2"><i class="bi bi-info-circle me-1"></i>Capital total immobilisé</div>
+            </div>
+        </div>
 
-                        <div class="mt-2">
-                            <span class="badge {% if sale.profit > 0 %}bg-success{% elif sale.profit < 0 %}bg-danger{% else %}bg-secondary{% endif %}" style="padding: 6px 12px; font-size: 0.85rem;">
-                                Bénéfice: {{ sale.profit_formatted }}
-                            </span>
+        <div class="col-6 col-md-6 col-lg-3 animate-in" style="animation-delay: 0.3s;">
+            <div class="premium-card">
+                <div class="card-icon" style="background: rgba(0, 255, 163, 0.1); color: var(--success-glow);">
+                    <i class="bi bi-lightning-charge"></i>
+                </div>
+                <div class="stat-label">Profit (Mois)</div>
+                <div class="stat-numb glow-green">{{ '%.2f'|format(total_sales_profit) }}€</div>
+                <div class="small text-muted mt-2"><i class="bi bi-check2-circle me-1"></i>Bénéfice net réalisé</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-6 col-lg-3 animate-in" style="animation-delay: 0.4s;">
+            <div class="premium-card">
+                <div class="card-icon" style="background: rgba(255, 255, 255, 0.05); color: #fff;">
+                    <i class="bi bi-currency-euro"></i>
+                </div>
+                <div class="stat-label">C.A (Mois)</div>
+                <div class="stat-numb">{{ '%.2f'|format(total_revenue) }}€</div>
+                <div class="small text-muted mt-2"><i class="bi bi-arrow-up-right me-1"></i>Revenus bruts mensuels</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-6 col-lg-3 animate-in" style="animation-delay: 0.5s;">
+            <div class="premium-card">
+                <div class="card-icon" style="background: rgba(255, 204, 0, 0.1); color: var(--pending-glow);">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+                <div class="stat-label">En attente</div>
+                <div class="stat-numb glow-gold">{{ '%.2f'|format(total_pending_payments) }}€</div>
+                <div class="small text-muted mt-2"><i class="bi bi-clock me-1"></i>Paiements non validés</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-5 pt-3">
+        <div class="d-flex justify-content-between align-items-end mb-4 animate-in" style="animation-delay: 0.6s;">
+            <div>
+                <h3 class="fw-bold mb-1">Dernières Ventes</h3>
+                <p class="text-muted small mb-0">Vos mouvements les plus récents en un coup d'œil.</p>
+            </div>
+            <a href="{{ url_for('sales') }}" class="text-decoration-none fw-bold" style="color: var(--primary-glow);">Tout voir <i class="bi bi-arrow-right"></i></a>
+        </div>
+
+        {% if latest_sales %}
+            <div class="row">
+                {% for sale in latest_sales %}
+                <div class="col-12 col-lg-6 animate-in" style="animation-delay: {{ 0.7 + loop.index0 * 0.1 }}s;">
+                    <div class="sale-row-card">
+                        <div class="product-thumb">
+                            {% if sale.image_url %}
+                                <img src="{{ sale.image_url }}" alt="sneaker">
+                            {% else %}
+                                <i class="bi bi-box-seam text-dark" style="font-size: 1.5rem;"></i>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1 overflow-hidden">
+                            <h6 class="mb-1 text-truncate fw-bold">{{ sale.item_name }}</h6>
+                            <div class="d-flex gap-2 align-items-center">
+                                <span class="badge bg-dark border border-secondary" style="font-size: 0.7rem;">SKU: {{ sale.sku }}</span>
+                                <span class="badge bg-dark border border-secondary" style="font-size: 0.7rem;">Taille: {{ sale.size }}</span>
+                            </div>
+                            <div class="mt-1 d-md-none fw-bold text-primary">{{ sale.sale_price_formatted }}</div>
+                        </div>
+                        <div class="text-end d-none d-md-block">
+                            <div class="fw-bold mb-1" style="font-size: 1.1rem;">{{ sale.sale_price_formatted }}</div>
+                            <div class="profit-badge {% if sale.profit < 0 %}negative{% endif %}">
+                                {% if sale.profit >= 0 %}+{% endif %}{{ sale.profit_formatted }}
+                            </div>
+                        </div>
+                        <div class="d-md-none">
+                            <div class="profit-badge {% if sale.profit < 0 %}negative{% endif %}" style="font-size: 0.7rem;">
+                                {{ sale.profit_formatted }}
+                            </div>
                         </div>
                     </div>
-
-                    <div class="ms-2" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
-                        {% if sale.image_url %}
-                            <img src="{{ sale.image_url }}" alt="Sneaker" style="max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3));">
-                        {% else %}
-                            <i class="bi bi-box-seam text-muted" style="font-size: 2rem; opacity: 0.3;"></i>
-                        {% endif %}
-                    </div>
                 </div>
-
-                <div class="px-3 pb-2">
-                    {% set profit_percentage = (sale.profit / sale.sale_price) * 100 if sale.sale_price and sale.sale_price != 0 else 0 %}
-                    <div class="profit-progress-bar-container mt-1 d-none d-md-block" style="height: 4px;">
-                        <div class="profit-progress-bar" style="width: {{ profit_percentage if profit_percentage >= 0 else 0 }}%;"></div>
-                    </div>
-                    <div class="text-end mt-1">
-                        <small class="text-muted" style="font-size: 0.7rem;">{{ sale.sale_date }}</small>
-                    </div>
-                </div>
+                {% endfor %}
             </div>
-        </div>
-        {% endfor %}
+        {% else %}
+            <div class="premium-card text-center py-5 animate-in" style="animation-delay: 0.7s;">
+                <i class="bi bi-inbox text-muted" style="font-size: 3rem; opacity: 0.2;"></i>
+                <p class="text-white-50 mt-3">Aucune vente enregistrée pour le moment.</p>
+                <a href="{{ url_for('products') }}" class="btn btn-outline-primary btn-sm rounded-pill mt-2">Commencer à vendre</a>
+            </div>
+        {% endif %}
     </div>
-    {% else %}
-        <p class="text-white-50 mt-4 animated-item" style="--animation-delay: 1.2s;">Aucune vente enregistrée pour le moment.</p>
-    {% endif %}
+
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("Tableau de bord ResellNotion initialisé.");
+    });
+</script>
 {% endblock %}

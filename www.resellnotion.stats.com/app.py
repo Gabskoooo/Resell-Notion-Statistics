@@ -2,36 +2,27 @@ import os
 import decimal
 import psycopg2 # Importez psycopg2
 import psycopg2.extras # Pour RealDictCursor
-
 from urllib.parse import urlparse # Pour parser l'URL de la DB
-from datetime import datetime, timedelta
-from functools import wraps
-from flask_login import login_required, current_user
-from flask import Flask, render_template, request, url_for, flash, redirect, session, current_app, abort
+from flask import current_app, abort
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_bcrypt import Bcrypt
 from dotenv import load_dotenv
-import calendar
 import json
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, g # Importez jsonify ici
+from flask import Flask, request, redirect, url_for, flash, jsonify, g # Importez jsonify ici
 from functools import wraps # Importez wraps pour le décorateur
 from decimal import Decimal
 import matplotlib
 import matplotlib.dates as mdates # Assurez-vous d'avoir cet import
 matplotlib.use('Agg') # Important: Utilisez le backend 'Agg' pour la génération d'images non-interactives
 import matplotlib.pyplot as plt
-import io
 import base64
 from flask_mail import Mail, Message
 from datetime import datetime, date, timedelta
-import matplotlib.ticker as mticker
 from PIL import Image, ImageDraw, ImageFont
 import io
 import requests
 import time
 import datetime as dt
-from dateutil.relativedelta import relativedelta
-from discord_webhook import DiscordWebhook, DiscordEmbed
 from werkzeug.utils import secure_filename # Assurez-vous d'avoir cet import au début du fichier
 import uuid # Pour générer des noms de fichiers uniques
 load_dotenv()
@@ -1731,38 +1722,41 @@ def sale_success(sale_id):
         return f"Erreur interne : {e}"
     finally:
         if cur: cur.close()
+
+
 @app.route('/sales')
 @login_required
-
 def sales():
     conn = g.db
     cur = None
 
     try:
+        # Utilisation de RealDictCursor pour récupérer les résultats sous forme de dictionnaire
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-        # Requête SQL mise à jour pour inclure payment_status
+        # Requête optimisée : on récupère tout directement depuis la table 'sales'
+        # car elle contient déjà le SKU et la Taille au moment de la vente.
         cur.execute('''
             SELECT
-                s.id,
-                s.item_name,
-                s.quantity,
-                s.sale_price,
-                s.purchase_price_at_sale,
-                s.sale_date,
-                s.notes,
-                s.sale_channel,
-                s.shipping_cost,
-                s.fees,
-                s.profit,
-                COALESCE(s.payment_status, 'reçu') as payment_status,
-                p.sku,
-                p.size
-            FROM sales s
-            LEFT JOIN products p ON s.product_id = p.id
-            WHERE s.user_id = %s
-            ORDER BY s.sale_date DESC
+                id,
+                item_name,
+                quantity,
+                sale_price,
+                purchase_price_at_sale,
+                sale_date,
+                notes,
+                sale_channel,
+                shipping_cost,
+                fees,
+                profit,
+                COALESCE(payment_status, 'reçu') as payment_status,
+                sku,
+                size
+            FROM sales
+            WHERE user_id = %s
+            ORDER BY sale_date DESC
         ''', (current_user.id,))
+
         sales_data_raw = cur.fetchall()
         cur.close()
 
@@ -1770,26 +1764,25 @@ def sales():
         for sale in sales_data_raw:
             sale_dict = dict(sale)
 
+            # Gestion des valeurs par défaut si le SKU ou la Taille sont vides
             sale_dict['sku'] = sale['sku'] if sale['sku'] else 'N/A'
             sale_dict['size'] = sale['size'] if sale['size'] else 'N/A'
 
-            sale_dict['sale_price_formatted'] = '{:.2f} €'.format(sale_dict['sale_price'] or 0.0)
-            sale_dict['purchase_price_at_sale_formatted'] = '{:.2f} €'.format(
-                sale_dict['purchase_price_at_sale'] or 0.0)
-            sale_dict['shipping_cost_formatted'] = '{:.2f} €'.format(sale_dict['shipping_cost'] or 0.0)
-            sale_dict['fees_formatted'] = '{:.2f} €'.format(sale_dict['fees'] or 0.0)
-            sale_dict['profit_formatted'] = '{:.2f} €'.format(sale_dict['profit'] or 0.0)
+            # Formatage des montants pour l'affichage (optionnel car fait aussi en Jinja2)
+            sale_dict['sale_price_formatted'] = '{:.2f} €'.format(float(sale_dict['sale_price'] or 0.0))
+            sale_dict['profit_formatted'] = '{:.2f} €'.format(float(sale_dict['profit'] or 0.0))
 
             sales_for_template.append(sale_dict)
 
-        # Le jeton CSRF n'est plus transmis
-        return render_template('sales.html',
-                               sales=sales_for_template)
+        return render_template('sales.html', sales=sales_for_template)
 
     except Exception as e:
-        flash(f"Une erreur est survenue lors du chargement des ventes : {e}", 'danger')
-        print(f"Erreur ventes: {e}")
+        # Log de l'erreur précise dans la console pour le débogage
+        print(f"--- ERREUR CRITIQUE VENTES ---")
+        print(f"Détails : {e}")
+        flash(f"Erreur lors du chargement des ventes. Veuillez contacter l'administrateur.", 'danger')
         return redirect(url_for('dashboard'))
+
     finally:
         if cur and not cur.closed:
             cur.close()
@@ -2027,7 +2020,7 @@ def statistics():
     roi_avg = (total_profit / total_purchase_cost * 100) if total_purchase_cost > 0 else 0
     health_score = round((min(6, roi_avg / 5) if roi_avg > 0 else 0) + min(4, volume / 2), 1)
 
-    # 2. PAIEMENTS EN ATTENTE (Méthode adaptée)
+    # 2. PAIEMENTS EN ATTENTE
     cur.execute(
         "SELECT COALESCE(SUM(sale_price), 0) as total FROM sales WHERE user_id = %s AND payment_status = 'en_attente'",
         (current_user.id,))
@@ -2045,7 +2038,7 @@ def statistics():
     # 4. TRÉSORERIE ENTIÈRE
     total_base_cash = current_cash + valeur_achat_stock + pending_payments
 
-    # 5. PROJECTIONS
+    # 5. PROJECTIONS ET FLUX
     cur.execute("SELECT MIN(sale_date) as first_sale, SUM(sale_price) as total_ca_all FROM sales WHERE user_id = %s",
                 (current_user.id,))
     all_stats = cur.fetchone()
@@ -2059,7 +2052,29 @@ def statistics():
     proj_1m = total_base_cash + (net_flow_weekly * 4.3)
     proj_1y = total_base_cash + (net_flow_weekly * 52)
 
-    # 6. STOCK MANAGEMENT (Latent)
+    # 6. OBJECTIFS (N-1 ou Période précédente)
+    delta_year = dt.timedelta(days=365)
+    start_n1 = filter_start - delta_year
+    end_n1 = filter_end - delta_year
+
+    cur.execute(
+        "SELECT SUM(sale_price) as rev, SUM(profit) as prof FROM sales WHERE user_id = %s AND sale_date >= %s AND sale_date <= %s",
+        (current_user.id, start_n1, end_n1))
+    ref_data = cur.fetchone()
+
+    if not ref_data or not ref_data['rev']:
+        delta_period = filter_end - filter_start
+        start_prev = filter_start - delta_period
+        cur.execute(
+            "SELECT SUM(sale_price) as rev, SUM(profit) as prof FROM sales WHERE user_id = %s AND sale_date >= %s AND sale_date <= %s",
+            (current_user.id, start_prev, filter_start))
+        ref_data = cur.fetchone()
+
+    ref_rev = float(ref_data['rev'] or 0)
+    ref_prof = float(ref_data['prof'] or 0)
+    has_ref = ref_rev > 0
+
+    # 7. STOCK MANAGEMENT (Latent)
     cur.execute(
         "SELECT AVG((profit / NULLIF(purchase_price_at_sale, 0)) * 100) as avg_roi_all FROM sales WHERE user_id = %s",
         (current_user.id,))
@@ -2073,10 +2088,15 @@ def statistics():
     ages = [
         (today_date - (i['date_added'].date() if isinstance(i['date_added'], dt.datetime) else i['date_added'])).days
         for i in stock_items if i['date_added']]
-    stock_avg_age = sum(ages) / len(ages) if ages else 0
+    stock_avg_age = int(sum(ages) / len(ages)) if ages else 0
 
-    # Avis Expert Résumé
-    expert_txt = f"Analyse globale : Votre capital total (Cash + Stock + Attente) est de {int(total_base_cash)}€. Le stock représente {int((valeur_achat_stock / total_base_cash) * 100) if total_base_cash > 0 else 0}% de vos actifs. Vos projections à 30 jours indiquent une croissance vers {int(proj_1m)}€."
+    # 8. CONSEILS EXPERTS DIFFÉRENCIÉS
+    expert_proj = f"Analyse Flux : Avec un profit net hebdomadaire estimé à {int(net_flow_weekly)}€, votre capital devrait croître de {int(proj_1m - total_base_cash)}€ d'ici 30 jours."
+
+    if stock_avg_age > 30:
+        expert_stock = f"Alerte Rotation : L'âge moyen de votre stock est de {stock_avg_age} jours. Il serait judicieux de liquider les pièces les plus anciennes pour libérer {int(valeur_achat_stock)}€ de trésorerie."
+    else:
+        expert_stock = f"Santé Stock : Excellente rotation. Votre stock est récent, ce qui maximise vos chances de réaliser votre profit latent de {int(profit_latent)}€ rapidement."
 
     return render_template('statistics.html',
                            sales=sales, revenue=total_revenue, profit=total_profit,
@@ -2084,11 +2104,155 @@ def statistics():
                            stock_value=valeur_achat_stock, stock_qty=stock_qty,
                            period=period, start_date=start_str, end_date=end_str,
                            valeur_achat_stock=valeur_achat_stock, profit_latent=profit_latent,
-                           ca_latent=ca_latent, stock_avg_age=int(stock_avg_age),
-                           expert_txt=expert_txt, current_cash=current_cash,
-                           pending_payments=pending_payments,
+                           ca_latent=ca_latent, stock_avg_age=stock_avg_age,
+                           expert_proj=expert_proj, expert_stock=expert_stock,
+                           current_cash=current_cash, pending_payments=pending_payments,
                            total_base_cash=total_base_cash,
-                           proj_1w=proj_1w, proj_1m=proj_1m, proj_1y=proj_1y)
+                           proj_1w=proj_1w, proj_1m=proj_1m, proj_1y=proj_1y,
+                           ref_rev=ref_rev, ref_prof=ref_prof, has_ref=has_ref)
+
+
+@app.route('/download-report-pdf')
+@login_required
+def download_report_pdf():
+    from weasyprint import HTML
+    import datetime as dt
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    import io
+    import base64
+    from flask import make_response, render_template, request, g
+
+    conn = g.db
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    # Récupération des filtres depuis l'URL
+    period = request.args.get('period', 'month')
+    start_str = request.args.get('start_date')
+    end_str = request.args.get('end_date')
+    current_cash = float(request.args.get('current_cash', 0))
+
+    now_dt = dt.datetime.now()
+    today_date = now_dt.date()
+
+    # --- 1. Logique de filtrage de date ---
+    filter_start = dt.datetime.combine(today_date, dt.time.min)
+    filter_end = dt.datetime.combine(today_date, dt.time.max)
+
+    if period == 'day':
+        pass
+    elif period == 'week':
+        monday = today_date - dt.timedelta(days=today_date.weekday())
+        filter_start = dt.datetime.combine(monday, dt.time.min)
+        filter_end = dt.datetime.combine(monday + dt.timedelta(days=6), dt.time.max)
+    elif period == 'month':
+        first_day = today_date.replace(day=1)
+        filter_start = dt.datetime.combine(first_day, dt.time.min)
+        if today_date.month == 12:
+            last_day = dt.date(today_date.year + 1, 1, 1) - dt.timedelta(days=1)
+        else:
+            last_day = dt.date(today_date.year, today_date.month + 1, 1) - dt.timedelta(days=1)
+        filter_end = dt.datetime.combine(last_day, dt.time.max)
+    elif period == 'year':
+        filter_start = dt.datetime(today_date.year, 1, 1, 0, 0, 0)
+        filter_end = dt.datetime(today_date.year, 12, 31, 23, 59, 59)
+    elif period == 'custom' and start_str and end_str:
+        try:
+            filter_start = dt.datetime.strptime(start_str, '%Y-%m-%d')
+            filter_end = dt.datetime.strptime(end_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+        except:
+            period = 'month'
+
+    # --- 2. Récupération des Ventes & KPIs ---
+    cur.execute("SELECT * FROM sales WHERE user_id = %s AND sale_date >= %s AND sale_date <= %s ORDER BY sale_date ASC",
+                (current_user.id, filter_start, filter_end))
+    sales = cur.fetchall()
+
+    total_revenue = sum(float(s['sale_price'] or 0) for s in sales)
+    total_profit = sum(float(s['profit'] or 0) for s in sales)
+    total_purchase_cost = sum(float(s['purchase_price_at_sale'] or 0) for s in sales)
+    volume = len(sales)
+    roi_avg = (total_profit / total_purchase_cost * 100) if total_purchase_cost > 0 else 0
+    health_score = round((min(6, roi_avg / 5) if roi_avg > 0 else 0) + min(4, volume / 2), 1)
+
+    # --- 3. Trésorerie & Stock ---
+    cur.execute("SELECT COALESCE(SUM(sale_price), 0) as total FROM sales WHERE user_id = %s AND payment_status = 'en_attente'", (current_user.id,))
+    pending_payments = float(cur.fetchone()['total'] or 0)
+
+    cur.execute("SELECT SUM(purchase_price) as total_val, SUM(quantity) as total_qty FROM products WHERE user_id = %s AND quantity = 1", (current_user.id,))
+    stock_info = cur.fetchone()
+    valeur_achat_stock = float(stock_info['total_val'] or 0)
+    stock_qty = stock_info['total_qty'] or 0
+    total_base_cash = current_cash + valeur_achat_stock + pending_payments
+
+    # --- 4. Projections & Flux ---
+    cur.execute("SELECT MIN(sale_date) as first_sale, SUM(sale_price) as total_ca_all FROM sales WHERE user_id = %s", (current_user.id,))
+    all_stats = cur.fetchone()
+    first_date = (all_stats['first_sale'].date() if isinstance(all_stats['first_sale'], dt.datetime) else all_stats['first_sale']) if all_stats['first_sale'] else today_date
+    weeks_active = max(1, (today_date - first_date).days / 7)
+    avg_ca_weekly = float(all_stats['total_ca_all'] or 0) / weeks_active
+    net_flow_weekly = avg_ca_weekly * 0.25
+    proj_1w, proj_1m, proj_1y = total_base_cash + net_flow_weekly, total_base_cash + (net_flow_weekly * 4.3), total_base_cash + (net_flow_weekly * 52)
+
+    # --- 5. Stock Management (Latent) ---
+    cur.execute("SELECT AVG((profit / NULLIF(purchase_price_at_sale, 0)) * 100) as avg_roi_all FROM sales WHERE user_id = %s", (current_user.id,))
+    avg_roi_all_time = float(cur.fetchone()['avg_roi_all'] or 20.0)
+    profit_latent = valeur_achat_stock * (avg_roi_all_time / 100)
+    ca_latent = valeur_achat_stock + profit_latent
+
+    cur.execute("SELECT date_added FROM products WHERE user_id = %s AND quantity = 1", (current_user.id,))
+    stock_items = cur.fetchall()
+    ages = [(today_date - (i['date_added'].date() if isinstance(i['date_added'], dt.datetime) else i['date_added'])).days for i in stock_items if i['date_added']]
+    stock_avg_age = int(sum(ages) / len(ages)) if ages else 0
+
+    # --- 6. Objectifs (Calcul de référence) ---
+    delta_year = dt.timedelta(days=365)
+    cur.execute("SELECT SUM(sale_price) as rev, SUM(profit) as prof FROM sales WHERE user_id = %s AND sale_date >= %s AND sale_date <= %s",
+                (current_user.id, filter_start - delta_year, filter_end - delta_year))
+    ref_data = cur.fetchone()
+    ref_rev = float(ref_data['rev'] or 0)
+    ref_prof = float(ref_data['prof'] or 0)
+
+    # --- 7. Graphique (Matplotlib) ---
+    chart_url = None
+    if sales:
+        plt.figure(figsize=(10, 4))
+        plt.style.use('dark_background')
+        dates_chart = [s['sale_date'].strftime('%d/%m') for s in sales]
+        revs_chart = [float(s['sale_price']) for s in sales]
+        plt.plot(dates_chart, revs_chart, color='#007bff', linewidth=3, marker='o')
+        plt.fill_between(dates_chart, revs_chart, alpha=0.2, color='#007bff')
+        plt.axis('off') # Pour un look épuré
+        img = io.BytesIO()
+        plt.savefig(img, format='png', bbox_inches='tight', transparent=True)
+        img.seek(0)
+        chart_url = base64.b64encode(img.getvalue()).decode()
+        plt.close()
+
+    # --- 8. Conseils Experts ---
+    expert_proj = f"Analyse Flux : Profit net hebdomadaire estimé à {int(net_flow_weekly)}€. Capital cible à 30j : {int(proj_1m)}€."
+    expert_stock = f"Rotation : Age moyen {stock_avg_age}j. Potentiel latent de {int(profit_latent)}€."
+
+    # --- GÉNÉRATION DU PDF ---
+    rendered = render_template('pdf_report_template.html',
+                               today_date=today_date.strftime('%d/%m/%Y'),
+                               sales=sales, revenue=total_revenue, profit=total_profit,
+                               volume=volume, roi_avg=roi_avg, health_score=health_score,
+                               stock_value=valeur_achat_stock, stock_qty=stock_qty,
+                               period=period, profit_latent=profit_latent,
+                               ca_latent=ca_latent, stock_avg_age=stock_avg_age,
+                               expert_proj=expert_proj, expert_stock=expert_stock,
+                               current_cash=current_cash, pending_payments=pending_payments,
+                               total_base_cash=total_base_cash,
+                               proj_1w=proj_1w, proj_1m=proj_1m, proj_1y=proj_1y,
+                               ref_rev=ref_rev, ref_prof=ref_prof, chart_url=chart_url)
+
+    pdf_file = HTML(string=rendered).write_pdf()
+    response = make_response(pdf_file)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=Rapport_{period}_{today_date}.pdf'
+    return response
 @app.route('/sales/<int:id>/delete', methods=('POST',))
 @login_required
 

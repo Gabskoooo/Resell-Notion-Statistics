@@ -1,155 +1,195 @@
 {% extends 'base.html' %}
 
-{% block title %}Historique des Ventes{% endblock %}
+{% block title %}Historique des Ventes | ResellNotion{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1 class="text-white dashboard-section-fadein dashboard-card-delay-1">Historique des Ventes</h1>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flashes mb-4 dashboard-section-fadein dashboard-card-delay-2">
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --primary-glow: #8a2be2;
+        --success-glow: #00ffa3;
+        --danger-glow: #ff4d4d;
+        --warning-glow: #ffcc00;
+    }
 
-    <div class="row g-4 mb-5">
-        <div class="col-md-4 dashboard-section-fadein dashboard-card-delay-3">
-            <div class="stats-card">
-                <div class="d-flex align-items-center">
-                    <i class="bi bi-graph-up-arrow stats-icon me-3"></i>
-                    <div>
-                        <small class="text-uppercase text-muted">Ventes Totales</small>
-                        <h4 class="stats-value mb-0" id="total-sales-count">0</h4>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 dashboard-section-fadein dashboard-card-delay-4">
-            <div class="stats-card">
-                <div class="d-flex align-items-center">
-                    <i class="bi bi-coin stats-icon me-3"></i>
-                    <div>
-                        <small class="text-uppercase text-muted">Chiffre d'affaires</small>
-                        <h4 class="stats-value mb-0" id="total-revenue">0,00 €</h4>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 dashboard-section-fadein dashboard-card-delay-5">
-            <div class="stats-card">
-                <div class="d-flex align-items-center">
-                    <i class="bi bi-cash-stack stats-icon me-3"></i>
-                    <div>
-                        <small class="text-uppercase text-muted">Bénéfice Net</small>
-                        <h4 class="stats-value mb-0" id="total-profit">0,00 €</h4>
-                    </div>
-                </div>
-            </div>
-        </div>
+    body {
+        background: #0b0e14;
+        background-image:
+            radial-gradient(circle at 0% 0%, rgba(138, 43, 226, 0.1) 0%, transparent 35%),
+            radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.05) 0%, transparent 35%);
+        color: #f8f9fa;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        min-height: 100vh;
+    }
+
+    .premium-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 24px;
+        backdrop-filter: blur(10px);
+    }
+    .stat-label { color: #8e9297; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+    .stat-numb { font-size: 2rem; font-weight: 700; margin-top: 5px; color: #fff; }
+    .text-glow-purple { color: #fff; text-shadow: 0 0 15px rgba(138, 43, 226, 0.4); }
+    .text-glow-green { color: var(--success-glow); text-shadow: 0 0 15px rgba(0, 255, 163, 0.3); }
+
+    .filter-input {
+        background: var(--glass-bg) !important;
+        border: 1px solid var(--glass-border) !important;
+        color: #fff !important;
+        border-radius: 12px !important;
+    }
+
+    /* --- CARDS DESIGN --- */
+    .sale-card {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 24px;
+        padding: 20px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        height: 100%;
+        backdrop-filter: blur(10px);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .sale-card:hover {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(138, 43, 226, 0.3);
+        transform: translateY(-4px);
+    }
+    .selected-sale-card {
+        border-color: var(--primary-glow) !important;
+        background: rgba(138, 43, 226, 0.08) !important;
+    }
+
+    .card-header-flex { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+    .sale-title { font-size: 0.95rem; font-weight: 700; color: #fff; line-height: 1.3; flex: 1; }
+
+    .card-meta { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+    .meta-item { font-size: 0.75rem; color: #8e9297; display: flex; align-items: center; font-weight: 500; }
+    .meta-item i { margin-right: 8px; width: 14px; text-align: center; opacity: 0.7; }
+
+    .card-footer-flex { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+    .sale-price-large { font-size: 1.3rem; font-weight: 800; color: #fff; }
+
+    .status-badge { padding: 5px 12px; border-radius: 30px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+    .status-reçu { background: rgba(0, 255, 163, 0.15); color: #00ffa3; }
+    .status-attente { background: rgba(255, 204, 0, 0.15); color: #ffcc00; }
+
+    .profit-pill { padding: 6px 14px; border-radius: 30px; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; }
+    .profit-pos { background: rgba(0, 255, 163, 0.1); color: var(--success-glow); }
+    .profit-neg { background: rgba(255, 77, 77, 0.1); color: var(--danger-glow); }
+
+    #actionPanel {
+        position: fixed; top: 0; right: -450px; width: 400px; height: 100vh;
+        background: rgba(22, 26, 43, 0.98); backdrop-filter: blur(20px);
+        border-left: 1px solid var(--glass-border); padding: 30px; z-index: 1050;
+        transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #actionPanel.show { right: 0; }
+
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-in { animation: fadeInUp 0.6s ease-out forwards; }
+</style>
+
+<div class="container py-5">
+    <div class="mb-5 animate-in">
+        <h1 class="text-white fw-bold">📉 Historique des Ventes</h1>
+        <p class="text-muted">Suivez vos performances en temps réel.</p>
     </div>
 
-    <div class="filter-bar mb-5 dashboard-section-fadein dashboard-card-delay-6">
+    <div class="row g-4 mb-5 animate-in" style="animation-delay: 0.1s">
+        <div class="col-md-4"><div class="premium-card"><div class="stat-label">Ventes</div><div class="stat-numb" id="total-sales-count">0</div></div></div>
+        <div class="col-md-4"><div class="premium-card"><div class="stat-label">CA</div><div class="stat-numb text-glow-purple" id="total-revenue">0,00 €</div></div></div>
+        <div class="col-md-4"><div class="premium-card"><div class="stat-label">Bénéfice</div><div class="stat-numb text-glow-green" id="total-profit">0,00 €</div></div></div>
+    </div>
+
+    <div class="premium-card mb-5 animate-in" style="animation-delay: 0.2s; padding: 15px;">
         <div class="row g-3">
+            <div class="col-md-4"><input type="text" id="salesSearch" class="form-control filter-input" placeholder="Recherche..."></div>
             <div class="col-md-4">
-                <input type="text" id="salesSearch" class="form-control" placeholder="Rechercher par nom ou SKU...">
-            </div>
-            <div class="col-md-4">
-                <select id="periodFilter" class="form-select">
-                    <option value="all">Toutes les ventes</option>
+                <select id="periodFilter" class="form-select filter-input">
+                    <option value="all">Toutes les périodes</option>
                     <option value="today">Aujourd'hui</option>
                     <option value="this_week">Cette semaine</option>
                     <option value="this_month">Ce mois-ci</option>
-                    <option value="this_year">Cette année</option>
-                    <option value="last_week">Dernière semaine</option>
-                    <option value="last_month">Dernier mois</option>
                 </select>
             </div>
             <div class="col-md-4">
-                <select id="paymentStatusFilter" class="form-select">
-                    <option value="all">Statut Paiement (Tous)</option>
-                    <option value="reçu">Paiement Reçu</option>
-                    <option value="en_attente">Paiement en Attente</option>
+                <select id="paymentStatusFilter" class="form-select filter-input">
+                    <option value="all">Tous les statuts</option>
+                    <option value="reçu">Reçu</option>
+                    <option value="en_attente">Attente</option>
                 </select>
             </div>
         </div>
     </div>
 
     {% if sales %}
-    <div class="sales-list-grid" id="salesGrid">
+    <div class="row g-3" id="salesGrid">
         {% for sale in sales %}
-        <div class="sale-card dashboard-section-fadein animated-card"
+        <div class="col-6 col-lg-3 animate-in"
+             style="animation-delay: {{ 0.3 + loop.index0 * 0.05 }}s;"
              data-sale-id="{{ sale.id }}"
              data-sale-name="{{ sale.item_name }}"
              data-sale-sku="{{ sale.sku | lower }}"
              data-sale-date="{{ sale.sale_date.strftime('%Y-%m-%d') }}"
              data-sale-price="{{ sale.sale_price }}"
-             data-purchase-price="{{ sale.purchase_price_at_sale }}"
-             data-shipping-cost="{{ sale.shipping_cost }}"
-             data-fees="{{ sale.fees }}"
              data-profit="{{ sale.profit }}"
-             data-payment-status="{{ sale.payment_status }}"
-             data-delete-url="{{ url_for('delete_sale', id=sale.id) }}"
-             data-edit-url="{{ url_for('edit_sale', id=sale.id) }}">
-            <div class="sale-card-body">
-                <div class="card-sale-row d-flex flex-column">
-                    <h5 class="card-title">{{ sale.item_name }}</h5>
-                    <p class="card-text mb-1 sale-info-item"><strong>SKU:</strong> {{ sale.sku }}</p>
+             data-payment-status="{{ sale.payment_status }}">
 
-                    <span class="badge mb-2 payment-status-badge {% if sale.payment_status == 'reçu' %}bg-success{% elif sale.payment_status == 'en_attente' %}bg-warning text-dark{% endif %}"
-                          data-sale-id="{{ sale.id }}">
-                        {% if sale.payment_status == 'reçu' %}Paiement Reçu{% else %}Paiement en Attente{% endif %}
-                    </span>
-
-                    <div class="mt-auto pt-2">
-                        <span class="sale-price">{{ "%.2f"|format(sale.sale_price) }} €</span>
-                        <span class="badge {% if sale.profit > 0 %}bg-success{% elif sale.profit < 0 %}bg-danger{% else %}bg-secondary{% endif %} ms-2">
-                            {{ "%.2f"|format(sale.profit) }} €
+            <div class="sale-card">
+                <div>
+                    <div class="card-header-flex">
+                        <h6 class="sale-title text-truncate" title="{{ sale.item_name }}">{{ sale.item_name }}</h6>
+                        <span class="status-badge {% if sale.payment_status == 'reçu' %}status-reçu{% else %}status-attente{% endif %}">
+                            {{ 'Reçu' if sale.payment_status == 'reçu' else 'Attente' }}
                         </span>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item"><i class="bi bi-upc-scan"></i><span>{{ sale.sku }}</span></div>
+                        <div class="meta-item"><i class="bi bi-rulers"></i><span>Taille: {{ sale.size }}</span></div>
+                        <div class="meta-item"><i class="bi bi-calendar2-event"></i><span>{{ sale.sale_date.strftime('%d %b %Y') }}</span></div>
+                    </div>
+                </div>
+
+                <div class="card-footer-flex">
+                    <div class="sale-price-large">{{ "%.2f"|format(sale.sale_price) }} €</div>
+                    <div class="profit-pill {% if sale.profit >= 0 %}profit-pos{% else %}profit-neg{% endif %}">
+                        <i class="bi bi-graph-up-arrow me-2" style="font-size: 0.7rem;"></i>{{ "%.2f"|format(sale.profit) }} €
                     </div>
                 </div>
             </div>
         </div>
         {% endfor %}
     </div>
-    <div id="no-sales-message" class="text-center text-white mt-5" style="display: none;">
-        <h3>Aucune vente ne correspond à vos filtres.</h3>
-        <p>Essayez d'ajuster votre recherche ou vos filtres temporels.</p>
-    </div>
-    {% else %}
-    <div class="no-sales-message text-center text-white dashboard-section-fadein dashboard-card-delay-3">
-        <h3>Aucune vente enregistrée pour le moment.</h3>
-        <p>Commencez à enregistrer vos ventes pour voir apparaître votre historique.</p>
-        <a href="{{ url_for('add_sale') }}" class="btn btn-primary mt-3">Enregistrer une vente</a>
-    </div>
     {% endif %}
 
-    <div id="actionPanel" class="text-white">
-        <button id="hideActionPanelBtn" class="btn btn-dark float-end mb-3"><i class="bi bi-x-lg"></i></button>
-        <h4 id="selected-sale-name-display" class="mb-2"></h4>
-        <small class="text-muted" id="current-status-display"></small>
-
-        <hr class="my-3 text-white-50">
-
-        <p class="mb-2 fw-bold">Modifier le statut de paiement :</p>
-        <div class="d-grid gap-2 mb-3">
-            <button type="button" class="btn btn-success btn-lg action-status-btn" data-new-status="reçu" id="setReceivedBtn">
-                <i class="bi bi-check-circle-fill me-2"></i>Marquer comme Reçu
-            </button>
-            <button type="button" class="btn btn-warning text-dark btn-lg action-status-btn" data-new-status="en_attente" id="setPendingBtn">
-                <i class="bi bi-clock-fill me-2"></i>Marquer comme En Attente
-            </button>
+    <div id="actionPanel">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="text-white fw-bold mb-0">Détails</h4>
+            <button id="hideActionPanelBtn" class="btn btn-link text-muted p-0"><i class="bi bi-x-lg fs-5"></i></button>
         </div>
-
-        <hr class="my-3 text-white-50">
-
+        <div class="premium-card mb-4" style="background: rgba(255,255,255,0.02)">
+            <h5 id="selected-sale-name-display" class="text-primary fw-bold mb-2"></h5>
+            <div id="current-status-display"></div>
+        </div>
+        <div class="d-grid gap-2 mb-4">
+            <button type="button" class="btn btn-success py-3" id="setReceivedBtn">Marquer comme Reçu</button>
+            <button type="button" class="btn btn-warning py-3 text-dark" id="setPendingBtn">Mettre en attente</button>
+        </div>
         <div class="d-grid gap-2">
-            <a id="editSaleLink" href="#" class="btn btn-info btn-lg"><i class="bi bi-pencil-fill me-2"></i>Modifier Détails</a>
-            <form id="deleteSaleForm" method="post" action="#">
-                <button type="submit" class="btn btn-danger btn-lg w-100" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette vente ?');"><i class="bi bi-trash-fill me-2"></i>Supprimer la Vente</button>
+            <a id="editSaleLink" href="#" class="btn btn-outline-info py-2">Modifier</a>
+            <form id="deleteSaleForm" method="post">
+                <button type="submit" class="btn btn-outline-danger w-100 py-2" onclick="return confirm('Supprimer ?');">Supprimer</button>
             </form>
         </div>
     </div>
@@ -160,225 +200,49 @@
         const salesSearchInput = document.getElementById('salesSearch');
         const periodFilterSelect = document.getElementById('periodFilter');
         const paymentStatusFilterSelect = document.getElementById('paymentStatusFilter');
-        const salesGrid = document.getElementById('salesGrid');
-        const salesCards = salesGrid ? salesGrid.querySelectorAll('.sale-card') : [];
-        const noSalesMessage = document.getElementById('no-sales-message');
-
+        const allCards = document.querySelectorAll('[data-sale-id]');
         const actionPanel = document.getElementById('actionPanel');
         const hideActionPanelBtn = document.getElementById('hideActionPanelBtn');
-        const selectedSaleNameDisplay = document.getElementById('selected-sale-name-display');
-        const editSaleLink = document.getElementById('editSaleLink');
-        const deleteSaleForm = document.getElementById('deleteSaleForm');
-
-        const currentStatusDisplay = document.getElementById('current-status-display');
-        const setReceivedBtn = document.getElementById('setReceivedBtn');
-        const setPendingBtn = document.getElementById('setPendingBtn');
         const baseUrl = "{{ url_for('sales') }}";
 
-        // Le jeton CSRF n'est plus géré ici.
+        let currentSaleId = null, currentSaleCard = null;
 
-        let currentSaleId = null;
-        let currentSaleCard = null;
-
-        const formatCurrency = (value) => {
-            return parseFloat(value).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
-        };
-
-        function updateCardDisplay(card, newStatus) {
-            const badge = card.querySelector('.payment-status-badge');
-
-            card.dataset.paymentStatus = newStatus;
-
-            if (newStatus === 'reçu') {
-                badge.textContent = 'Paiement Reçu';
-                badge.classList.remove('bg-warning', 'text-dark');
-                badge.classList.add('bg-success');
-            } else {
-                badge.textContent = 'Paiement en Attente';
-                badge.classList.remove('bg-success');
-                badge.classList.add('bg-warning', 'text-dark');
-            }
-
-            updateActionPanelStatus(newStatus);
-            applyFilters();
-        }
-
-        function updateActionPanelStatus(status) {
-            if (status === 'reçu') {
-                currentStatusDisplay.innerHTML = 'Statut actuel: <span class="badge bg-success">Paiement Reçu</span>';
-                setReceivedBtn.disabled = true;
-                setPendingBtn.disabled = false;
-            } else {
-                currentStatusDisplay.innerHTML = 'Statut actuel: <span class="badge bg-warning text-dark">Paiement en Attente</span>';
-                setReceivedBtn.disabled = false;
-                setPendingBtn.disabled = true;
-            }
-        }
-
-        // FONCTION DE MISE À JOUR AJAX : Simplifiée
-        async function updatePaymentStatus(saleId, newStatus) {
-            try {
-                const response = await fetch(`${baseUrl}/${saleId}/update_status`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        // L'en-tête CSRF a été supprimé
-                    },
-                    body: JSON.stringify({ status: newStatus })
-                });
-
-                if (!response.ok) {
-                    console.error('Erreur HTTP:', response.status, response.statusText);
-                    const errorBody = await response.text();
-                    alert(`Échec de la mise à jour (Code ${response.status}). Le serveur a refusé la requête. Détail : ${errorBody.substring(0, 100)}...`);
-                    return;
-                }
-
-                const data = await response.json();
-
-                if (data.success) {
-                    if (currentSaleCard) {
-                        updateCardDisplay(currentSaleCard, data.new_status);
-                    }
-                    actionPanel.classList.remove('show');
-                } else {
-                    alert('Erreur de mise à jour: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Erreur Fetch:', error);
-                alert('Erreur réseau lors de la mise à jour du statut. Vérifiez la console pour plus de détails.');
-            }
-        }
-
-        // Le reste de la fonction applyFilters et les écouteurs restent inchangés
         function applyFilters() {
             const searchTerm = salesSearchInput.value.toLowerCase();
             const selectedPeriod = periodFilterSelect.value;
-            const selectedPaymentStatus = paymentStatusFilterSelect.value;
-            const today = new Date();
-            let visibleSales = 0;
-            let currentRevenue = 0;
-            let currentProfit = 0;
+            const selectedStatus = paymentStatusFilterSelect.value;
+            const today = new Date(); today.setHours(0,0,0,0);
+            let count = 0, revenue = 0, profit = 0;
 
-            salesCards.forEach(card => {
-                const saleName = card.dataset.saleName.toLowerCase();
-                const saleSku = card.dataset.saleSku.toLowerCase();
-                const saleDate = new Date(card.dataset.saleDate);
-                const paymentStatus = card.dataset.paymentStatus;
-                const salePrice = parseFloat(card.dataset.salePrice);
-                const profit = parseFloat(card.dataset.profit);
+            allCards.forEach(card => {
+                const name = card.dataset.saleName.toLowerCase(), sku = card.dataset.saleSku.toLowerCase(), status = card.dataset.paymentStatus, date = new Date(card.dataset.saleDate);
+                date.setHours(0,0,0,0);
+                const isSearch = name.includes(searchTerm) || sku.includes(searchTerm), isStatus = selectedStatus === 'all' || status === selectedStatus;
+                let isPeriod = selectedPeriod === 'all' || (selectedPeriod === 'today' && date.getTime() === today.getTime());
 
-                const isSearchMatch = saleName.includes(searchTerm) || saleSku.includes(searchTerm);
-                const isStatusMatch = selectedPaymentStatus === 'all' || paymentStatus === selectedPaymentStatus;
-
-                let isPeriodMatch = false;
-
-                const currentYearStart = new Date(today.getFullYear(), 0, 1);
-                currentYearStart.setHours(0,0,0,0);
-                saleDate.setHours(0,0,0,0);
-
-                if (selectedPeriod === 'all') {
-                    isPeriodMatch = true;
-                } else {
-                    const currentWeekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
-                    currentWeekStart.setHours(0,0,0,0);
-                    const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-                    currentMonthStart.setHours(0,0,0,0);
-                    const lastWeekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() - 7);
-                    lastWeekStart.setHours(0,0,0,0);
-                    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-                    lastMonthStart.setHours(0,0,0,0);
-
-                    switch (selectedPeriod) {
-                        case 'today':
-                            isPeriodMatch = saleDate.toDateString() === today.toDateString();
-                            break;
-                        case 'this_week':
-                            isPeriodMatch = saleDate >= currentWeekStart && saleDate <= today;
-                            break;
-                        case 'this_month':
-                            isPeriodMatch = saleDate >= currentMonthStart && saleDate <= today;
-                            break;
-                        case 'this_year':
-                            isPeriodMatch = saleDate.getFullYear() === today.getFullYear();
-                            break;
-                        case 'last_week':
-                            isPeriodMatch = saleDate >= lastWeekStart && saleDate < currentWeekStart;
-                            break;
-                        case 'last_month':
-                            isPeriodMatch = saleDate >= lastMonthStart && saleDate < currentMonthStart;
-                            break;
-                    }
-                }
-
-                if (isSearchMatch && isPeriodMatch && isStatusMatch) {
-                    card.style.display = 'flex';
-                    visibleSales++;
-                    currentRevenue += salePrice;
-                    currentProfit += profit;
-                } else {
-                    card.style.display = 'none';
-                }
+                if (isSearch && isStatus && isPeriod) {
+                    card.style.display = 'block'; count++;
+                    revenue += parseFloat(card.dataset.salePrice); profit += parseFloat(card.dataset.profit);
+                } else card.style.display = 'none';
             });
-
-            const totalSalesCount = document.getElementById('total-sales-count');
-            const totalRevenue = document.getElementById('total-revenue');
-            const totalProfit = document.getElementById('total-profit');
-            totalSalesCount.textContent = visibleSales;
-            totalRevenue.textContent = formatCurrency(currentRevenue);
-            totalProfit.textContent = formatCurrency(currentProfit);
-
-            if (visibleSales === 0) {
-                noSalesMessage.style.display = 'block';
-            } else {
-                noSalesMessage.style.display = 'none';
-            }
+            document.getElementById('total-sales-count').textContent = count;
+            document.getElementById('total-revenue').textContent = revenue.toLocaleString('fr-FR', {style:'currency', currency:'EUR'});
+            document.getElementById('total-profit').textContent = profit.toLocaleString('fr-FR', {style:'currency', currency:'EUR'});
         }
 
-
-        salesSearchInput.addEventListener('input', applyFilters);
-        periodFilterSelect.addEventListener('change', applyFilters);
-        paymentStatusFilterSelect.addEventListener('change', applyFilters);
-
-        salesCards.forEach(card => {
+        allCards.forEach(card => {
             card.addEventListener('click', function() {
-                currentSaleId = this.dataset.saleId;
-                currentSaleCard = this;
-                const saleName = this.dataset.saleName;
-                const currentStatus = this.dataset.paymentStatus;
-
-                selectedSaleNameDisplay.innerText = `${saleName}`;
-                editSaleLink.href = `${baseUrl}/${currentSaleId}/edit`;
-                deleteSaleForm.action = `${baseUrl}/${currentSaleId}/delete`;
-
-                updateActionPanelStatus(currentStatus);
-
+                currentSaleId = this.dataset.saleId; currentSaleCard = this;
+                document.getElementById('selected-sale-name-display').innerText = this.dataset.saleName;
+                document.getElementById('editSaleLink').href = `${baseUrl}/${currentSaleId}/edit`;
+                document.getElementById('deleteSaleForm').action = `${baseUrl}/${currentSaleId}/delete`;
                 actionPanel.classList.add('show');
-
-                document.querySelectorAll('.sale-card').forEach(c => c.classList.remove('selected-sale-card'));
-                this.classList.add('selected-sale-card');
             });
         });
 
-        hideActionPanelBtn.addEventListener('click', function() {
-            actionPanel.classList.remove('show');
-            document.querySelectorAll('.sale-card').forEach(c => c.classList.remove('selected-sale-card'));
-            currentSaleId = null;
-            currentSaleCard = null;
-        });
-
-        setReceivedBtn.addEventListener('click', function() {
-            if (currentSaleId) {
-                updatePaymentStatus(currentSaleId, 'reçu');
-            }
-        });
-
-        setPendingBtn.addEventListener('click', function() {
-            if (currentSaleId) {
-                updatePaymentStatus(currentSaleId, 'en_attente');
-            }
-        });
-
+        hideActionPanelBtn.addEventListener('click', () => actionPanel.classList.remove('show'));
+        salesSearchInput.addEventListener('input', applyFilters);
+        [periodFilterSelect, paymentStatusFilterSelect].forEach(el => el.addEventListener('change', applyFilters));
         applyFilters();
     });
 </script>

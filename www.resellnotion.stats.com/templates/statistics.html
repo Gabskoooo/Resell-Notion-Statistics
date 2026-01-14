@@ -1,235 +1,401 @@
 {% extends 'base.html' %}
 
-{% block title %}Statistiques Calendaires{% endblock %}
+{% block title %}Statistiques | ResellNotion{% endblock %}
 
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
 
 <style>
-    .stats-container { padding: 30px; color: #fff; background: #0b0e11; min-height: 100vh; font-family: 'Poppins', sans-serif; }
-    .glass-card {
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        padding: 25px;
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --primary-glow: #8a2be2;
+        --success-glow: #00ffa3;
+        --danger-glow: #ff4d4d;
+        --warning-glow: #ffcc00;
+    }
+
+    body {
+        background: #0b0e14;
+        background-image:
+            radial-gradient(circle at 0% 0%, rgba(138, 43, 226, 0.1) 0%, transparent 35%),
+            radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.05) 0%, transparent 35%);
+        color: #f8f9fa;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        min-height: 100vh;
+    }
+
+    .stats-container { padding: 30px; }
+
+    @media (max-width: 768px) {
+        .stats-container { padding: 15px; }
+        .stat-numb { font-size: 1.5rem !important; }
+        h1 { font-size: 1.5rem; }
+    }
+
+    /* --- CARDS PREMIUM --- */
+    .premium-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 24px;
+        transition: 0.4s all;
         height: 100%;
+        backdrop-filter: blur(10px);
     }
-    .kpi-label { color: #848e9c; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
-    .kpi-value { font-size: 2rem; font-weight: 700; margin-top: 5px; }
+    .premium-card:hover {
+        border-color: rgba(255,255,255,0.2);
+        background: rgba(255, 255, 255, 0.05);
+    }
 
+    .stat-label { color: #8e9297; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+    .stat-numb { font-size: 2rem; font-weight: 700; margin-top: 5px; color: #fff; }
+
+    /* Glows */
+    .text-glow-purple { color: #fff; text-shadow: 0 0 15px rgba(138, 43, 226, 0.4); }
+    .text-glow-green { color: var(--success-glow); text-shadow: 0 0 15px rgba(0, 255, 163, 0.3); }
+    .text-glow-red { color: var(--danger-glow); text-shadow: 0 0 15px rgba(255, 77, 77, 0.4); }
+
+    /* --- NAVIGATION & INPUTS --- */
     .period-btn {
-        background: #1e2329; border: none; color: #848e9c;
-        padding: 10px 18px; border-radius: 12px; text-decoration: none; transition: 0.3s;
-        font-size: 0.9rem;
+        background: var(--glass-bg); border: 1px solid var(--glass-border); color: #8e9297;
+        padding: 10px 18px; border-radius: 14px; text-decoration: none; transition: 0.3s;
+        font-size: 0.85rem; font-weight: 600; cursor: pointer;
     }
-    .period-btn.active { background: #007bff; color: white; box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3); }
+    .period-btn.active { background: var(--primary-glow); color: white; border-color: var(--primary-glow); box-shadow: 0 0 15px rgba(138, 43, 226, 0.3); }
+    .period-btn:hover:not(.active) { background: rgba(255,255,255,0.1); color: #fff; }
 
-    .custom-date-form {
-        display: flex; gap: 10px; align-items: center;
-        background: rgba(255,255,255,0.05); padding: 5px 15px; border-radius: 12px;
+    .custom-input {
+        background: var(--glass-bg) !important; border: 1px solid var(--glass-border) !important;
+        color: #fff !important; border-radius: 12px; font-size: 0.85rem; padding: 8px 12px;
     }
-    .custom-date-form input { background: transparent; border: none; color: white; font-size: 0.85rem; outline: none; }
 
+    /* --- PROGRESS BARS --- */
+    .progress-custom { height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; position: relative; }
+    .progress-bar-glow { box-shadow: 0 0 10px currentColor; transition: width 1s ease-in-out; }
+
+    /* --- MODALS & HELP --- */
+    .help-icon { cursor: pointer; color: var(--primary-glow); margin-left: 5px; font-size: 0.9rem; transition: 0.2s; }
+    .help-icon:hover { color: #fff; text-shadow: 0 0 10px var(--primary-glow); }
+
+    .overlay {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(10px); z-index: 10000;
+        align-items: center; justify-content: center;
+    }
+    .overlay-content {
+        background: #161a2b; padding: 35px; border-radius: 24px; max-width: 500px; width: 90%;
+        border: 1px solid var(--glass-border); position: relative;
+    }
+
+    /* --- HEALTH CIRCLE --- */
     .health-circle {
         width: 120px; height: 120px; border-radius: 50%;
-        border: 8px solid rgba(255,255,255,0.05);
+        border: 6px solid rgba(255,255,255,0.05);
         display: flex; align-items: center; justify-content: center;
         margin: 0 auto; position: relative;
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
     }
-    .score-inner { font-size: 2rem; font-weight: 800; }
+    .score-inner { font-size: 2.2rem; font-weight: 800; }
 
-    .expert-box {
-        background: #111a21;
-        border-left: 4px solid #007bff;
-        padding: 25px; border-radius: 4px;
-    }
-    .cash-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 10px; padding: 5px 12px; width: 120px; outline: none; }
-    .projection-card { background: linear-gradient(145deg, rgba(0, 123, 255, 0.1), rgba(0, 0, 0, 0)); border: 1px solid rgba(0, 123, 255, 0.2); }
+    /* --- TABLES --- */
+    .table-premium { border-collapse: separate; border-spacing: 0 8px; }
+    .table-premium tr { background: var(--glass-bg); transition: 0.3s; }
+    .table-premium tr:hover { background: rgba(255,255,255,0.06); transform: scale(1.005); }
+    .table-premium td, .table-premium th { border: none !important; padding: 16px !important; color: #f8f9fa; }
+    .table-premium tr td:first-child { border-radius: 16px 0 0 16px; }
+    .table-premium tr td:last-child { border-radius: 0 16px 16px 0; }
+
+    .expert-text { font-size: 1.1rem; line-height: 1.6; }
+
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-in { animation: fadeInUp 0.6s ease-out forwards; }
 </style>
 
+<div id="overlay-health" class="overlay"><div class="overlay-content"><span class="btn-close btn-close-white position-absolute top-0 end-0 m-3" onclick="closeHelp('health')"></span><h4 class="text-white fw-bold mb-3">Business Health Score</h4><p class="small text-muted">Ce score sur 10 évalue la santé globale de votre activité.</p></div></div>
+<div id="overlay-proj1w" class="overlay"><div class="overlay-content"><span class="btn-close btn-close-white position-absolute top-0 end-0 m-3" onclick="closeHelp('proj1w')"></span><h4 class="text-white fw-bold mb-3">Projection 7 Jours</h4><p class="small text-muted">Trésorerie Totale + (Bénéfice quotidien × 7)</p></div></div>
+<div id="overlay-proj1m" class="overlay"><div class="overlay-content"><span class="btn-close btn-close-white position-absolute top-0 end-0 m-3" onclick="closeHelp('proj1m')"></span><h4 class="text-white fw-bold mb-3">Projection 30 Jours</h4><p class="small text-muted">Trésorerie Totale + (Bénéfice quotidien × 30)</p></div></div>
+<div id="overlay-proj1y" class="overlay"><div class="overlay-content"><span class="btn-close btn-close-white position-absolute top-0 end-0 m-3" onclick="closeHelp('proj1y')"></span><h4 class="text-white fw-bold mb-3">Projection 1 An</h4><p class="small text-muted">Trésorerie Totale + (Bénéfice quotidien × 365)</p></div></div>
+<div id="overlay-goals" class="overlay"><div class="overlay-content"><span class="btn-close btn-close-white position-absolute top-0 end-0 m-3" onclick="closeHelp('goals')"></span><h4 class="text-white fw-bold mb-3">Objectifs</h4><p class="small text-muted">Vos objectifs basés sur votre historique précédent.</p></div></div>
+<div id="overlay-profit-latent" class="overlay"><div class="overlay-content"><span class="btn-close btn-close-white position-absolute top-0 end-0 m-3" onclick="closeHelp('profit-latent')"></span><h4 class="text-white fw-bold mb-3">Profit Latent</h4><p class="small text-muted">Il s'agit du bénéfice net que vous réaliserez une fois que l'intégralité de votre stock actuel sera vendue au prix du marché estimé.</p><hr style="border-color: var(--glass-border);"><p class="small text-white mt-3">Calcul : <code>Σ (Prix de vente estimé - Prix d'achat)</code> de tous les articles en stock.</p></div></div>
+<div id="overlay-ca-latent" class="overlay"><div class="overlay-content"><span class="btn-close btn-close-white position-absolute top-0 end-0 m-3" onclick="closeHelp('ca-latent')"></span><h4 class="text-white fw-bold mb-3">Vente Latente (CA)</h4><p class="small text-muted">Chiffre d'affaires total si tout le stock est vendu.</p></div></div>
+
+
 <div class="stats-container">
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-5 gap-3">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-5 gap-4 animate-in">
         <div>
-            <h1 class="fw-bold mb-1">Rapport de Performance</h1>
-            <p class="text-muted small">Données calées sur le calendrier civil.</p>
+            <h1 class="fw-bold text-white mb-1">Rapport de Performance</h1>
+            <p class="text-muted small">Analyse calendaire de votre activité sneaker.</p>
         </div>
 
-        <div class="d-flex flex-wrap gap-2 align-items-center">
-            <form action="/statistics" method="GET" class="d-flex gap-2 align-items-center bg-dark p-2 rounded-3 me-2">
-                <span class="small text-muted ms-1">Liquidités :</span>
-                <input type="number" step="0.01" name="current_cash" value="{{ current_cash }}" class="cash-input" placeholder="0.00€">
-                <input type="hidden" name="period" value="{{ period }}">
-                <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3">Actualiser</button>
-            </form>
-
-            <div class="d-flex gap-1 bg-dark p-1 rounded-3">
-                <a href="?period=day&current_cash={{ current_cash }}" class="period-btn {{ 'active' if period == 'day' }}">Jour</a>
-                <a href="?period=week&current_cash={{ current_cash }}" class="period-btn {{ 'active' if period == 'week' }}">Semaine</a>
-                <a href="?period=month&current_cash={{ current_cash }}" class="period-btn {{ 'active' if period == 'month' }}">Mois</a>
-                <a href="?period=year&current_cash={{ current_cash }}" class="period-btn {{ 'active' if period == 'year' }}">Année</a>
+        <div class="d-flex flex-wrap gap-2 align-items-center bg-dark bg-opacity-25 p-2 rounded-4 border border-white border-opacity-10">
+            <div class="d-flex gap-1 me-2">
+                <a href="?period=day" class="period-btn {{ 'active' if period == 'day' }}">Jour</a>
+                <a href="?period=week" class="period-btn {{ 'active' if period == 'week' }}">Sem.</a>
+                <a href="?period=month" class="period-btn {{ 'active' if period == 'month' }}">Mois</a>
+                <a href="?period=year" class="period-btn {{ 'active' if period == 'year' }}">An</a>
             </div>
 
-            <form action="/statistics" method="GET" class="custom-date-form">
+            <form action="/statistics" method="GET" class="d-flex gap-1 align-items-center">
                 <input type="hidden" name="period" value="custom">
-                <input type="hidden" name="current_cash" value="{{ current_cash }}">
-                <input type="date" name="start_date" value="{{ start_date }}" required>
-                <span class="text-muted">→</span>
-                <input type="date" name="end_date" value="{{ end_date }}" required>
-                <button type="submit" class="btn btn-sm btn-primary rounded-pill"><i class="bi bi-search"></i></button>
+                <input type="date" name="start_date" value="{{ start_date }}" class="custom-input" required>
+                <input type="date" name="end_date" value="{{ end_date }}" class="custom-input" required>
+                <button type="submit" class="period-btn"><i class="bi bi-search"></i></button>
             </form>
         </div>
     </div>
 
-    <div class="row g-4 mb-4">
-        <div class="col-md-3">
-            <div class="glass-card text-center">
-                <span class="kpi-label">Business Health</span>
-                <div class="health-circle mt-3" style="border-color: {% if health_score > 7 %}#02c076{% elif health_score > 4 %}#f3ba2f{% else %}#ff5252{% endif %};">
-                    <div class="score-inner">{{ health_score }}<span style="font-size: 1rem; opacity: 0.5;">/10</span></div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-6 col-md-3 animate-in" style="animation-delay: 0.1s">
+            <div class="premium-card text-center">
+                <span class="stat-label">Health <i class="bi bi-question-circle help-icon" onclick="openHelp('health')"></i></span>
+                <div class="health-circle mt-3" style="border-color: {% if health_score > 7 %}var(--success-glow){% elif health_score > 4 %}var(--warning-glow){% else %}var(--danger-glow){% endif %};">
+                    <div class="score-inner text-white">{{ health_score }}<span style="font-size: 0.9rem; opacity: 0.5;">/10</span></div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="glass-card">
-                <span class="kpi-label">CA Période</span>
-                <div class="kpi-value text-primary">{{ "%.2f"|format(revenue) }}€</div>
+        <div class="col-6 col-md-3 animate-in" style="animation-delay: 0.2s">
+            <div class="premium-card">
+                <span class="stat-label">CA Période</span>
+                <div class="stat-numb text-white">{{ "%.2f"|format(revenue) }}€</div>
                 <div class="text-muted small mt-2">{{ volume }} ventes</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="glass-card">
-                <span class="kpi-label">Bénéfice Brut</span>
-                <div class="kpi-value text-success">+{{ "%.2f"|format(profit) }}€</div>
+        <div class="col-6 col-md-3 animate-in" style="animation-delay: 0.3s">
+            <div class="premium-card">
+                <span class="stat-label">Bénéfice Brut</span>
+                <div class="stat-numb {% if profit >= 0 %}text-glow-green{% else %}text-glow-red{% endif %}">
+                    {% if profit >= 0 %}+{% endif %}{{ "%.2f"|format(profit) }}€
+                </div>
                 <div class="text-muted small mt-2">ROI: {{ "%.1f"|format(roi_avg) }}%</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="glass-card">
-                <span class="kpi-label">Valeur du Stock</span>
-                <div class="kpi-value text-warning">{{ "%.0f"|format(stock_value) }}€</div>
-                <div class="text-muted small mt-2">{{ stock_qty }} paires en stock</div>
+        <div class="col-6 col-md-3 animate-in" style="animation-delay: 0.4s">
+            <div class="premium-card border-warning border-opacity-25">
+                <span class="stat-label">Valeur Stock</span>
+                <div class="stat-numb" style="color: var(--warning-glow)">{{ "%.0f"|format(stock_value) }}€</div>
+                <div class="text-muted small mt-2">{{ stock_qty }} paires</div>
             </div>
         </div>
     </div>
 
-    <div class="row g-4 mb-4">
-        <div class="col-md-8">
-            <div class="glass-card">
-                <h6 class="kpi-label mb-4">Évolution des Flux</h6>
-                <canvas id="evolutionChart" style="max-height: 280px;"></canvas>
+    <div class="row g-4 mb-5">
+        <div class="col-lg-8 animate-in" style="animation-delay: 0.5s">
+            <div class="premium-card">
+                <h6 class="stat-label mb-4">Évolution des Flux</h6>
+                <div style="height: 300px;"><canvas id="evolutionChart"></canvas></div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="glass-card d-flex flex-column justify-content-center" style="background: linear-gradient(90deg, rgba(0,123,255,0.15) 0%, rgba(0,123,255,0.05) 100%); border-left: 4px solid #007bff;">
-                <h5 class="text-white fw-bold mb-3 text-uppercase" style="letter-spacing: 1px;">
-                    <i class="bi bi-robot me-2 text-primary"></i>CONSEIL EXPERT
+        <div class="col-lg-4 animate-in" style="animation-delay: 0.6s">
+            <div class="premium-card" style="background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), transparent); border-left: 4px solid var(--primary-glow);">
+                <h5 class="text-white fw-bold mb-3 text-uppercase small" style="letter-spacing: 2px;">
+                    <i class="bi bi-robot me-2" style="color: var(--primary-glow)"></i>CONSEIL DE L'EXPERT
                 </h5>
-                <p class="small text-muted" style="line-height: 1.6;">
+                <p class="expert-text text-white-50">
                     {% if health_score >= 8 %}
-                        Performances exceptionnelles sur cette période. Votre stratégie d'achat est parfaite, continuez sur ce segment.
+                        Performances exceptionnelles. Votre stratégie d'achat est optimale, maintenez ce rythme sur ce segment.
                     {% elif health_score >= 5 %}
-                        Période stable. Vous pourriez optimiser votre rentabilité en vendant sur des canaux avec moins de frais.
+                        Activité stable. Optimisez votre rentabilité en réduisant les frais sur certains canaux de vente.
                     {% else %}
-                        La période affiche une sous-performance. Vérifiez si vous ne détenez pas trop de stock "mort" qui plombe votre score.
+                        Sous-performance détectée. Analysez votre stock dormant qui impacte négativement votre score de santé.
                     {% endif %}
                 </p>
             </div>
         </div>
     </div>
 
-    <div class="mt-5 mb-4">
-        <h3 class="fw-bold mb-1">Trésorerie Entière</h3>
-        <p class="text-muted small">Vue globale de votre capital (Total : {{ "%.2f"|format(total_base_cash) }}€)</p>
-    </div>
-    <div class="row g-4 mb-4">
-        <div class="col-md-3"><div class="glass-card"><span class="kpi-label">Liquidités</span><div class="kpi-value text-white">{{ "%.2f"|format(current_cash) }}€</div></div></div>
-        <div class="col-md-3"><div class="glass-card"><span class="kpi-label">Stock (Achat)</span><div class="kpi-value text-white">{{ "%.2f"|format(valeur_achat_stock) }}€</div></div></div>
-        <div class="col-md-3"><div class="glass-card border-warning"><span class="kpi-label text-warning">Paiements en attente</span><div class="kpi-value text-white">{{ "%.2f"|format(pending_payments) }}€</div></div></div>
-        <div class="col-md-3"><div class="glass-card border-primary"><span class="kpi-label text-primary fw-bold">Trésorerie Totale</span><div class="kpi-value text-primary">{{ "%.2f"|format(total_base_cash) }}€</div></div></div>
+
+    <div class="mt-5 mb-4 animate-in">
+        <h3 class="fw-bold text-white mb-1">État Financier</h3>
+        <p class="text-muted small">Évaluation de vos actifs disponibles et immobilisés.</p>
     </div>
 
-    <div class="mt-5 mb-4">
-        <h3 class="fw-bold mb-1">Projections de Capital</h3>
-        <p class="text-muted small">Croissance estimée basée sur votre flux net hebdomadaire.</p>
-    </div>
-    <div class="row g-4 mb-4">
-        <div class="col-md-4"><div class="glass-card projection-card"><span class="kpi-label text-primary">À 1 Semaine</span><div class="kpi-value text-white">{{ "%.2f"|format(proj_1w) }}€</div></div></div>
-        <div class="col-md-4"><div class="glass-card projection-card" style="border-color: rgba(2, 192, 118, 0.3);"><span class="kpi-label text-success">À 1 Mois</span><div class="kpi-value text-white">{{ "%.2f"|format(proj_1m) }}€</div></div></div>
-        <div class="col-md-4"><div class="glass-card projection-card" style="border-color: rgba(243, 186, 47, 0.3);"><span class="kpi-label text-warning">À 1 An</span><div class="kpi-value text-info">{{ "%.0f"|format(proj_1y) }}€</div></div></div>
-    </div>
-
-    <div class="row mb-5 mt-4">
-        <div class="col-12">
-            <div class="expert-box">
-                <div class="d-flex align-items-center mb-3">
-                    <i class="bi bi-robot text-primary fs-3 me-3"></i>
-                    <h5 class="text-white fw-bold m-0 text-uppercase" style="letter-spacing: 1px;">Conseil Expert Global</h5>
+    <div class="row g-3 mb-4 animate-in">
+        <div class="col-6 col-md-3">
+            <div class="premium-card">
+                <span class="stat-label">Liquidités (Cash)</span>
+                <div class="mt-2">
+                    <div class="input-group input-group-sm">
+                        <input type="number" id="input-cash" value="{{ current_cash }}"
+                               class="form-control custom-input fw-bold fs-5 text-white"
+                               oninput="updateFinances()" style="background: rgba(255,255,255,0.05) !important;">
+                        <span class="input-group-text bg-transparent border-0 text-white-50">€</span>
+                    </div>
                 </div>
-                <p class="text-muted fs-5 mb-0">{{ expert_txt }}</p>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="premium-card">
+                <span class="stat-label">Stock (Achat)</span>
+                <div class="stat-numb" id="val-stock-achat" style="font-size: 1.5rem">{{ "%.2f"|format(valeur_achat_stock) }}€</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="premium-card border-warning border-opacity-25">
+                <span class="stat-label text-warning">En Attente</span>
+                <div class="stat-numb" id="val-pending" style="font-size: 1.5rem">{{ "%.2f"|format(pending_payments) }}€</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="premium-card border-primary border-opacity-50">
+                <span class="stat-label text-glow-purple">Puissance Totale</span>
+                <div class="stat-numb text-glow-purple" id="val-total-base" style="font-size: 1.5rem">{{ "%.2f"|format(total_base_cash) }}€</div>
             </div>
         </div>
     </div>
 
-    <div class="mt-5 mb-4">
-        <h3 class="fw-bold mb-1">Stock Management</h3>
-        <p class="text-muted small">Analyse du potentiel de ton inventaire actuel.</p>
+    <div class="mt-5 mb-4 animate-in">
+        <h3 class="fw-bold text-white mb-1">Projections d'Évolution</h3>
+        <p class="text-muted small">Estimations théoriques basées sur votre rythme actuel.</p>
     </div>
 
-    <div class="row g-4 mb-4">
-        <div class="col-md-4">
-            <div class="glass-card text-center">
-                <span class="kpi-label">Valeur d'Achat Stock</span>
-                <div class="kpi-value text-white">{{ "%.2f"|format(valeur_achat_stock) }}€</div>
+    <div class="row g-3 mb-4 text-center animate-in">
+        <div class="col-12 col-md-4">
+            <div class="premium-card border-primary border-opacity-25">
+                <span class="stat-label">7 Jours <i class="bi bi-question-circle help-icon" onclick="openHelp('proj1w')"></i></span>
+                <div class="stat-numb text-white" id="proj-7d" style="font-size: 1.6rem">{{ "%.2f"|format(proj_1w) }}€</div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="glass-card text-center text-success">
-                <span class="kpi-label">Profit Latent</span>
-                <div class="kpi-value text-success">+{{ "%.2f"|format(profit_latent) }}€</div>
+        <div class="col-12 col-md-4">
+            <div class="premium-card border-success border-opacity-25">
+                <span class="stat-label text-success">1 Mois <i class="bi bi-question-circle help-icon" onclick="openHelp('proj1m')"></i></span>
+                <div class="stat-numb text-white" id="proj-30d" style="font-size: 1.6rem">{{ "%.2f"|format(proj_1m) }}€</div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="glass-card text-center text-info">
-                <span class="kpi-label">Vente Latente (CA)</span>
-                <div class="kpi-value text-info">{{ "%.2f"|format(ca_latent) }}€</div>
+        <div class="col-12 col-md-4">
+            <div class="premium-card border-warning border-opacity-25">
+                <span class="stat-label text-warning">1 An <i class="bi bi-question-circle help-icon" onclick="openHelp('proj1y')"></i></span>
+                <div class="stat-numb text-white" id="proj-365d" style="font-size: 1.6rem">{{ "%.0f"|format(proj_1y) }}€</div>
             </div>
         </div>
     </div>
 
-    <div class="row g-4 mb-4">
+    <div class="premium-card mb-5 animate-in" style="background: rgba(138, 43, 226, 0.05); border-left: 4px solid var(--primary-glow);">
+        <div class="d-flex align-items-center mb-3">
+            <i class="bi bi-robot text-primary fs-3 me-3"></i>
+            <h5 class="text-white fw-bold m-0 text-uppercase small" style="letter-spacing: 2px;">CONSEIL DE L'EXPERT</h5>
+        </div>
+        <p id="expert-advice-text" class="expert-text text-white-50 mb-0">Analyse des données en cours...</p>
+    </div>
+
+
+    <div class="mt-5 mb-4 animate-in">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-3">
+            <div>
+                <h3 class="fw-bold text-white mb-1">Objectifs du Moment <i class="bi bi-question-circle help-icon" onclick="openHelp('goals')"></i></h3>
+                <p class="text-muted small">Cibles basées sur la période sélectionnée : <strong>{{ period|capitalize }}</strong></p>
+            </div>
+            {% if has_ref %}
+            <div class="bg-white bg-opacity-5 p-1 rounded-3 d-flex gap-1">
+                <button onclick="setGoalCoef(1.2)" id="btn-low" class="period-btn active" style="font-size: 0.75rem; padding: 5px 12px;">Bas (x1.2)</button>
+                <button onclick="setGoalCoef(1.8)" id="btn-high" class="period-btn" style="font-size: 0.75rem; padding: 5px 12px;">Haut (x1.8)</button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5 animate-in">
+        {% if has_ref %}
+        <div class="col-md-6">
+            <div class="premium-card">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="stat-label">Chiffre d'Affaires</span>
+                    <span id="badge-rev-reached" class="badge bg-success text-dark fw-bold d-none">OBJECTIF ATTEINT !</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-baseline">
+                    <div class="stat-numb text-white" id="goal-rev-val">-- €</div>
+                    <div class="text-end">
+                        <div class="text-primary fw-bold" id="goal-rev-percent">0%</div>
+                        <div class="text-muted small" id="goal-rev-rem">Reste: -- €</div>
+                    </div>
+                </div>
+                <div class="progress-custom mt-3"><div id="progress-rev" class="progress-bar-glow h-100 bg-primary" style="width: 0%"></div></div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="premium-card">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="stat-label">Bénéfice Net</span>
+                    <span id="badge-prof-reached" class="badge bg-success text-dark fw-bold d-none">OBJECTIF ATTEINT !</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-baseline">
+                    <div class="stat-numb text-success" id="goal-prof-val">-- €</div>
+                    <div class="text-end">
+                        <div class="text-success fw-bold" id="goal-prof-percent">0%</div>
+                        <div class="text-muted small" id="goal-prof-rem">Reste: -- €</div>
+                    </div>
+                </div>
+                <div class="progress-custom mt-3"><div id="progress-prof" class="progress-bar-glow h-100 bg-success" style="width: 0%"></div></div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center py-4 bg-white bg-opacity-5 rounded-4 border border-white border-opacity-10">
+            <p class="text-muted m-0">Historique insuffisant pour cette période.</p>
+        </div>
+        {% endif %}
+    </div>
+
+
+    <div class="mt-5 mb-4 animate-in">
+        <h3 class="fw-bold text-white mb-1">Stock Management</h3>
+        <p class="text-muted small">Optimisation de votre inventaire actuel.</p>
+    </div>
+    <div class="row g-3 mb-4 animate-in">
+        <div class="col-12 col-md-4">
+            <div class="premium-card text-center">
+                <span class="stat-label">Valeur Achat</span>
+                <div class="stat-numb" style="font-size: 1.6rem">{{ "%.2f"|format(valeur_achat_stock) }}€</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="premium-card text-center border-success border-opacity-25">
+                <span class="stat-label text-success">Profit Latent <i class="bi bi-question-circle help-icon" onclick="openHelp('profit-latent')"></i></span>
+                <div class="stat-numb text-success" style="font-size: 1.6rem">+{{ "%.2f"|format(profit_latent) }}€</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="premium-card text-center border-primary border-opacity-25">
+                <span class="stat-label text-glow-purple">Vente Latente</span>
+                <div class="stat-numb text-white" style="font-size: 1.6rem">{{ "%.2f"|format(ca_latent) }}€</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5 animate-in">
         <div class="col-md-4">
-            <div class="glass-card">
-                <h6 class="kpi-label mb-3">Vitalité & Flux</h6>
+            <div class="premium-card">
+                <h6 class="stat-label mb-3">Vitalité & Flux</h6>
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="small">Âge moyen du stock :</span>
-                    <span class="badge {% if stock_avg_age > 40 %}bg-danger{% else %}bg-success{% endif %} rounded-pill">
-                        {{ stock_avg_age }} jours
-                    </span>
+                    <span class="small text-white-50">Âge moyen stock :</span>
+                    <span class="badge {% if stock_avg_age > 45 %}bg-danger{% else %}bg-success{% endif %} rounded-pill px-3">{{ stock_avg_age }}j</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center">
-                    <span class="small">Capacité réinvestissement :</span>
-                    <span class="fw-bold text-white">{{ "%.2f"|format(ca_latent * 0.85) }}€</span>
+                    <span class="small text-white-50">Réinvestissement :</span>
+                    <span class="fw-bold text-white">{{ "%.0f"|format(ca_latent * 0.85) }}€</span>
                 </div>
             </div>
         </div>
         <div class="col-md-8">
-            <div class="glass-card expert-box h-100" style="background: linear-gradient(90deg, rgba(0,123,255,0.15) 0%, rgba(0,123,255,0.05) 100%); border-left: 4px solid #007bff;">
-                <h5 class="text-white fw-bold mb-3 text-uppercase" style="letter-spacing: 1px;">
-                    <i class="bi bi-robot me-2 text-primary"></i>CONSEIL EXPERT
+            <div class="premium-card" style="background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), transparent); border-left: 4px solid var(--primary-glow);">
+                <h5 class="text-white fw-bold mb-3 text-uppercase small" style="letter-spacing: 2px;">
+                    <i class="bi bi-robot me-2 text-primary"></i>CONSEIL DE L'EXPERT
                 </h5>
-                <p class="text-muted" style="line-height: 1.6; font-style: italic;">" {{ expert_txt }} "</p>
+                <p id="expert-stock-text" class="expert-text text-white-50 mb-0">Analyse de l'inventaire en cours...</p>
             </div>
         </div>
     </div>
 
-    <div class="glass-card">
-        <h6 class="kpi-label mb-4">Mouvements détaillés</h6>
+
+    <div class="premium-card animate-in">
+        <h6 class="stat-label mb-4">Détails des mouvements</h6>
         <div class="table-responsive">
-            <table class="table table-dark table-hover border-0 align-middle">
+            <table class="table table-premium align-middle" style="min-width: 700px;">
                 <thead>
-                    <tr class="text-muted small">
-                        <th>DATE</th><th>ITEM</th><th>VENTE</th><th>PROFIT</th><th>ROI</th>
+                    <tr class="text-muted small uppercase">
+                        <th>DATE</th><th>ARTICLE</th><th>VENTE</th><th>PROFIT</th><th>ROI</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -238,19 +404,15 @@
                         <td class="text-muted small">{{ sale.sale_date.strftime('%d/%m/%Y') }}</td>
                         <td>
                             <div class="d-flex align-items-center">
-                                <img src="{{ sale.image_url }}" width="40" class="rounded me-3" onerror="this.src='/static/placeholder.png'">
-                                <div>
-                                    <div class="fw-bold" style="font-size: 0.9rem;">{{ sale.item_name }}</div>
-                                    <div class="text-muted small">{{ sale.sku }}</div>
+                                <div style="width: 45px; height: 45px; background: white; border-radius: 10px; padding: 4px; margin-right: 15px;">
+                                    <img src="{{ sale.image_url }}" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.src='/static/placeholder.png'">
                                 </div>
+                                <div><div class="fw-bold small">{{ sale.item_name }}</div><div class="text-muted" style="font-size: 0.7rem;">{{ sale.sku }}</div></div>
                             </div>
                         </td>
                         <td class="fw-bold">{{ "%.2f"|format(sale.sale_price) }}€</td>
                         <td class="text-success fw-bold">+{{ "%.2f"|format(sale.profit) }}€</td>
-                        <td>
-                            {% set current_roi = (sale.profit / sale.purchase_price_at_sale * 100) if sale.purchase_price_at_sale > 0 else 0 %}
-                            <span class="badge {% if current_roi > 20 %}bg-success{% else %}bg-secondary{% endif %}">{{ "%.0f"|format(current_roi) }}%</span>
-                        </td>
+                        <td><span class="badge bg-secondary bg-opacity-25 text-white">{{ "%.0f"|format((sale.profit / sale.purchase_price_at_sale * 100) if sale.purchase_price_at_sale > 0 else 0) }}%</span></td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -260,39 +422,117 @@
 </div>
 
 <script>
-    const ctx = document.getElementById('evolutionChart').getContext('2d');
-    const labels = [{% for s in sales %}"{{ s.sale_date.strftime('%d/%m') }}",{% endfor %}];
-    const revenueData = [{% for s in sales %}{{ s.sale_price }},{% endfor %}];
-    const profitData = [{% for s in sales %}{{ s.profit }},{% endfor %}];
+    // --- LOGIQUE FINANCIÈRE (PARTIE 2) ---
+    const staticStock = parseFloat("{{ valeur_achat_stock }}") || 0;
+    const staticPending = parseFloat("{{ pending_payments }}") || 0;
+    const dailyProfit = parseFloat("{{ (profit / 7) if period == 'week' else (profit / 30) if period == 'month' else (profit / 365) if period == 'year' else profit }}") || 0;
 
+    function updateFinances() {
+        const cash = parseFloat(document.getElementById('input-cash').value) || 0;
+        const totalBase = cash + staticStock + staticPending;
+        document.getElementById('val-total-base').innerText = totalBase.toFixed(2) + "€";
+
+        const proj7 = totalBase + (dailyProfit * 7);
+        const proj30 = totalBase + (dailyProfit * 30);
+        const proj365 = totalBase + (dailyProfit * 365);
+        document.getElementById('proj-7d').innerText = proj7.toFixed(2) + "€";
+        document.getElementById('proj-30d').innerText = proj30.toFixed(2) + "€";
+        document.getElementById('proj-365d').innerText = Math.round(proj365).toLocaleString() + "€";
+
+        let advice = "";
+        const growthRate = (dailyProfit * 30 / totalBase * 100).toFixed(1);
+        const stockWeight = (staticStock / totalBase * 100).toFixed(0);
+        if (dailyProfit > 0) {
+            advice = `Analyse Résultats : Avec un profit quotidien moyen de ${dailyProfit.toFixed(2)}€, votre croissance mensuelle projetée est de ${growthRate}%. `;
+            if (stockWeight > 60) advice += `Attention : ${stockWeight}% de votre puissance est immobilisée. Vendez pour libérer du cash.`;
+        } else advice = "Analyse Résultats : Profit neutre. Visez la rotation du stock.";
+        document.getElementById('expert-advice-text').innerText = advice;
+    }
+
+    // --- LOGIQUE OBJECTIFS (PARTIE 3) ---
+    let currentGoalCoef = 1.2;
+    const baseRefRev = parseFloat("{{ ref_rev }}") || 0;
+    const baseRefProf = parseFloat("{{ ref_prof }}") || 0;
+    const actualRevenue = parseFloat("{{ revenue }}") || 0;
+    const actualProfit = parseFloat("{{ profit }}") || 0;
+
+    function setGoalCoef(c) { currentGoalCoef = c; updateGoalsUI(); }
+
+    function updateGoalsUI() {
+        if (!{{ has_ref|tojson }}) return;
+        const targetRev = baseRefRev * currentGoalCoef;
+        const targetProf = baseRefProf * currentGoalCoef;
+        const revPercent = Math.min(100, (actualRevenue / targetRev) * 100);
+        document.getElementById('goal-rev-val').innerText = Math.round(targetRev).toLocaleString() + " €";
+        document.getElementById('goal-rev-percent').innerText = Math.round(revPercent) + "%";
+        document.getElementById('goal-rev-rem').innerText = (targetRev - actualRevenue) > 0 ? `Reste: ${Math.round(targetRev - actualRevenue)}€` : "Objectif atteint";
+        document.getElementById('progress-rev').style.width = revPercent + "%";
+        document.getElementById('badge-rev-reached').classList.toggle('d-none', actualRevenue < targetRev);
+        const profPercent = Math.min(100, (actualProfit / targetProf) * 100);
+        document.getElementById('goal-prof-val').innerText = Math.round(targetProf).toLocaleString() + " €";
+        document.getElementById('goal-prof-percent').innerText = Math.round(profPercent) + "%";
+        document.getElementById('goal-prof-rem').innerText = (targetProf - actualProfit) > 0 ? `Reste: ${Math.round(targetProf - actualProfit)}€` : "Objectif atteint";
+        document.getElementById('progress-prof').style.width = profPercent + "%";
+        document.getElementById('badge-prof-reached').classList.toggle('d-none', actualProfit < targetProf);
+        document.getElementById('btn-low').classList.toggle('active', currentGoalCoef === 1.2);
+        document.getElementById('btn-high').classList.toggle('active', currentGoalCoef === 1.8);
+    }
+
+    // --- LOGIQUE STOCK (PARTIE 4 - NOUVEAU) ---
+    function updateStockAdvice() {
+        const age = parseInt("{{ stock_avg_age }}") || 0;
+        const pLatent = parseFloat("{{ profit_latent }}") || 0;
+        const vAchat = parseFloat("{{ valeur_achat_stock }}") || 0;
+        const marginPotential = vAchat > 0 ? (pLatent / vAchat * 100).toFixed(1) : 0;
+
+        let advice = "";
+        if (age > 45) {
+            advice = `Alerte Rotation : Votre stock a un âge moyen élevé (${age} jours). Votre capital est "dormant". Envisagez une baisse de prix de 5-10% sur les paires les plus anciennes pour libérer ${vAchat.toFixed(0)}€ de liquidités immédiatement. `;
+        } else {
+            advice = `Analyse Inventaire : Votre flux de stock est sain (${age} jours en moyenne). `;
+        }
+
+        advice += `Performance théorique : Votre stock actuel porte une marge latente de ${marginPotential}%. `;
+
+        if (marginPotential > 25) {
+            advice += "Votre stratégie d'achat est excellente, privilégiez le maintien de vos prix pour maximiser ce profit.";
+        } else {
+            advice += "Marge faible détectée sur l'inventaire. Concentrez-vous sur des achats plus sélectifs ou réduisez vos frais d'acquisition.";
+        }
+
+        document.getElementById('expert-stock-text').innerText = advice;
+    }
+
+    function openHelp(id) { document.getElementById('overlay-' + id).style.display = 'flex'; }
+    function closeHelp(id) { document.getElementById('overlay-' + id).style.display = 'none'; }
+
+    // Chart
+    const ctx = document.getElementById('evolutionChart').getContext('2d');
     new Chart(ctx, {
         type: 'line',
         data: {
-            labels: labels,
+            labels: [{% for s in sales %}"{{ s.sale_date.strftime('%d/%m') }}",{% endfor %}],
             datasets: [{
                 label: 'Vente',
-                data: revenueData,
-                borderColor: '#007bff',
-                backgroundColor: 'rgba(0, 123, 255, 0.05)',
-                fill: true,
-                tension: 0.4
+                data: [{% for s in sales %}{{ s.sale_price }},{% endfor %}],
+                borderColor: '#8a2be2',
+                backgroundColor: 'rgba(138, 43, 226, 0.1)',
+                fill: true, tension: 0.4, borderWidth: 3
             }, {
                 label: 'Profit',
-                data: profitData,
-                borderColor: '#02c076',
+                data: [{% for s in sales %}{{ s.profit }},{% endfor %}],
+                borderColor: '#00ffa3',
                 borderDash: [5, 5],
-                fill: false,
-                tension: 0.4
+                fill: false, tension: 0.4, borderWidth: 2
             }]
         },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#848e9c' } },
-                x: { grid: { display: false }, ticks: { color: '#848e9c' } }
-            }
-        }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { display: false } } } }
     });
+
+    // Initialisation
+    updateFinances();
+    updateGoalsUI();
+    updateStockAdvice();
 </script>
 {% endblock %}

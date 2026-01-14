@@ -3,417 +3,302 @@
 {% block title %}Ajouter Produit{% endblock %}
 
 {% block content %}
-<div class="form-steps-container">
-    <h1 class="text-center mb-5 text-white dashboard-section-fadein dashboard-card-delay-1">Ajouter un nouveau produit</h1>
+<style>
+    /* 1. FORCER LA VISIBILITÉ DU CONTENU */
+    .step-card {
+        background-color: #2a2a4a !important;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 20px;
+        display: none; /* Géré par JS */
+    }
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flashes">
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
+    /* Cette règle assure que le contenu est visible quand l'étape est active */
+    .step-card.active-step, .step-card[style*="display: block"] {
+        display: block !important;
+    }
+
+    .step-content {
+        display: block !important; /* Force l'affichage du contenu interne */
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    /* 2. STYLES RECAPITULATIF */
+    .recap-container { max-height: 400px; overflow-y: auto; margin-bottom: 20px; padding: 5px; }
+    .recap-row {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .recap-img { width: 60px; height: 60px; object-fit: contain; border-radius: 8px; background: #fff; padding: 2px; }
+    .recap-details { flex-grow: 1; }
+    .recap-details h6 { margin: 0; color: #8a2be2; font-weight: bold; font-size: 0.9rem; }
+    .recap-details small { color: #848e9c; }
+    .recap-price-tag { background: rgba(138, 43, 226, 0.2); color: #fff; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; }
+
+    /* 3. ANIMATION FINALE */
+    #success-overlay {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: #1a1a2e;
+        z-index: 9999;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    .loader-container { position: relative; width: 160px; height: 160px; }
+    .loader-circle-prog {
+        fill: none; stroke: #28a745; stroke-width: 8;
+        stroke-dasharray: 440; stroke-dashoffset: 440;
+        transition: stroke-dashoffset 2s ease-out;
+        transform: rotate(-90deg);
+        transform-origin: 50% 50%;
+    }
+</style>
+
+<div id="success-overlay">
+    <div class="loader-container">
+        <svg width="160" height="160">
+            <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="8"></circle>
+            <circle id="progress-bar" class="loader-circle-prog" cx="80" cy="80" r="70"></circle>
+        </svg>
+        <i class="bi bi-box-seam" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 4rem; color: #fff;"></i>
+    </div>
+    <h2 class="mt-4 text-white">Produit(s) enregistré(s)</h2>
+</div>
+
+<div class="form-steps-container mt-4">
+    <h1 class="text-center mb-5 text-white">Ajouter au stock</h1>
 
     <form method="post" id="add-product-form">
-        {# Étape 1: Informations de base #}
-        <div class="step-card dashboard-card-delay-2" id="step-1">
-            <div class="step-header" data-step="1">
-                <div class="step-number">1</div>
-                <h3 class="step-title">Informations de base</h3>
+        {# Étape 1 #}
+        <div class="step-card active-step" id="step-1" style="display: block;">
+            <div class="step-header text-white mb-4">
+                <h3 class="step-title"><span class="badge bg-primary me-2">1</span> Informations de base</h3>
             </div>
             <div class="step-content">
-                <div class="form-group-item">
-                    <label for="sku" class="form-label">SKU (Référence Unique):</label>
-                    <input type="text" class="form-control" id="sku" name="sku" value="{{ sku if sku else '' }}" required autocomplete="off">
-                    <div id="sku-suggestions" class="list-group position-absolute w-100" style="max-height: 200px; overflow-y: auto; display: none; z-index: 1000; border-radius: 0.25rem;">
-                        <div id="no-sku-found-message" class="list-group-item text-center" style="display: none;">
-                            Aucun SKU trouvé. Veuillez le renseigner manuellement.
-                        </div>
-                    </div>
+                <div class="mb-3 position-relative">
+                    <label class="form-label text-white">SKU (Référence Unique):</label>
+                    <input type="text" class="form-control" id="current_sku" autocomplete="off" placeholder="Ex: DD1391-100">
+                    <div id="sku-suggestions" class="list-group position-absolute w-100" style="display:none; z-index:1000;"></div>
                 </div>
-
-                <input type="hidden" id="image_url" name="image_url" value="{{ image_url if image_url else '' }}">
-
-                <div class="form-group-item">
-                    <label for="name" class="form-label">Nom du produit:</label>
-                    <input type="text" class="form-control" id="name" name="name" value="{{ name if name else '' }}" required autocomplete="off">
-                    <div id="name-suggestions" class="list-group position-absolute w-100" style="max-height: 200px; overflow-y: auto; display: none; z-index: 1000; border-radius: 0.25rem;">
-                        <div id="no-name-found-message" class="list-group-item text-center" style="display: none;">
-                            Aucun produit trouvé avec ce nom.
-                        </div>
-                    </div>
+                <div class="mb-3 position-relative">
+                    <label class="form-label text-white">Nom du produit:</label>
+                    <input type="text" class="form-control" id="current_name" autocomplete="off" placeholder="Ex: Dunk Low Panda">
+                    <div id="name-suggestions" class="list-group position-absolute w-100" style="display:none; z-index:1000;"></div>
                 </div>
-
-                <div class="mb-3 d-flex align-items-center" id="sku-image-preview-container" style="display: {{ 'flex' if image_url else 'none' }}; margin-top: 10px;">
-                    <label class="form-label me-3 mb-0">Image suggérée:</label>
-                    <img id="sku-image-preview" src="{{ image_url if image_url else '' }}" alt="Image SKU" class="img-thumbnail border-0 bg-transparent" style="max-width: 150px; height: auto;">
+                <input type="hidden" id="current_image_url">
+                <div id="sku-preview-container" class="mt-3 text-center" style="display:none;">
+                    <img id="sku-preview-img" src="" class="img-thumbnail" style="max-width: 150px; background:white;">
+                </div>
+                <div class="d-flex justify-content-end mt-4">
+                    <button type="button" class="btn btn-primary px-4" onclick="validateStep1()">Suivant</button>
                 </div>
             </div>
         </div>
 
-        {# Étape 2: Tailles et Prix #}
-        <div class="step-card mt-4" id="step-2">
-            <div class="step-header" data-step="2">
-                <div class="step-number">2</div>
-                <h3 class="step-title">Tailles et Prix</h3>
+        {# Étape 2 #}
+        <div class="step-card" id="step-2">
+            <div class="step-header text-white mb-4">
+                <h3 class="step-title"><span class="badge bg-secondary me-2">2</span> Tailles et Prix</h3>
             </div>
             <div class="step-content">
-                <div id="dynamic-fields-container">
-                    {# Les champs de taille/prix seront insérés ici par JS #}
+                <div id="dynamic-sizes-container"></div>
+                <button type="button" class="btn btn-outline-primary btn-sm mb-3" onclick="addSizeRow()">+ Ajouter une taille</button>
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-light" onclick="showStep(1)">Précédent</button>
+                    <button type="button" class="btn btn-primary px-4" onclick="validateStep2()">Suivant</button>
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm mb-3" id="add-size-btn">Ajouter une taille</button>
             </div>
         </div>
 
-        {# Étape 3: Détails et Finalisation #}
-        <div class="step-card mt-4" id="step-3">
-            <div class="step-header" data-step="3">
-                <div class="step-number">3</div>
-                <h3 class="step-title">Détails et Finalisation</h3>
+        {# Étape 3 #}
+        <div class="step-card" id="step-3">
+            <div class="step-header text-white mb-4">
+                <h3 class="step-title"><span class="badge bg-success me-2">3</span> Récapitulatif</h3>
             </div>
             <div class="step-content">
-                <div class="form-group-item">
-                    <label for="description" class="form-label">Description (optionnel):</label>
-                    <textarea class="form-control" id="description" name="description" rows="3">{{ description if description else '' }}</textarea>
+                <div id="recap-list" class="recap-container"></div>
+                <div class="d-flex flex-column gap-2 mt-4">
+                    <button type="button" class="btn btn-outline-primary py-2" onclick="saveToMemoryAndReset()">Ajouter un autre produit</button>
+                    <button type="submit" class="btn btn-success py-3 fw-bold">Terminer et enregistrer</button>
+                    <button type="button" class="btn btn-link text-muted btn-sm" onclick="showStep(2)">Modifier le dernier produit</button>
                 </div>
-                <button type="submit" class="btn btn-primary w-100 mt-4">Enregistrer le(s) produit(s)</button>
             </div>
         </div>
     </form>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Form Elements
-        const form = document.getElementById('add-product-form');
-        const skuInput = document.getElementById('sku');
-        const skuSuggestions = document.getElementById('sku-suggestions');
-        const skuImagePreviewContainer = document.getElementById('sku-image-preview-container');
-        const skuImagePreview = document.getElementById('sku-image-preview');
-        const imageUrlInput = document.getElementById('image_url');
-        const productNameInput = document.getElementById('name');
-        const nameSuggestions = document.getElementById('name-suggestions');
-        const noNameFoundMessage = document.getElementById('no-name-found-message');
-        const noSkuFoundMessage = document.getElementById('no-sku-found-message');
+    let productsInMemory = [];
+    let searchTimer;
 
-        // Step Containers
-        const step1Card = document.getElementById('step-1');
-        const step2Card = document.getElementById('step-2');
-        const step3Card = document.getElementById('step-3');
-        const allSteps = [step1Card, step2Card, step3Card];
-
-        // Dynamic Fields
-        const addSizeBtn = document.getElementById('add-size-btn');
-        const dynamicFieldsContainer = document.getElementById('dynamic-fields-container');
-        let sizeFieldCounter = 0; // Utiliser un nom plus spécifique
-        const defaultImageUrl = "{{ url_for('static', filename='sku_not_found.png') }}";
-
-        // Debounce for suggestions
-        let debounceTimeoutSku;
-        let debounceTimeoutName;
-
-        // --- Step Logic ---
-        function activateStep(stepCard) {
-            allSteps.forEach(s => s.classList.remove('active-step'));
-            stepCard.classList.add('active-step');
-        }
-
-        function completeStep(stepCard) {
-            stepCard.classList.add('completed');
-        }
-
-        function uncompleteStep(stepCard) {
-            stepCard.classList.remove('completed');
-        }
-
-        function checkStep1Completion() {
-            if (skuInput.value.trim() !== '' && productNameInput.value.trim() !== '') {
-                completeStep(step1Card);
-                activateStep(step2Card);
-            } else {
-                uncompleteStep(step1Card);
-                // Si l'étape 1 est incomplète, les étapes suivantes sont aussi considérées comme non complétées/actives
-                uncompleteStep(step2Card);
-                uncompleteStep(step3Card);
-                activateStep(step1Card); // Rester sur l'étape 1
-            }
-        }
-
-        function checkStep2Completion() {
-             const sizeInputs = dynamicFieldsContainer.querySelectorAll('input[name="sizes[]"]');
-             const priceInputs = dynamicFieldsContainer.querySelectorAll('input[name="prices[]"]');
-             let isComplete = true;
-
-             if (sizeInputs.length === 0) {
-                 isComplete = false;
-             } else {
-                 sizeInputs.forEach(input => {
-                     if (input.value.trim() === '') isComplete = false;
-                 });
-                 priceInputs.forEach(input => {
-                     if (input.value.trim() === '') isComplete = false;
-                 });
-             }
-
-             if (isComplete) {
-                 completeStep(step2Card);
-                 activateStep(step3Card);
-             } else {
-                 uncompleteStep(step2Card);
-                 uncompleteStep(step3Card); // Si l'étape 2 est incomplète, l'étape 3 est aussi considérée comme non complétée/active
-                 if (step1Card.classList.contains('completed')) {
-                     activateStep(step2Card); // Rester sur l'étape 2 si l'étape 1 est complétée
-                 } else {
-                     activateStep(step1Card); // Sinon, revenir à l'étape 1
-                 }
-             }
-        }
-
-        // Event Listeners pour la validation des étapes
-        skuInput.addEventListener('input', checkStep1Completion);
-        productNameInput.addEventListener('input', checkStep1Completion);
-        dynamicFieldsContainer.addEventListener('input', checkStep2Completion);
-        dynamicFieldsContainer.addEventListener('DOMNodeRemoved', checkStep2Completion); // Pour quand un champ est supprimé
-
-        // Écouteurs pour les clics sur les en-têtes d'étape pour la navigation arrière
-        step1Card.querySelector('.step-header').addEventListener('click', () => activateStep(step1Card));
-        step2Card.querySelector('.step-header').addEventListener('click', () => {
-            if (step1Card.classList.contains('completed')) {
-                activateStep(step2Card);
-            } else {
-                activateStep(step1Card); // Ne peut activer l'étape 2 que si la 1 est complétée
-            }
-        });
-        step3Card.querySelector('.step-header').addEventListener('click', () => {
-            if (step2Card.classList.contains('completed')) {
-                activateStep(step3Card);
-            } else if (step1Card.classList.contains('completed')) {
-                activateStep(step2Card); // Ne peut activer l'étape 3 que si la 2 est complétée
-            } else {
-                activateStep(step1Card);
-            }
+    function showStep(n) {
+        // Cacher tout et retirer la classe active
+        document.querySelectorAll('.step-card').forEach(card => {
+            card.style.display = 'none';
+            card.classList.remove('active-step');
         });
 
+        // Afficher l'étape cible
+        const target = document.getElementById('step-' + n);
+        if (target) {
+            target.style.display = 'block';
+            target.classList.add('active-step');
+            window.scrollTo(0, 0);
+        }
+    }
 
-        // --- Dynamic Fields Logic ---
-        function addSizeFields() {
-            sizeFieldCounter++;
-            const div = document.createElement('div');
-            div.classList.add('row', 'mb-3', 'align-items-center', 'form-group-item', 'dynamic-field-row');
-            div.innerHTML = `
-                <div class="col-md-5">
-                    <label for="size-${sizeFieldCounter}" class="form-label">Taille Produit ${sizeFieldCounter}</label>
-                    <input type="text" class="form-control" id="size-${sizeFieldCounter}" name="sizes[]" required>
-                </div>
-                <div class="col-md-5">
-                    <label for="price-${sizeFieldCounter}" class="form-label">Prix d'achat (${sizeFieldCounter}) (€)</label>
-                    <input type="number" step="0.01" class="form-control" id="price-${sizeFieldCounter}" name="prices[]" required>
-                </div>
-                <div class="col-md-2 d-flex justify-content-end align-items-end">
-                    <button type="button" class="btn btn-danger btn-sm remove-field-btn">Supprimer</button>
-                </div>
-            `;
-            dynamicFieldsContainer.appendChild(div);
+    function validateStep1() {
+        if (document.getElementById('current_sku').value.trim() && document.getElementById('current_name').value.trim()) {
+            showStep(2);
+        } else {
+            alert("Remplissez le SKU et le Nom.");
+        }
+    }
 
-            const removeBtn = div.querySelector('.remove-field-btn');
-            removeBtn.addEventListener('click', function() {
-                div.remove();
-                checkStep2Completion();
+    function validateStep2() {
+        const sizes = document.querySelectorAll('.current-sizes');
+        let hasValue = false;
+        sizes.forEach(i => { if(i.value.trim() !== "") hasValue = true; });
+
+        if (hasValue) {
+            updateRecap();
+            showStep(3);
+        } else {
+            alert("Ajoutez au moins une taille.");
+        }
+    }
+
+    function addSizeRow(valS = '', valP = '') {
+        const container = document.getElementById('dynamic-sizes-container');
+        const div = document.createElement('div');
+        div.className = 'row g-2 mb-2 align-items-center';
+        div.innerHTML = `
+            <div class="col-5"><input type="text" class="form-control current-sizes" placeholder="Taille" value="${valS}" required></div>
+            <div class="col-5"><input type="number" step="0.01" class="form-control current-prices" placeholder="Prix" value="${valP}" required></div>
+            <div class="col-2 text-end"><button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()"><i class="bi bi-trash"></i></button></div>
+        `;
+        container.appendChild(div);
+    }
+
+    function updateRecap() {
+        const list = document.getElementById('recap-list');
+        list.innerHTML = '';
+
+        const current = {
+            name: document.getElementById('current_name').value,
+            sku: document.getElementById('current_sku').value,
+            img: document.getElementById('current_image_url').value || '/static/sku_not_found.png',
+            sizes: Array.from(document.querySelectorAll('.current-sizes')).map(i => i.value),
+            prices: Array.from(document.querySelectorAll('.current-prices')).map(i => i.value)
+        };
+
+        const all = [...productsInMemory, current];
+        all.forEach(p => {
+            p.sizes.forEach((s, i) => {
+                if(!s || !p.prices[i]) return;
+                const row = document.createElement('div');
+                row.className = 'recap-row';
+                row.innerHTML = `
+                    <img src="${p.img}" class="recap-img" onerror="this.src='/static/sku_not_found.png'">
+                    <div class="recap-details"><h6>${p.name}</h6><small>SKU: ${p.sku} | Taille: ${s}</small></div>
+                    <div class="recap-price-tag">${parseFloat(p.prices[i]).toFixed(2)}€</div>
+                `;
+                list.appendChild(row);
+            });
+        });
+    }
+
+    function saveToMemoryAndReset() {
+        productsInMemory.push({
+            name: document.getElementById('current_name').value,
+            sku: document.getElementById('current_sku').value,
+            img: document.getElementById('current_image_url').value,
+            sizes: Array.from(document.querySelectorAll('.current-sizes')).map(i => i.value),
+            prices: Array.from(document.querySelectorAll('.current-prices')).map(i => i.value)
+        });
+        document.getElementById('add-product-form').reset();
+        document.getElementById('current_image_url').value = '';
+        document.getElementById('sku-preview-container').style.display = 'none';
+        document.getElementById('dynamic-sizes-container').innerHTML = '';
+        addSizeRow();
+        showStep(1);
+    }
+
+    // Recherche SKU & Nom avec Debounce
+    function setupSearch(id, suggId) {
+        const input = document.getElementById(id);
+        const box = document.getElementById(suggId);
+        input.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            if (input.value.length < 3) { box.style.display = 'none'; return; }
+            searchTimer = setTimeout(() => {
+                fetch(`/get_sku_suggestions?query=${encodeURIComponent(input.value)}`)
+                .then(r => r.json()).then(data => {
+                    box.innerHTML = '';
+                    if(data.length > 0) {
+                        data.forEach(item => {
+                            const d = document.createElement('div');
+                            d.className = 'list-group-item list-group-item-action bg-dark text-white border-secondary d-flex align-items-center';
+                            d.innerHTML = `<img src="${item.image_url}" width="40" class="me-3" style="background:white; border-radius:4px;">
+                                           <div><div class="fw-bold">${item.sku}</div><small>${item.product_name}</small></div>`;
+                            d.onclick = () => {
+                                document.getElementById('current_sku').value = item.sku;
+                                document.getElementById('current_name').value = item.product_name;
+                                document.getElementById('current_image_url').value = item.image_url;
+                                document.getElementById('sku-preview-img').src = item.image_url;
+                                document.getElementById('sku-preview-container').style.display = 'block';
+                                box.style.display = 'none';
+                            };
+                            box.appendChild(d);
+                        });
+                        box.style.display = 'block';
+                    }
+                });
+            }, 250);
+        });
+    }
+
+    // Soumission
+    document.getElementById('add-product-form').onsubmit = async function(e) {
+        e.preventDefault();
+        const lastName = document.getElementById('current_name').value;
+        if(lastName) {
+            productsInMemory.push({
+                name: lastName,
+                sku: document.getElementById('current_sku').value,
+                img: document.getElementById('current_image_url').value,
+                sizes: Array.from(document.querySelectorAll('.current-sizes')).map(i => i.value),
+                prices: Array.from(document.querySelectorAll('.current-prices')).map(i => i.value)
             });
         }
+        document.getElementById('success-overlay').style.display = 'flex';
+        setTimeout(() => { document.getElementById('progress-bar').style.strokeDashoffset = '0'; }, 100);
 
-        addSizeBtn.addEventListener('click', addSizeFields);
-        addSizeFields(); // Ajoute un champ par défaut au chargement
-
-        // --- Suggestions Logic ---
-        function handleSkuSuggestions() {
-            clearTimeout(debounceTimeoutSku);
-            const query = skuInput.value.trim();
-            skuSuggestions.innerHTML = '';
-            noSkuFoundMessage.style.display = 'none';
-            skuSuggestions.style.display = 'none';
-
-            if (query.length < 2) {
-                imageUrlInput.value = '';
-                skuImagePreview.src = defaultImageUrl;
-                skuImagePreviewContainer.style.display = 'flex';
-                checkStep1Completion(); // Re-check validity
-                return;
-            }
-
-            debounceTimeoutSku = setTimeout(function() {
-                fetch(`/get_sku_suggestions?query=${encodeURIComponent(query)}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        skuSuggestions.innerHTML = '';
-                        if (data.length > 0) {
-                            data.forEach(item => {
-                                const div = document.createElement('div');
-                                div.classList.add('list-group-item', 'list-group-item-action', 'd-flex', 'align-items-center');
-                                div.style.cursor = 'pointer';
-                                div.style.backgroundColor = 'var(--card-bg)';
-                                div.style.color = '#dcddde';
-                                div.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                                div.addEventListener('mouseover', () => div.style.backgroundColor = 'rgba(255, 255, 255, 0.1)');
-                                div.addEventListener('mouseout', () => div.style.backgroundColor = 'var(--card-bg)');
-
-
-                                const img = document.createElement('img');
-                                img.src = item.image_url;
-                                img.alt = item.sku;
-                                img.style.width = '50px';
-                                img.style.height = '50px';
-                                img.style.marginRight = '10px';
-                                img.style.objectFit = 'contain';
-
-                                const textContentDiv = document.createElement('div');
-                                const skuSpan = document.createElement('span');
-                                skuSpan.textContent = item.sku;
-                                const nameSpan = document.createElement('small');
-                                nameSpan.textContent = ` (${item.product_name})`;
-                                nameSpan.style.marginLeft = '5px';
-                                nameSpan.style.color = '#a0a0a0';
-
-                                textContentDiv.appendChild(skuSpan);
-                                textContentDiv.appendChild(nameSpan);
-
-                                div.appendChild(img);
-                                div.appendChild(textContentDiv);
-
-                                div.addEventListener('click', function() {
-                                    skuInput.value = item.sku;
-                                    imageUrlInput.value = item.image_url;
-                                    skuImagePreview.src = item.image_url;
-                                    skuImagePreviewContainer.style.display = 'flex';
-                                    productNameInput.value = item.product_name;
-                                    skuSuggestions.style.display = 'none';
-                                    skuSuggestions.innerHTML = '';
-                                    checkStep1Completion();
-                                });
-                                skuSuggestions.appendChild(div);
-                            });
-                            skuSuggestions.style.display = 'block';
-                        } else {
-                            noSkuFoundMessage.style.display = 'block';
-                            noSkuFoundMessage.style.backgroundColor = 'var(--card-bg)';
-                            noSkuFoundMessage.style.color = '#dcddde';
-                            noSkuFoundMessage.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                            skuSuggestions.appendChild(noSkuFoundMessage);
-                            skuSuggestions.style.display = 'block';
-                            imageUrlInput.value = '';
-                            skuImagePreview.src = defaultImageUrl;
-                            skuImagePreviewContainer.style.display = 'flex';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Erreur lors de la récupération des suggestions SKU :', error);
-                    });
-            }, 300);
+        for (const p of productsInMemory) {
+            const fd = new FormData();
+            fd.append('sku', p.sku); fd.append('name', p.name); fd.append('image_url', p.img);
+            p.sizes.forEach(s => fd.append('sizes[]', s));
+            p.prices.forEach(pr => fd.append('prices[]', pr));
+            await fetch("{{ url_for('add_product') }}", { method: 'POST', body: fd });
         }
+        setTimeout(() => { window.location.href = "{{ url_for('products') }}"; }, 2200);
+    };
 
-        function handleProductNameSuggestions() {
-            clearTimeout(debounceTimeoutName);
-            const query = productNameInput.value.trim();
-            nameSuggestions.innerHTML = '';
-            noNameFoundMessage.style.display = 'none';
-            nameSuggestions.style.display = 'none';
-
-            if (query.length < 2) return;
-
-            debounceTimeoutName = setTimeout(function() {
-                fetch(`/get_product_name_suggestions?query=${encodeURIComponent(query)}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        nameSuggestions.innerHTML = '';
-                        if (data.length > 0) {
-                            data.forEach(item => {
-                                const div = document.createElement('div');
-                                div.classList.add('list-group-item', 'list-group-item-action', 'd-flex', 'align-items-center');
-                                div.style.cursor = 'pointer';
-                                div.style.backgroundColor = 'var(--card-bg)';
-                                div.style.color = '#dcddde';
-                                div.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                                div.addEventListener('mouseover', () => div.style.backgroundColor = 'rgba(255, 255, 255, 0.1)');
-                                div.addEventListener('mouseout', () => div.style.backgroundColor = 'var(--card-bg)');
-
-                                const img = document.createElement('img');
-                                img.src = item.image_url;
-                                img.alt = item.name;
-                                img.style.width = '50px';
-                                img.style.height = '50px';
-                                img.style.marginRight = '10px';
-                                img.style.objectFit = 'contain';
-
-                                const textContentDiv = document.createElement('div');
-                                const nameSpan = document.createElement('span');
-                                nameSpan.textContent = item.name;
-                                const skuSpan = document.createElement('small');
-                                skuSpan.textContent = ` (SKU: ${item.sku})`;
-                                skuSpan.style.marginLeft = '5px';
-                                skuSpan.style.color = '#a0a0a0';
-
-                                textContentDiv.appendChild(nameSpan);
-                                textContentDiv.appendChild(skuSpan);
-
-                                div.appendChild(img);
-                                div.appendChild(textContentDiv);
-
-                                div.addEventListener('click', function() {
-                                    productNameInput.value = item.name;
-                                    skuInput.value = item.sku;
-                                    imageUrlInput.value = item.image_url;
-                                    skuImagePreview.src = item.image_url;
-                                    skuImagePreviewContainer.style.display = 'flex';
-                                    nameSuggestions.style.display = 'none';
-                                    nameSuggestions.innerHTML = '';
-                                    checkStep1Completion();
-                                });
-                                nameSuggestions.appendChild(div);
-                            });
-                            nameSuggestions.style.display = 'block';
-                        } else {
-                            noNameFoundMessage.style.display = 'block';
-                            noNameFoundMessage.style.backgroundColor = 'var(--card-bg)';
-                            noNameFoundMessage.style.color = '#dcddde';
-                            noNameFoundMessage.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                            nameSuggestions.appendChild(noNameFoundMessage);
-                            nameSuggestions.style.display = 'block';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Erreur lors de la récupération des suggestions de nom de produit :', error);
-                    });
-            }, 300);
-        }
-
-        // Event Listeners
-        skuInput.addEventListener('input', handleSkuSuggestions);
-        productNameInput.addEventListener('input', handleProductNameSuggestions);
-
-        // Close suggestions when clicking outside
-        document.addEventListener('click', function(event) {
-            if (!skuSuggestions.contains(event.target) && event.target !== skuInput) {
-                skuSuggestions.style.display = 'none';
-            }
-            if (!nameSuggestions.contains(event.target) && event.target !== productNameInput) {
-                nameSuggestions.style.display = 'none';
-            }
-        });
-
-        // Initial setup
-        activateStep(step1Card);
-        if (!imageUrlInput.value) {
-            skuImagePreview.src = defaultImageUrl;
-            skuImagePreviewContainer.style.display = 'flex';
-        } else {
-            skuImagePreviewContainer.style.display = 'flex';
-        }
-
-        checkStep1Completion(); // Vérifier l'état initial des étapes
-        checkStep2Completion(); // Pour le cas où des données seraient pré-remplies
-
+    document.addEventListener('DOMContentLoaded', () => {
+        addSizeRow();
+        setupSearch('current_sku', 'sku-suggestions');
+        setupSearch('current_name', 'name-suggestions');
+        showStep(1);
     });
 </script>
 {% endblock %}
