@@ -1180,9 +1180,9 @@ def generate_wtb_wts_image():
 
         for batch_index, product_batch in enumerate(product_batches):
             # Charger l'image de fond
-            base_image_path = os.path.join(current_app.root_path, 'static', 'fond.png')
+            base_image_path = os.path.join(current_app.root_path, 'static', 'logo.png')
             if not os.path.exists(base_image_path):
-                raise FileNotFoundError('Background image fond.png not found at path: ' + base_image_path)
+                raise FileNotFoundError('Background image logo.png not found at path: ' + base_image_path)
 
             base_img = Image.open(base_image_path).convert("RGBA")
             img_width, img_height = base_img.size
@@ -2112,6 +2112,97 @@ def statistics():
                            ref_rev=ref_rev, ref_prof=ref_prof, has_ref=has_ref)
 
 
+@app.route('/api/overlay_stats')
+@login_required
+def api_overlay_stats():
+    conn = g.db
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    user_id = current_user.id
+    now = dt.datetime.now()
+    today = now.date()
+    monday = today - dt.timedelta(days=today.weekday())
+
+    # --- 1. VOLUMES ET PROFIT (Formule identique à ta route /statistics) ---
+    cur.execute("""
+        SELECT 
+            SUM(sale_price) as total_revenue,
+            SUM(profit) as total_profit,
+            SUM(purchase_price_at_sale) as total_cost,
+            COUNT(*) as volume
+        FROM sales WHERE user_id = %s
+    """, (user_id,))
+    main_stats = cur.fetchone()
+
+    t_profit = float(main_stats['total_profit'] or 0)
+    t_cost = float(main_stats['total_cost'] or 0)
+    # Calcul du ROI Moyen (Total Profit / Total Achat)
+    roi_avg = round((t_profit / t_cost * 100), 1) if t_cost > 0 else 0
+
+    # --- 2. RECORDS (Utilisation de item_name) ---
+    cur.execute("SELECT profit, item_name FROM sales WHERE user_id = %s ORDER BY profit DESC LIMIT 1", (user_id,))
+    rec = cur.fetchone()
+    record_val = float(rec['profit'] or 0) if rec else 0
+    record_name = rec['item_name'] if rec else "N/A"
+
+    # --- 3. VOLUMES TEMPORELS ---
+    cur.execute("SELECT SUM(sale_price) as v FROM sales WHERE user_id = %s AND sale_date::date = %s", (user_id, today))
+    s_today = float(cur.fetchone()['v'] or 0)
+
+    cur.execute("SELECT SUM(sale_price) as v FROM sales WHERE user_id = %s AND sale_date >= %s",
+                (user_id, dt.datetime.combine(monday, dt.time.min)))
+    s_week = float(cur.fetchone()['v'] or 0)
+
+    cur.execute(
+        "SELECT SUM(sale_price) as v FROM sales WHERE user_id = %s AND EXTRACT(MONTH FROM sale_date) = %s AND EXTRACT(YEAR FROM sale_date) = %s",
+        (user_id, today.month, today.year))
+    s_month = float(cur.fetchone()['v'] or 0)
+
+    cur.execute("SELECT SUM(sale_price) as v FROM sales WHERE user_id = %s AND EXTRACT(YEAR FROM sale_date) = %s",
+                (user_id, today.year))
+    s_year = float(cur.fetchone()['v'] or 0)
+
+    # --- 4. TOP/FLOP HEBDO ---
+    cur.execute("SELECT MAX(profit) as b, MIN(profit) as w FROM sales WHERE user_id = %s AND sale_date >= %s",
+                (user_id, dt.datetime.combine(monday, dt.time.min)))
+    hebdo = cur.fetchone()
+    b_week = float(hebdo['b'] or 0)
+    w_week = float(hebdo['w'] or 0)
+
+    # --- 5. STOCK ET TRÉSO ---
+    cur.execute("SELECT SUM(purchase_price) as v FROM products WHERE user_id = %s AND quantity = 1", (user_id,))
+    s_val = float(cur.fetchone()['v'] or 0)
+
+    cur.execute("SELECT SUM(sale_price) as v FROM sales WHERE user_id = %s AND payment_status = 'en_attente'",
+                (user_id,))
+    pending = float(cur.fetchone()['v'] or 0)
+
+    # --- 6. PROGRESSION OBJECTIF ---
+    last_monday = monday - dt.timedelta(days=7)
+    cur.execute("SELECT SUM(profit) as p FROM sales WHERE user_id = %s AND sale_date >= %s AND sale_date < %s",
+                (user_id, last_monday, monday))
+    prev_p = float(cur.fetchone()['p'] or 0)
+    cur.execute("SELECT SUM(profit) as p FROM sales WHERE user_id = %s AND sale_date >= %s", (user_id, monday))
+    curr_p = float(cur.fetchone()['p'] or 0)
+    progression = min(100, round((curr_p / prev_p * 100))) if prev_p > 0 else (100 if curr_p > 0 else 0)
+
+    return jsonify({
+        "total_profit": t_profit,
+        "roi_avg": roi_avg,
+        "record_value": record_val,
+        "record_pair": record_name,
+        "avg_margin": round(t_profit / main_stats['volume'], 2) if main_stats['volume'] and main_stats[
+            'volume'] > 0 else 0,
+        "sales_today": s_today,
+        "sales_week": s_week,
+        "sales_month": s_month,
+        "sales_year": s_year,
+        "best_sale_week": b_week,
+        "worst_sale_week": w_week,
+        "stock_value": s_val,
+        "weekly_progress": progression,
+        "total_base_cash": s_val + pending
+    })
 @app.route('/download-report-pdf')
 @login_required
 def download_report_pdf():

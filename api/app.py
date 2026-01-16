@@ -1171,9 +1171,9 @@ def generate_wtb_wts_image():
 
         for batch_index, product_batch in enumerate(product_batches):
             # Charger l'image de fond
-            base_image_path = os.path.join(current_app.root_path, 'static', 'fond.png')
+            base_image_path = os.path.join(current_app.root_path, 'static', 'logo.png')
             if not os.path.exists(base_image_path):
-                raise FileNotFoundError('Background image fond.png not found at path: ' + base_image_path)
+                raise FileNotFoundError('Background image logo.png not found at path: ' + base_image_path)
 
             base_img = Image.open(base_image_path).convert("RGBA")
             img_width, img_height = base_img.size
