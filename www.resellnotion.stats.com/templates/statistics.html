@@ -18,7 +18,6 @@
 
     body {
         background: #0b0e14;
-        /* Note : Le fichier de fond doit être appelé en .png si utilisé ultérieurement */
         background-image:
             radial-gradient(circle at 0% 0%, rgba(138, 43, 226, 0.1) 0%, transparent 35%),
             radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.05) 0%, transparent 35%);
@@ -36,9 +35,9 @@
         border: 1px solid var(--glass-border);
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        scrollbar-width: none; /* Firefox */
+        scrollbar-width: none;
     }
-    .nav-tabs-premium::-webkit-scrollbar { display: none; /* Chrome/Safari */ }
+    .nav-tabs-premium::-webkit-scrollbar { display: none; }
 
     .nav-tabs-premium .tab-link {
         padding: 12px 24px; border-radius: 14px; color: #8e9297; font-weight: 600;
@@ -79,65 +78,77 @@
 
     .expert-text { font-size: 1.15rem; line-height: 1.7; font-weight: 400; }
     .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(10px); z-index: 10000; align-items: center; justify-content: center; }
-    .overlay-content { background: #161a2b; padding: 35px; border-radius: 24px; max-width: 500px; width: 90%; border: 1px solid var(--glass-border); position: relative; max-height: 90vh; overflow-y: auto; }
+    .overlay-content { background: #161a2b; padding: 35px; border-radius: 24px; max-width: 600px; width: 90%; border: 1px solid var(--glass-border); position: relative; max-height: 90vh; overflow-y: auto; }
+
+    /* --- CARDS STOCK INDIVIDUELLES --- */
+    .stock-focus-card {
+        background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: 20px;
+        padding: 16px; display: flex; align-items: center; gap: 18px; transition: 0.3s;
+        margin-bottom: 15px;
+    }
+    .stock-img-box { width: 85px; height: 85px; background: #fff; border-radius: 14px; padding: 8px; flex-shrink: 0; }
+    .stock-img-box img { width: 100%; height: 100%; object-fit: contain; }
+    .stock-info-box { flex-grow: 1; min-width: 0; }
+    .stock-tag { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800; margin-bottom: 4px; display: block; }
+    .stock-name { font-size: 1rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stock-meta { font-size: 0.75rem; color: #8e9297; display: flex; gap: 12px; margin-top: 4px; }
+    .stock-price-tag { font-size: 1.2rem; font-weight: 800; color: #fff; margin-left: auto; }
+
+    .btn-focus-trigger {
+        background: rgba(138, 43, 226, 0.1); border: 1px dashed var(--primary-glow); color: #fff;
+        padding: 12px; border-radius: 16px; font-size: 0.8rem; font-weight: 700; cursor: pointer;
+        width: 100%; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .btn-focus-trigger:hover { background: var(--primary-glow); border-style: solid; box-shadow: 0 0 15px var(--primary-glow); }
+
+    /* --- ANALYTIQUE SUB-NAV --- */
+    .analytique-nav { display: flex; gap: 10px; margin-bottom: 25px; }
 
     @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* --- OPTIMISATIONS RESPONSIVE --- */
-
-    /* Typographie fluide pour les titres */
     h1 { font-size: clamp(1.5rem, 5vw, 2.5rem); }
-
-    @media (max-width: 992px) {
-        .stat-numb { font-size: 1.6rem; }
-        .expert-text { font-size: 1rem; }
-    }
-
-    @media (max-width: 768px) {
-        .stats-container { padding: 15px; }
-
-        .d-flex.flex-wrap.justify-content-between {
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
-
-        .period-btn { padding: 8px 12px; font-size: 0.75rem; }
-
-        .custom-input { width: 100% !important; margin-bottom: 10px; }
-
-        .health-circle { width: 100px; height: 100px; }
-        .score-inner { font-size: 1.8rem; }
-
-        .stat-numb { font-size: 1.4rem !important; }
-
-        /* Ajustement des graphiques */
-        .premium-card div[style*="height: 350px"] {
-            height: 250px !important;
-        }
-    }
-
-    @media (max-width: 576px) {
-        .col-6 { padding-left: 8px; padding-right: 8px; }
-        .premium-card { padding: 15px; }
-        .stat-label { font-size: 0.7rem; }
-        .stat-numb { font-size: 1.2rem !important; }
-
-        .nav-tabs-premium .tab-link { padding: 10px 15px; font-size: 0.8rem; }
-
-        .overlay-content { padding: 25px; }
-    }
+    @media (max-width: 768px) { .stats-container { padding: 15px; } .stat-numb { font-size: 1.4rem !important; } }
 </style>
 
 <div id="overlay-health" class="overlay"><div class="overlay-content"><span class="btn-close btn-close-white position-absolute top-0 end-0 m-3" onclick="closeHelp('health')"></span><h4 class="text-white fw-bold mb-3">Health Score</h4><p class="small text-muted">Analyse de la rentabilité et du flux.</p></div></div>
 <div id="overlay-profit-latent" class="overlay"><div class="overlay-content"><span class="btn-close btn-close-white position-absolute top-0 end-0 m-3" onclick="closeHelp('profit-latent')"></span><h4 class="text-white fw-bold mb-3">Profit Latent</h4><p class="small text-muted">Bénéfice net contenu dans votre stock actuel.</p></div></div>
+<div id="overlay-stock-focus" class="overlay">
+    <div class="overlay-content">
+        <span class="btn-close btn-close-white position-absolute top-0 end-0 m-3" onclick="closeHelp('stock-focus')"></span>
+        <h4 class="text-white fw-bold mb-4"><i class="bi bi-bullseye me-2 text-primary"></i>Focus Actifs Spécifiques</h4>
+        <div class="mb-4">
+            {% if oldest_pair %}
+            <div class="stock-focus-card">
+                <div class="stock-img-box"><img src="{{ oldest_pair.image_url }}" onerror="this.src='/static/placeholder.png'"></div>
+                <div class="stock-info-box">
+                    <span class="stock-tag text-danger">Unité la plus ancienne</span>
+                    <div class="stock-name">{{ oldest_pair.name }}</div>
+                    <div class="stock-meta"><span>SKU: {{ oldest_pair.sku }}</span><span>Taille: {{ oldest_pair.size }}</span></div>
+                    <div class="mt-2"><span class="badge bg-danger bg-opacity-25 text-danger">{{ oldest_pair.age }} JOURS</span></div>
+                </div>
+                <div class="stock-price-tag">{{ "%.0f"|format(oldest_pair.purchase_price) }}€</div>
+            </div>
+            {% endif %}
+            {% for p in expensive_pairs %}
+            <div class="stock-focus-card">
+                <div class="stock-img-box"><img src="{{ p.image_url }}" onerror="this.src='/static/placeholder.png'"></div>
+                <div class="stock-info-box">
+                    <span class="stock-tag" style="color: var(--primary-glow);">Actif haute valeur</span>
+                    <div class="stock-name">{{ p.name }}</div>
+                    <div class="stock-meta"><span>SKU: {{ p.sku }}</span><span>Taille: {{ p.size }}</span></div>
+                    <div class="mt-2"><span class="badge bg-white bg-opacity-10 text-white-50">{{ p.age }} JOURS</span></div>
+                </div>
+                <div class="stock-price-tag">{{ "%.0f"|format(p.purchase_price) }}€</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
 
 <div class="stats-container">
-
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-4">
         <div>
             <h1 class="fw-bold text-white mb-1">Rapport de Performance</h1>
-            <p class="text-muted small">Suivi stratégique de votre activité.</p>
+            <p class="text-muted small">Intelligence de Marché & Flux Financiers</p>
         </div>
         <div class="d-flex flex-wrap gap-2 align-items-center bg-dark bg-opacity-25 p-2 rounded-4 border border-white border-opacity-10 w-100 w-md-auto justify-content-center">
             <div class="d-flex gap-1 justify-content-center w-100 w-md-auto">
@@ -160,6 +171,7 @@
         <button class="tab-link" onclick="showTab(event, 'tab-finances')">Finances</button>
         <button class="tab-link" onclick="showTab(event, 'tab-goals')">Objectifs</button>
         <button class="tab-link" onclick="showTab(event, 'tab-stock')">Stock</button>
+        <button class="tab-link" onclick="showTab(event, 'tab-analytique')">Analytique</button>
         <button class="tab-link" onclick="showTab(event, 'tab-history')">Historique</button>
     </nav>
 
@@ -172,12 +184,7 @@
         </div>
         <div class="row g-4">
             <div class="col-lg-8"><div class="premium-card"><h6 class="stat-label mb-4">Évolution des Flux</h6><div style="height: 350px;"><canvas id="evolutionChart"></canvas></div></div></div>
-            <div class="col-lg-4">
-                <div class="premium-card" style="background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), transparent); border-left: 4px solid var(--primary-glow);">
-                    <h5 class="text-white fw-bold mb-3 text-uppercase small"><i class="bi bi-robot me-2" style="color: var(--primary-glow)"></i>AVIS DE L'EXPERT</h5>
-                    <p id="dashboard-expert-advice" class="expert-text text-white-50">Diagnostic stratégique en cours...</p>
-                </div>
-            </div>
+            <div class="col-lg-4"><div class="premium-card" style="background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), transparent); border-left: 4px solid var(--primary-glow);"><h5 class="text-white fw-bold mb-3 text-uppercase small"><i class="bi bi-robot me-2" style="color: var(--primary-glow)"></i>AVIS DE L'EXPERT</h5><p id="dashboard-expert-advice" class="expert-text text-white-50">Diagnostic stratégique en cours...</p></div></div>
         </div>
     </div>
 
@@ -189,23 +196,10 @@
             <div class="col-6 col-md-3"><div class="premium-card border-warning border-opacity-25"><span class="stat-label text-warning">En Attente</span><div class="stat-numb text-truncate" style="font-size: 1.5rem">{{ "%.2f"|format(pending_payments) }}€</div></div></div>
             <div class="col-6 col-md-3"><div class="premium-card border-primary border-opacity-50"><span class="stat-label text-glow-purple">Puissance Totale</span><div class="stat-numb text-glow-purple text-truncate" id="val-total-base" style="font-size: 1.5rem">{{ "%.2f"|format(total_base_cash) }}€</div></div></div>
         </div>
-        <h3 class="fw-bold text-white mb-4">Projections de Croissance</h3>
-        <div class="row g-3 mb-5 text-center">
-            <div class="col-12 col-md-4"><div class="premium-card"><span class="stat-label">Horizon 7 Jours</span><div class="stat-numb text-white text-truncate" id="proj-7d">--€</div></div></div>
-            <div class="col-12 col-md-4"><div class="premium-card border-success border-opacity-25"><span class="stat-label text-success">Horizon 30 Jours</span><div class="stat-numb text-white text-truncate" id="proj-30d">--€</div></div></div>
-            <div class="col-12 col-md-4"><div class="premium-card border-warning border-opacity-25"><span class="stat-label text-warning">Horizon 1 An</span><div class="stat-numb text-white text-truncate" id="proj-365d">--€</div></div></div>
-        </div>
-        <div class="premium-card mb-5" style="background: rgba(138, 43, 226, 0.05); border-left: 4px solid var(--primary-glow);">
-            <div class="d-flex align-items-center mb-3"><i class="bi bi-robot text-primary fs-3 me-3"></i><h5 class="text-white fw-bold m-0 text-uppercase small">AVIS DE L'EXPERT</h5></div>
-            <p id="finance-expert-advice" class="expert-text text-white-50 mb-0">Analyse de la solvabilité...</p>
-        </div>
+        <div class="premium-card mb-5" style="background: rgba(138, 43, 226, 0.05); border-left: 4px solid var(--primary-glow);"><h5 class="text-white fw-bold mb-3 text-uppercase small"><i class="bi bi-robot text-primary me-2"></i>AVIS DE L'EXPERT</h5><p id="finance-expert-advice" class="expert-text text-white-50 mb-0">Analyse de la solvabilité...</p></div>
     </div>
 
     <div id="tab-goals" class="tab-pane">
-        <div class="d-flex flex-wrap justify-content-between align-items-end mb-4 gap-3">
-            <div><h3 class="fw-bold text-white mb-1">Objectifs Performance</h3><p class="text-muted small">Analyse sur la période : <strong>{{ period|capitalize }}</strong></p></div>
-            {% if has_ref %}<div class="bg-white bg-opacity-5 p-1 rounded-3 d-flex gap-1"><button onclick="setGoalCoef(1.2)" id="btn-low" class="period-btn active">Prudent (x1.2)</button><button onclick="setGoalCoef(1.8)" id="btn-high" class="period-btn">Aggressif (x1.8)</button></div>{% endif %}
-        </div>
         <div class="row g-4">
             <div class="col-md-6"><div class="premium-card"><div class="d-flex justify-content-between mb-2"><span class="stat-label">Cible Chiffre d'Affaires</span><span id="badge-rev-reached" class="badge bg-success text-dark d-none">PALIER FRANCHI</span></div><div class="d-flex justify-content-between flex-wrap"><div class="stat-numb text-white text-truncate" id="goal-rev-val">-- €</div><div class="text-end"><div class="text-primary fw-bold" id="goal-rev-percent">0%</div><div class="text-muted small" id="goal-rev-rem">Gap: -- €</div></div></div><div class="progress-custom mt-3"><div id="progress-rev" class="progress-bar-glow h-100 bg-primary" style="width: 0%"></div></div></div></div>
             <div class="col-md-6"><div class="premium-card"><div class="d-flex justify-content-between mb-2"><span class="stat-label">Cible Bénéfice Net</span><span id="badge-prof-reached" class="badge bg-success text-dark d-none">RENTABILITÉ VALIDÉE</span></div><div class="d-flex justify-content-between flex-wrap"><div class="stat-numb text-success text-truncate" id="goal-prof-val">-- €</div><div class="text-end"><div class="text-success fw-bold" id="goal-prof-percent">0%</div><div class="text-muted small" id="goal-prof-rem">Gap: -- €</div></div></div><div class="progress-custom mt-3"><div id="progress-prof" class="progress-bar-glow h-100 bg-success" style="width: 0%"></div></div></div></div>
@@ -220,14 +214,41 @@
             <div class="col-6 col-md-4"><div class="premium-card text-center border-primary border-opacity-25"><span class="stat-label text-glow-purple">Vente Latente (CA)</span><div class="stat-numb text-white text-truncate" style="font-size: 1.6rem">{{ "%.2f"|format(ca_latent) }}€</div></div></div>
         </div>
         <div class="row g-4">
-            <div class="col-md-4"><div class="premium-card"><h6 class="stat-label mb-3">Santé du Stock</h6><div class="d-flex justify-content-between mb-3"><span class="small text-white-50">Temps de détention :</span><span class="badge {% if stock_avg_age > 45 %}bg-danger{% else %}bg-success{% endif %} px-3">{{ stock_avg_age }}j</span></div><div class="d-flex justify-content-between"><span class="small text-white-50">Réinvestissement :</span><span class="fw-bold text-white">{{ "%.0f"|format(ca_latent * 0.85) }}€</span></div></div></div>
+            <div class="col-md-4">
+                <div class="premium-card d-flex flex-column justify-content-between">
+                    <div>
+                        <h6 class="stat-label mb-3">Santé du Stock</h6>
+                        <div class="d-flex justify-content-between mb-3"><span class="small text-white-50">Temps de détention :</span><span class="badge {% if stock_avg_age > 45 %}bg-danger{% else %}bg-success{% endif %} px-3">{{ stock_avg_age }}j</span></div>
+                        <div class="d-flex justify-content-between mb-4"><span class="small text-white-50">Réinvestissement :</span><span class="fw-bold text-white">{{ "%.0f"|format(ca_latent * 0.85) }}€</span></div>
+                    </div>
+                    <button class="btn-focus-trigger" onclick="openHelp('stock-focus')"><i class="bi bi-eye-fill"></i> VOIR LES ACTIFS CRITIQUES</button>
+                </div>
+            </div>
             <div class="col-md-8"><div class="premium-card" style="background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), transparent); border-left: 4px solid var(--primary-glow);"><h5 class="text-white fw-bold mb-3 text-uppercase small"><i class="bi bi-robot me-2 text-primary"></i>AVIS DE L'EXPERT</h5><p id="stock-expert-advice" class="expert-text text-white-50 mb-0">Audit du catalogue...</p></div></div>
         </div>
     </div>
 
+    <div id="tab-analytique" class="tab-pane">
+        <h3 class="fw-bold text-white mb-4">Analytique de Distribution</h3>
+        <div class="analytique-nav">
+            <button class="period-btn active" onclick="switchAnalytique(this, 'days')">Par Jour</button>
+            <button class="period-btn" onclick="switchAnalytique(this, 'sizes')">Par Taille</button>
+            <button class="period-btn" onclick="switchAnalytique(this, 'platforms')">Par Plateforme</button>
+        </div>
+        <div class="row g-4">
+            <div class="col-lg-8"><div class="premium-card"><h6 class="stat-label mb-4" id="analytique-chart-title">Répartition par Jour</h6><div style="height: 380px;"><canvas id="analytiqueChart"></canvas></div></div></div>
+            <div class="col-lg-4">
+                <div class="premium-card" style="background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), transparent); border-left: 4px solid var(--primary-glow);">
+                    <h5 class="text-white fw-bold mb-3 text-uppercase small"><i class="bi bi-robot me-2 text-primary"></i>ANALYSE SECTORIELLE</h5>
+                    <p id="analytique-expert-advice" class="expert-text text-white-50">Sélectionnez un segment pour analyse...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="tab-history" class="tab-pane">
-        <h3 class="fw-bold text-white mb-4">Détails des transactions</h3>
-        <div class="premium-card"><div class="table-responsive"><table class="table table-premium align-middle" style="min-width: 700px;"><thead><tr class="text-muted small uppercase"><th>DATE</th><th>ARTICLE</th><th>PRIX VENTE</th><th>PROFIT NET</th><th>ROI %</th></tr></thead><tbody>{% for sale in sales %}<tr><td class="text-muted small">{{ sale.sale_date.strftime('%d/%m/%Y') }}</td><td><div class="d-flex align-items-center"><div style="width: 45px; height: 45px; background: white; border-radius: 10px; padding: 4px; margin-right: 15px; flex-shrink: 0;"><img src="{{ sale.image_url }}" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.src='/static/placeholder.png'"></div><div><div class="fw-bold small">{{ sale.item_name }}</div><div class="text-muted" style="font-size: 0.7rem;">{{ sale.sku }}</div></div></div></td><td class="fw-bold">{{ "%.2f"|format(sale.sale_price) }}€</td><td class="text-success fw-bold">+{{ "%.2f"|format(sale.profit) }}€</td><td><span class="badge bg-secondary bg-opacity-25 text-white">{{ "%.0f"|format((sale.profit / sale.purchase_price_at_sale * 100) if sale.purchase_price_at_sale > 0 else 0) }}%</span></td></tr>{% endfor %}</tbody></table></div></div>
+        <h3 class="fw-bold text-white mb-4">Historique</h3>
+        <div class="premium-card"><div class="table-responsive"><table class="table table-premium align-middle"><thead><tr class="text-muted small uppercase"><th>DATE</th><th>ARTICLE</th><th>PRIX VENTE</th><th>PROFIT</th><th>ROI</th></tr></thead><tbody>{% for sale in sales %}<tr><td class="small">{{ sale.sale_date.strftime('%d/%m/%Y') }}</td><td><div class="d-flex align-items-center"><div style="width: 45px; height: 45px; background: white; border-radius: 10px; padding: 4px; margin-right: 15px;"><img src="{{ sale.image_url }}" style="width: 100%; height: 100%; object-fit: contain;"></div><div><div class="fw-bold small">{{ sale.item_name }}</div><div class="text-muted small">{{ sale.sku }}</div></div></div></td><td class="fw-bold">{{ "%.2f"|format(sale.sale_price) }}€</td><td class="text-success fw-bold">+{{ "%.2f"|format(sale.profit) }}€</td><td><span class="badge bg-secondary bg-opacity-25 text-white">{{ "%.0f"|format((sale.profit / sale.purchase_price_at_sale * 100) if sale.purchase_price_at_sale > 0 else 0) }}%</span></td></tr>{% endfor %}</tbody></table></div></div>
     </div>
 </div>
 
@@ -236,119 +257,86 @@
         document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
         document.getElementById(id).classList.add('active'); e.currentTarget.classList.add('active');
+        if (id === 'tab-analytique' && !analytiqueChart) initAnalytique();
     }
 
-    const staticStock = parseFloat("{{ valeur_achat_stock }}") || 0;
-    const staticPending = parseFloat("{{ pending_payments }}") || 0;
-    const dailyProf = parseFloat("{{ (profit / 7) if period == 'week' else (profit / 30) if period == 'month' else (profit / 365) if period == 'year' else profit }}") || 0;
-    const hScore = parseInt("{{ health_score }}") || 0;
-    const roiAvg = parseFloat("{{ roi_avg }}") || 0;
-    const vol = parseInt("{{ volume }}") || 0;
+    const staticStock = {{ stock_value|default(0)|tojson }};
+    const staticPending = {{ pending_payments|default(0)|tojson }};
+    const dailyProf = {{ profit|default(0)|tojson }} / ({{ 7 if period == 'week' else 30 if period == 'month' else 365 if period == 'year' else 1 }});
+    const hScore = {{ health_score|default(0)|tojson }};
+    const roiAvg = {{ roi_avg|default(0)|tojson }};
+    const vol = {{ volume|default(0)|tojson }};
 
-    // --- LOGIQUE AVIS EXPERT : DASHBOARD (STRATÉGIE GLOBALE) ---
+    const daysData = {{ days_dist|tojson }};
+    const sizesData = {{ sizes_dist|tojson }};
+    const platformsData = {{ platforms_dist|tojson }};
+
     function updateDashboardAdvice() {
         let adv = "";
-        if (hScore >= 9 && roiAvg >= 30) {
-            adv = `🔥 MODÈLE ÉLITE : Votre efficacité est redoutable. Avec un ROI de ${roiAvg}%, chaque euro investi travaille dur. Recommandation : Ne changez rien à vos critères d'achat, mais cherchez à augmenter le volume de 20% pour décupler vos profits sans sacrifier la marge.`;
-        } else if (hScore >= 7 && vol < 3) {
-            adv = `💎 BOUTIQUE DE LUXE : Vous avez l'œil pour les pépites, mais votre activité manque de souffle. Votre sélection est ultra-qualitative mais trop rare. Pour passer au niveau supérieur, vous devez accepter des marges légèrement plus faibles sur des modèles à rotation plus rapide (Quick Flips).`;
-        } else if (hScore >= 5 && roiAvg < 15) {
-            adv = `⚖️ LE GRINDER : Vous générez du volume, mais vos marges sont compressées. Vous travaillez probablement sur des modèles trop "mass market" où la concurrence est féroce. Stratégie : Allouez 30% de votre budget à des paires plus exclusives pour faire remonter votre ROI moyen au-dessus de 20%.`;
-        } else if (hScore < 4) {
-            adv = `⚠️ AUDIT D'URGENCE : Votre score de santé est critique. Votre capital s'érode soit par des frais cachés, soit par un stock qui perd de la valeur. Arrêtez tout achat immédiat. Vendez vos paires les moins rentables pour sécuriser du cash et repartez sur une base saine.`;
-        } else if (dailyProf < 0) {
-            adv = `📉 PHASE D'INVESTISSEMENT : Vos résultats actuels sont dans le rouge, ce qui est normal si vous venez de constituer un gros stock. L'enjeu est maintenant la revente. Surveillez votre 'Break-even point' pour ne pas transformer ce stock en passif financier.`;
-        } else {
-            adv = `📈 CROISSANCE RÉGULIÈRE : Votre profil est équilibré. L'historique montre une gestion saine. C'est le moment idéal pour tester un nouveau segment de marché (ex: passer du lifestyle au performance) avec une petite partie de votre capital.`;
-        }
+        if (hScore >= 9 && roiAvg >= 30) adv = `OPTIMISATION DE LA RENTABILITÉ : Performance exceptionnelle avec un ROI moyen de ${roiAvg}% et un Health Score de ${hScore}/10. Recommandation : Visez une augmentation du volume de 20% pour décupler vos profits sans sacrifier la marge.`;
+        else if (hScore >= 7 && vol < 3) adv = `ANALYSE DU VOLUME : Bien que qualitatif (Health Score ${hScore}/10), votre volume (${vol} ventes) limite votre croissance. Diversifiez votre inventaire avec des modèles à rotation plus rapide.`;
+        else if (hScore >= 5 && roiAvg < 15) adv = `RESTRUCTURATION DES MARGES : Volume soutenu mais ROI de ${roiAvg}% inférieur aux standards. Allouez une part plus importante de votre budget à des actifs à plus forte valeur ajoutée (ROI > 20%).`;
+        else if (hScore < 4) adv = `AUDIT DE VIABILITÉ : Alerte : Health Score de ${hScore}/10 indique une fragilité structurelle. Suspendez toute nouvelle acquisition et liquidez les actifs les moins performants.`;
+        else adv = `STABILITÉ STRATÉGIQUE : Activité saine et équilibrée. Avec un ROI de ${roiAvg}% et une gestion cohérente, votre structure est prête pour explorer de nouveaux segments de marché.`;
         document.getElementById('dashboard-expert-advice').innerText = adv;
     }
 
-    // --- LOGIQUE AVIS EXPERT : FINANCES (RISQUES & CASHFLOW) ---
     function updateFinances() {
         const cash = parseFloat(document.getElementById('input-cash').value) || 0;
         const total = cash + staticStock + staticPending;
         document.getElementById('val-total-base').innerText = total.toFixed(2) + "€";
-
-        const p30 = total + (dailyProf * 30);
-        document.getElementById('proj-7d').innerText = (total + (dailyProf * 7)).toFixed(2) + "€";
-        document.getElementById('proj-30d').innerText = p30.toFixed(2) + "€";
-        document.getElementById('proj-365d').innerText = Math.round(total + (dailyProf * 365)).toLocaleString() + "€";
-
-        const growth = (dailyProf * 30 / total * 100).toFixed(1);
-        const sWeight = (staticStock / total * 100).toFixed(0);
-        let adv = "";
-
-        if (sWeight > 85) {
-            adv = `🚨 RISQUE D'ASPHYXIE : ${sWeight}% de votre argent est bloqué dans des boîtes. En cas de pépin personnel ou de baisse du marché, vous n'avez aucune marge de manœuvre. Vendez 3 paires "faciles" dès demain pour remonter votre cash disponible à au moins 25%.`;
-        } else if (cash > total * 0.6 && dailyProf < 1) {
-            adv = `💤 CAPITAL DORMANТ : Vous avez trop de cash (${cash.toFixed(0)}€) qui ne produit rien. Votre argent perd de la valeur chaque jour. C'est le moment d'être agressif sur les achats, vous avez le "war chest" nécessaire pour écraser la concurrence sur les enchères.`;
-        } else if (dailyProf > 0 && growth > 15) {
-            adv = `🚀 HYPER-CROISSANCE : Votre rythme de ${growth}% par mois est exceptionnel. À ce stade, le danger est l'erreur humaine. Automatisez vos processus (suivi, listings, envois) pour que votre structure puisse supporter cette montée en puissance financière.`;
-        } else if (staticPending > total * 0.3) {
-            adv = `⏳ EXPOSITION AUX PLATEFORMES : Une trop grande partie de votre argent (${staticPending.toFixed(0)}€) est bloquée en attente de paiement. Diversifiez vos canaux de vente (Vinted, Main propre) pour recevoir votre argent plus rapidement.`;
-        } else {
-            adv = `🛡️ GESTION PRUDENTE : Votre ratio cash/stock est optimal. Vous pouvez encaisser une baisse du marché tout en gardant une capacité d'achat. C'est la configuration parfaite pour durer sur le long terme.`;
-        }
-        document.getElementById('finance-expert-advice').innerText = adv;
+        document.getElementById('finance-expert-advice').innerText = `CONTRÔLE DE TRÉSORERIE : Votre capital total s'élève à ${total.toFixed(2)}€. Vos projections prévoient une capitalisation de ${(total + (dailyProf * 30)).toFixed(2)}€ d'ici 30 jours, basée sur l'ajout linéaire de votre profit journalier moyen.`;
     }
 
-    // --- LOGIQUE AVIS EXPERT : STOCK (ROTATION & VALEUR) ---
     function updateStockAdvice() {
-        const age = parseInt("{{ stock_avg_age }}") || 0;
-        const pLat = parseFloat("{{ profit_latent }}") || 0;
-        const vAch = parseFloat("{{ valeur_achat_stock }}") || 0;
-        const pot = vAch > 0 ? (pLat / vAch * 100).toFixed(1) : 0;
-        let adv = "";
-
-        if (age > 50 && pot < 15) {
-            adv = `🏚️ STOCK MORT : Vos paires stagnent depuis ${age} jours pour une marge dérisoire. Elles prennent de la place et bloquent votre capital. Liquidez tout au prix coûtant. Utilisez cet argent pour acheter des modèles qui tournent en moins de 15 jours.`;
-        } else if (age < 20 && pot > 25) {
-            adv = `⚡ THE TURBO-FLIPPER : Vous achetez des paires qui s'arrachent instantanément avec une marge énorme. C'est le Graal du resell. Analyse : Vous avez trouvé une niche ou un fournisseur sous-estimé. Doublez la mise sur ce segment précis.`;
-        } else if (age > 60 && pot > 40) {
-            adv = `🍷 L'INVESTISSEUR PATIENT : Votre stock est ancien mais sa valeur explose avec le temps. Vous faites du 'Holding'. C'est rentable, mais attention : si vous avez besoin de cash rapidement, vous devrez brader vos pépites. Gardez toujours 20% de stock à rotation rapide à côté.`;
-        } else if (pot < 5) {
-            adv = `⚠️ DANGER DE MARGE : Votre profit latent est de seulement ${pot}%. Entre les frais d'envoi, les plateformes et les éventuels retours, vous risquez de travailler gratuitement. Rehaussez vos prix de vente ou négociez mieux vos prix d'achat.`;
-        } else {
-            adv = `📦 INVENTAIRE SAIN : Rotation moyenne de ${age} jours avec un potentiel de +${pLat.toFixed(0)}€ de bénéfice. Votre stock est équilibré. Pensez simplement à vérifier si certaines paires ne commencent pas à "prendre la poussière".`;
-        }
-        document.getElementById('stock-expert-advice').innerText = adv;
+        const age = {{ stock_avg_age|tojson }};
+        const pLat = {{ profit_latent|tojson }};
+        document.getElementById('stock-expert-advice').innerText = `AUDIT D'INVENTAIRE : Rotation moyenne de ${age} jours avec un profit latent de +${pLat.toFixed(2)}€. Votre structure est cohérente avec les standards. Un suivi des unités approchant les 45 jours est conseillé.`;
     }
 
-    // --- LOGIQUE OBJECTIFS ---
-    let currentGoalCoef = 1.2;
-    const baseRefRev = parseFloat("{{ ref_rev }}") || 0;
-    const baseRefProf = parseFloat("{{ ref_prof }}") || 0;
-    const actualRevenue = parseFloat("{{ revenue }}") || 0;
-    const actualProfit = parseFloat("{{ profit }}") || 0;
+    let analytiqueChart = null;
+    function initAnalytique() {
+        const ctx = document.getElementById('analytiqueChart').getContext('2d');
+        analytiqueChart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: [], datasets: [{ label: 'Profit (€)', data: [], backgroundColor: 'rgba(138, 43, 226, 0.4)', borderColor: '#8a2be2', borderWidth: 2 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8e9297' } }, x: { ticks: { color: '#8e9297' } } } }
+        });
+        switchAnalytique(document.querySelector('.analytique-nav .period-btn'), 'days');
+    }
 
-    function setGoalCoef(c) { currentGoalCoef = c; updateGoalsUI(); }
-    function updateGoalsUI() {
-        if (!{{ has_ref|tojson }}) return;
-        const targetRev = baseRefRev * currentGoalCoef;
-        const targetProf = baseRefProf * currentGoalCoef;
-        const revP = Math.min(100, (actualRevenue / targetRev) * 100);
-        document.getElementById('goal-rev-val').innerText = Math.round(targetRev).toLocaleString() + " €";
-        document.getElementById('goal-rev-percent').innerText = Math.round(revP) + "%";
-        document.getElementById('goal-rev-rem').innerText = (targetRev - actualRevenue) > 0 ? `Gap: ${Math.round(targetRev - actualRevenue)}€` : "Quota franchi";
-        document.getElementById('progress-rev').style.width = revP + "%";
-        document.getElementById('badge-rev-reached').classList.toggle('d-none', actualRevenue < targetRev);
-        const profP = Math.min(100, (actualProfit / targetProf) * 100);
-        document.getElementById('goal-prof-val').innerText = Math.round(targetProf).toLocaleString() + " €";
-        document.getElementById('goal-prof-percent').innerText = Math.round(profP) + "%";
-        document.getElementById('goal-prof-rem').innerText = (targetProf - actualProfit) > 0 ? `Gap: ${Math.round(targetProf - actualProfit)}€` : "Objectif validé";
-        document.getElementById('progress-prof').style.width = profP + "%";
-        document.getElementById('badge-prof-reached').classList.toggle('d-none', actualProfit < targetProf);
-        document.getElementById('btn-low').classList.toggle('active', currentGoalCoef === 1.2);
-        document.getElementById('btn-high').classList.toggle('active', currentGoalCoef === 1.8);
+    function switchAnalytique(btn, type) {
+        document.querySelectorAll('.analytique-nav .period-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        let labels = [], profits = [], counts = [], advice = "", title = "";
+        const dayNames = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+
+        if (type === 'days') {
+            title = "Répartition par Jour"; labels = dayNames;
+            for(let i=0; i<7; i++) { profits.push(daysData[i].profit); counts.push(daysData[i].count); }
+            const bestDay = labels[profits.indexOf(Math.max(...profits))];
+            advice = `ANALYSE DE SAISONNALITÉ : Votre pic de rentabilité est observé le ${bestDay}. Stratégie : Concentrez vos publications d'annonces 24h avant ce pic pour maximiser la visibilité lors de la phase d'achat critique.`;
+        } else if (type === 'sizes') {
+            title = "Répartition par Taille"; labels = Object.keys(sizesData);
+            labels.forEach(k => { profits.push(sizesData[k].profit); counts.push(sizesData[k].count); });
+            const bestSize = labels[profits.indexOf(Math.max(...profits))];
+            advice = `OPTIMISATION DU CATALOGUE : La taille ${bestSize} génère votre plus fort profit net. Recommandation : Allouez 40% de votre capital sur ce segment pour sécuriser une rotation à haute vélocité.`;
+        } else {
+            title = "Répartition par Plateforme"; labels = Object.keys(platformsData);
+            labels.forEach(k => { profits.push(platformsData[k].profit); counts.push(platformsData[k].count); });
+            const bestPlat = labels[profits.indexOf(Math.max(...profits))];
+            advice = `EFFICIENCE DES CANAUX : ${bestPlat} s'impose comme votre canal dominant. Analyse : Ce canal offre le meilleur ratio visibilité/frais. Priorisez-y vos actifs 'Haute Valeur' pour optimiser votre marge nette.`;
+        }
+        document.getElementById('analytique-chart-title').innerText = title;
+        document.getElementById('analytique-expert-advice').innerText = advice;
+        analytiqueChart.data.labels = labels; analytiqueChart.data.datasets[0].data = profits; analytiqueChart.update();
     }
 
     function openHelp(id) { document.getElementById('overlay-' + id).style.display = 'flex'; }
     function closeHelp(id) { document.getElementById('overlay-' + id).style.display = 'none'; }
+    const ctxEv = document.getElementById('evolutionChart').getContext('2d');
+    new Chart(ctxEv, { type: 'line', data: { labels: [{% for s in sales %}"{{ s.sale_date.strftime('%d/%m') }}",{% endfor %}], datasets: [{ label: 'Ventes', data: [{% for s in sales %}{{ s.sale_price }},{% endfor %}], borderColor: '#8a2be2', backgroundColor: 'rgba(138, 43, 226, 0.1)', fill: true, tension: 0.4, borderWidth: 3 }, { label: 'Bénéfice', data: [{% for s in sales %}{{ s.profit }},{% endfor %}], borderColor: '#00ffa3', borderDash: [5, 5], fill: false, tension: 0.4, borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8e9297' } }, x: { grid: { display: false }, ticks: { color: '#8e9297' } } } } });
 
-    const ctx = document.getElementById('evolutionChart').getContext('2d');
-    new Chart(ctx, { type: 'line', data: { labels: [{% for s in sales %}"{{ s.sale_date.strftime('%d/%m') }}",{% endfor %}], datasets: [{ label: 'Ventes', data: [{% for s in sales %}{{ s.sale_price }},{% endfor %}], borderColor: '#8a2be2', backgroundColor: 'rgba(138, 43, 226, 0.1)', fill: true, tension: 0.4, borderWidth: 3 }, { label: 'Bénéfice', data: [{% for s in sales %}{{ s.profit }},{% endfor %}], borderColor: '#00ffa3', borderDash: [5, 5], fill: false, tension: 0.4, borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8e9297' } }, x: { grid: { display: false }, ticks: { color: '#8e9297' } } } } });
-
-    updateDashboardAdvice(); updateFinances(); updateGoalsUI(); updateStockAdvice();
+    updateDashboardAdvice(); updateFinances(); updateStockAdvice();
 </script>
 {% endblock %}

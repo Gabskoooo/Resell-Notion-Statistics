@@ -2052,7 +2052,7 @@ def statistics():
     proj_1m = total_base_cash + (net_flow_weekly * 4.3)
     proj_1y = total_base_cash + (net_flow_weekly * 52)
 
-    # 6. OBJECTIFS (N-1 ou Période précédente)
+    # 6. OBJECTIFS
     delta_year = dt.timedelta(days=365)
     start_n1 = filter_start - delta_year
     end_n1 = filter_end - delta_year
@@ -2090,13 +2090,57 @@ def statistics():
         for i in stock_items if i['date_added']]
     stock_avg_age = int(sum(ages) / len(ages)) if ages else 0
 
-    # 8. CONSEILS EXPERTS DIFFÉRENCIÉS
-    expert_proj = f"Analyse Flux : Avec un profit net hebdomadaire estimé à {int(net_flow_weekly)}€, votre capital devrait croître de {int(proj_1m - total_base_cash)}€ d'ici 30 jours."
+    # 9. FOCUS ACTIFS SPÉCIFIQUES
+    cur.execute(
+        "SELECT name, sku, size, purchase_price, image_url, date_added FROM products WHERE user_id = %s AND quantity = 1 ORDER BY date_added ASC LIMIT 1",
+        (current_user.id,))
+    old_res = cur.fetchone()
+    oldest_pair = None
+    if old_res:
+        d_added = old_res['date_added'].date() if isinstance(old_res['date_added'], dt.datetime) else old_res['date_added']
+        oldest_pair = {
+            'name': old_res['name'], 'sku': old_res['sku'], 'size': old_res['size'],
+            'purchase_price': float(old_res['purchase_price'] or 0), 'image_url': old_res['image_url'],
+            'age': (today_date - d_added).days
+        }
 
-    if stock_avg_age > 30:
-        expert_stock = f"Alerte Rotation : L'âge moyen de votre stock est de {stock_avg_age} jours. Il serait judicieux de liquider les pièces les plus anciennes pour libérer {int(valeur_achat_stock)}€ de trésorerie."
-    else:
-        expert_stock = f"Santé Stock : Excellente rotation. Votre stock est récent, ce qui maximise vos chances de réaliser votre profit latent de {int(profit_latent)}€ rapidement."
+    cur.execute(
+        "SELECT name, sku, size, purchase_price, image_url, date_added FROM products WHERE user_id = %s AND quantity = 1 ORDER BY purchase_price DESC LIMIT 2",
+        (current_user.id,))
+    expensive_res = cur.fetchall()
+    expensive_pairs = []
+    for p in expensive_res:
+        d_added = p['date_added'].date() if isinstance(p['date_added'], dt.datetime) else p['date_added']
+        expensive_pairs.append({
+            'name': p['name'], 'sku': p['sku'], 'size': p['size'],
+            'purchase_price': float(p['purchase_price'] or 0), 'image_url': p['image_url'],
+            'age': (today_date - d_added).days
+        })
+
+    # 10. ANALYTIQUE (Répartitions Temporelles, Tailles et Plateformes)
+    days_dist = {i: {'count': 0, 'profit': 0} for i in range(7)} # 0=Lundi, 6=Dimanche
+    sizes_dist = {}
+    platforms_dist = {}
+
+    for s in sales:
+        # Répartition par Jour
+        d_idx = s['sale_date'].weekday()
+        days_dist[d_idx]['count'] += 1
+        days_dist[d_idx]['profit'] += float(s['profit'] or 0)
+
+        # Répartition par Taille
+        sz = str(s['size'] or "N/A")
+        if sz not in sizes_dist:
+            sizes_dist[sz] = {'count': 0, 'profit': 0}
+        sizes_dist[sz]['count'] += 1
+        sizes_dist[sz]['profit'] += float(s['profit'] or 0)
+
+        # Répartition par Plateforme (Canal)
+        ch = s['sale_channel'] or "Inconnu"
+        if ch not in platforms_dist:
+            platforms_dist[ch] = {'count': 0, 'profit': 0}
+        platforms_dist[ch]['count'] += 1
+        platforms_dist[ch]['profit'] += float(s['profit'] or 0)
 
     return render_template('statistics.html',
                            sales=sales, revenue=total_revenue, profit=total_profit,
@@ -2105,13 +2149,90 @@ def statistics():
                            period=period, start_date=start_str, end_date=end_str,
                            valeur_achat_stock=valeur_achat_stock, profit_latent=profit_latent,
                            ca_latent=ca_latent, stock_avg_age=stock_avg_age,
-                           expert_proj=expert_proj, expert_stock=expert_stock,
                            current_cash=current_cash, pending_payments=pending_payments,
                            total_base_cash=total_base_cash,
                            proj_1w=proj_1w, proj_1m=proj_1m, proj_1y=proj_1y,
-                           ref_rev=ref_rev, ref_prof=ref_prof, has_ref=has_ref)
+                           ref_rev=ref_rev, ref_prof=ref_prof, has_ref=has_ref,
+                           oldest_pair=oldest_pair, expensive_pairs=expensive_pairs,
+                           days_dist=days_dist, sizes_dist=sizes_dist, platforms_dist=platforms_dist)
 
 
+@app.route('/secret-monitor-v5')
+@login_required
+def admin_monitor():
+    # 1. Sécurité : restriction par email
+    if current_user.email != 'bidardgab@gmail.com':
+        abort(403)
+
+    # 2. Connexion via la logique de ton app (g.db)
+    conn = g.db
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    try:
+        # 3. Récupération de tous les utilisateurs
+        cur.execute("SELECT id, email, username, discord_id, key_status FROM users")
+        users = cur.fetchall()
+
+        users_data = []
+
+        for user in users:
+            u_id = user['id']
+
+            # Récupérer la dernière vente
+            cur.execute("""
+                SELECT sale_date FROM sales 
+                WHERE user_id = %s 
+                ORDER BY sale_date DESC LIMIT 1
+            """, (u_id,))
+            last_sale = cur.fetchone()
+
+            # Récupérer le dernier produit ajouté
+            cur.execute("""
+                SELECT name, date_added FROM products 
+                WHERE user_id = %s 
+                ORDER BY date_added DESC LIMIT 1
+            """, (u_id,))
+            last_prod = cur.fetchone()
+
+            # Récupérer les stats de CA et bénéfice depuis la table classement_utilisateurs
+            cur.execute("""
+                SELECT total_ca, total_benefice FROM classement_utilisateurs 
+                WHERE user_id = %s
+            """, (u_id,))
+            stats = cur.fetchone()
+
+            # Calcul de la dernière activité (max entre vente et ajout produit)
+            dates = []
+            if last_sale and last_sale['sale_date']:
+                dates.append(last_sale['sale_date'])
+            if last_prod and last_prod['date_added']:
+                dates.append(last_prod['date_added'])
+
+            last_active = max(dates) if dates else "Aucune activité"
+
+            users_data.append({
+                'username': user['username'] or user['email'],
+                'email': user['email'],
+                'discord_id': user['discord_id'],
+                'key_status': user['key_status'],
+                'total_ca': float(stats['total_ca'] or 0) if stats else 0,
+                'total_profit': float(stats['total_benefice'] or 0) if stats else 0,
+                'last_active': last_active,
+                'last_product_name': last_prod['name'] if last_prod else "N/A"
+            })
+
+        # 4. Tri par CA décroissant
+        users_data.sort(key=lambda x: x['total_ca'], reverse=True)
+
+        return render_template('admin_monitor.html', users=users_data)
+
+    except Exception as e:
+        # Debugging précis dans la console
+        print(f"--- ERREUR CRITIQUE MONITOR ---")
+        print(f"Détail : {str(e)}")
+        return f"Erreur SQL : {str(e)}", 500
+    finally:
+        cur.close()
 @app.route('/api/overlay_stats')
 @login_required
 def api_overlay_stats():
