@@ -25,6 +25,9 @@ import time
 import datetime as dt
 from werkzeug.utils import secure_filename # Assurez-vous d'avoir cet import au début du fichier
 import uuid # Pour générer des noms de fichiers uniques
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 load_dotenv()
 # Render définit automatiquement DATABASE_URL pour votre base de données liée.
 
@@ -64,6 +67,39 @@ mail = Mail(app)
 # Crée le dossier d'upload s'il n'existe pas
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+
+def send_gmail_stats(recipient_email, subject, html_body):
+    sender_email = "resell.notion2025@gmail.com"
+    password = "uheb xlvp ozww tnul"
+
+    message = MIMEMultipart("alternative")
+    message["Subject"] = subject
+    message["From"] = f"Resell Notion Stats <{sender_email}>"
+    message["To"] = recipient_email
+
+    part = MIMEText(html_body, "html")
+    message.attach(part)
+
+    try:
+        # On passe sur SMTP classique (port 587) au lieu de SMTP_SSL
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.set_debuglevel(1) # Pour voir les logs dans ta console
+        server.starttls()        # Sécurise la connexion (obligatoire pour le port 587)
+        server.login(sender_email, password)
+        server.sendmail(sender_email, recipient_email, message.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"❌ Erreur d'envoi d'email : {e}")
+        return False
+
+class UserSession:
+    def __init__(self, user_id):
+        self.id = user_id
+    def get_id(self): return str(self.id)
+    def is_active(self): return True
+    def is_authenticated(self): return True
+    def is_anonymous(self): return False
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -2160,79 +2196,97 @@ def statistics():
 @app.route('/secret-monitor-v5')
 @login_required
 def admin_monitor():
-    # 1. Sécurité : restriction par email
     if current_user.email != 'bidardgab@gmail.com':
         abort(403)
 
-    # 2. Connexion via la logique de ton app (g.db)
-    conn = g.db
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
+    cur = g.db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
-        # 3. Récupération de tous les utilisateurs
-        cur.execute("SELECT id, email, username, discord_id, key_status FROM users")
-        users = cur.fetchall()
+        # On récupère tous les utilisateurs directement
+        cur.execute("SELECT id, email, username, key_status FROM users")
+        rows = cur.fetchall()
 
-        users_data = []
+        users_list = []
+        for r in rows:
+            # On cherche la dernière vente et le dernier produit pour la date
+            cur.execute("SELECT MAX(sale_date) as last_v FROM sales WHERE user_id = %s", (r['id'],))
+            v = cur.fetchone()['last_v']
 
-        for user in users:
-            u_id = user['id']
+            cur.execute("SELECT MAX(date_added) as last_p FROM products WHERE user_id = %s", (r['id'],))
+            p = cur.fetchone()['last_p']
 
-            # Récupérer la dernière vente
-            cur.execute("""
-                SELECT sale_date FROM sales 
-                WHERE user_id = %s 
-                ORDER BY sale_date DESC LIMIT 1
-            """, (u_id,))
-            last_sale = cur.fetchone()
+            # Date finale
+            last_act = max(filter(None, [v, p]), default="Aucune")
 
-            # Récupérer le dernier produit ajouté
-            cur.execute("""
-                SELECT name, date_added FROM products 
-                WHERE user_id = %s 
-                ORDER BY date_added DESC LIMIT 1
-            """, (u_id,))
-            last_prod = cur.fetchone()
+            # Stats financières
+            cur.execute("SELECT total_ca, total_benefice FROM classement_utilisateurs WHERE user_id = %s", (r['id'],))
+            s = cur.fetchone()
 
-            # Récupérer les stats de CA et bénéfice depuis la table classement_utilisateurs
-            cur.execute("""
-                SELECT total_ca, total_benefice FROM classement_utilisateurs 
-                WHERE user_id = %s
-            """, (u_id,))
-            stats = cur.fetchone()
-
-            # Calcul de la dernière activité (max entre vente et ajout produit)
-            dates = []
-            if last_sale and last_sale['sale_date']:
-                dates.append(last_sale['sale_date'])
-            if last_prod and last_prod['date_added']:
-                dates.append(last_prod['date_added'])
-
-            last_active = max(dates) if dates else "Aucune activité"
-
-            users_data.append({
-                'username': user['username'] or user['email'],
-                'email': user['email'],
-                'discord_id': user['discord_id'],
-                'key_status': user['key_status'],
-                'total_ca': float(stats['total_ca'] or 0) if stats else 0,
-                'total_profit': float(stats['total_benefice'] or 0) if stats else 0,
-                'last_active': last_active,
-                'last_product_name': last_prod['name'] if last_prod else "N/A"
+            users_list.append({
+                'id': r['id'],
+                'email': r['email'],
+                'username': r['username'] or r['email'],
+                'key_status': r['key_status'],
+                'ca': float(s['total_ca'] or 0) if s else 0,
+                'profit': float(s['total_benefice'] or 0) if s else 0,
+                'last_active': last_act
             })
 
-        # 4. Tri par CA décroissant
-        users_data.sort(key=lambda x: x['total_ca'], reverse=True)
-
-        return render_template('admin_monitor.html', users=users_data)
-
+        return render_template('admin_monitor.html', users=users_list)
     except Exception as e:
-        # Debugging précis dans la console
-        print(f"--- ERREUR CRITIQUE MONITOR ---")
-        print(f"Détail : {str(e)}")
-        return f"Erreur SQL : {str(e)}", 500
-    finally:
-        cur.close()
+        return f"Erreur : {str(e)}", 500
+
+
+@app.route('/admin/send-ping/<int:user_id>')
+@login_required
+def admin_send_ping(user_id):
+    if current_user.email != 'bidardgab@gmail.com':
+        abort(403)
+
+    cur = g.db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    # 1. Récupération des données utilisateur
+    cur.execute("SELECT email, username FROM users WHERE id = %s", (user_id,))
+    target = cur.fetchone()
+
+    # Récupération de la dernière vente pour le texte du mail
+    cur.execute("SELECT MAX(sale_date) as last_v FROM sales WHERE user_id = %s", (user_id,))
+    v_date = cur.fetchone()['last_v']
+    date_str = v_date.strftime('%d %B %Y') if v_date else "quelques temps"
+
+    if target:
+        subject = "🔐 Conserver votre accès - Resell Notion Stats"
+
+        # 2. Le template HTML (le même que précédemment, simplifié ici pour la lisibilité)
+        html_content = f"""
+        <div style="background-color: #0f172a; color: #f1f5f9; font-family: sans-serif; padding: 40px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; padding: 40px; border: 1px solid #334155;">
+                <h1 style="color: #4f46e5; text-align: center;">RESELL NOTION <span style="color: #ffffff;">STATS</span></h1>
+                <hr style="border: 0; border-top: 1px solid #334155; margin: 20px 0;">
+                <h2 style="color: #ffffff;">Bonjour {target['username']},</h2>
+                <p style="color: #94a3b8; font-size: 16px;">
+                    Votre dernière activité remonte au <strong style="color: #f59e0b;">{date_str}</strong>.
+                </p>
+                <p style="color: #94a3b8;">
+                    Nous effectuons un nettoyage des comptes inactifs. Souhaitez-vous conserver vos données ? 
+                    Répondez simplement <b>"OUI"</b> à ce mail.
+                </p>
+                <div style="text-align: center; margin-top: 30px; font-size: 12px; color: #64748b;">
+                    &copy; 2026 Resell Notion Stats
+                </div>
+            </div>
+        </div>
+        """
+
+        # 3. ENVOI RÉEL
+        success = send_gmail_stats(target['email'], subject, html_content)
+
+        if success:
+            flash(f"✅ Email envoyé avec succès à {target['email']}", "success")
+        else:
+            flash(f"❌ Échec de l'envoi à {target['email']}", "danger")
+
+    return redirect(url_for('admin_monitor'))
+
 @app.route('/api/overlay_stats')
 @login_required
 def api_overlay_stats():
