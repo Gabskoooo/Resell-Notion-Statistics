@@ -3,21 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Récapitulatif de Vente | Resell Notion</title>
+    <title>Récapitulatif de Vente - Cyber Premium</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
     <style>
         :root {
             --cyber-cyan: #00f3ff;
             --cyber-black: #050505;
-            --cyber-glass: rgba(0, 243, 255, 0.05);
         }
 
         body {
             margin: 0;
-            /* Force le corps à faire exactement la hauteur de l'écran */
             height: 100vh;
-            /* Empêche le scroll global */
             overflow: hidden;
             background-color: var(--cyber-black);
             background-image: url('/static/img/bg-cyber-premium.png');
@@ -25,88 +23,93 @@
             background-position: center;
             font-family: 'Plus Jakarta Sans', sans-serif;
             color: white;
-            /* Centrage parfait de la carte */
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 10px; /* Petite marge de sécurité */
+            padding: 15px;
             box-sizing: border-box;
         }
 
-        /* --- LA CARTE PRINCIPALE --- */
         .recap-card {
             width: 100%;
-            max-width: 450px; /* Largeur max sur desktop */
-            /* HAUTEUR CRITIQUE : Ne dépasse jamais 95% de la hauteur d'écran */
-            max-height: 95vh;
-            /* Structure FLEX VERTICALE : C'est le secret pour que tout rentre */
+            max-width: 400px;
+            max-height: 85vh;
             display: flex;
             flex-direction: column;
-
-            background: rgba(5, 5, 5, 0.9);
+            background: rgba(5, 5, 5, 0.94);
             border: 1px solid var(--cyber-cyan);
-            border-radius: 20px;
-            box-shadow: 0 0 40px rgba(0, 243, 255, 0.15);
-            backdrop-filter: blur(15px);
-            overflow: hidden; /* Coupe tout ce qui dépasse */
+            border-radius: 24px;
+            box-shadow: 0 0 50px rgba(0, 243, 255, 0.15);
+            backdrop-filter: blur(20px);
+            overflow: hidden;
+            position: relative;
         }
 
-        /* --- HEADER ET FOOTER (Taille fixe, ne s'étirent pas) --- */
+        .btn-close-recap {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 32px;
+            height: 32px;
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid var(--cyber-cyan);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--cyber-cyan);
+            text-decoration: none;
+            font-size: 1rem;
+            transition: 0.3s all ease;
+            z-index: 100;
+        }
+
+        .btn-close-recap:hover {
+            background: var(--cyber-cyan);
+            color: var(--cyber-black);
+            transform: rotate(90deg);
+        }
+
         .header-brand {
-            flex: 0 0 auto; /* Ne grandit pas, ne rétrécit pas */
+            flex: 0 0 auto;
             padding: 15px;
             text-align: center;
-            border-bottom: 1px solid rgba(0, 243, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .footer-cta {
-            flex: 0 0 auto; /* Ne grandit pas, ne rétrécit pas */
-            padding: 15px 20px;
-            text-align: center;
-            background: var(--cyber-glass);
-            border-top: 1px solid rgba(0, 243, 255, 0.1);
-        }
-
-        /* --- CONTENEUR IMAGE (Prend l'espace flexible) --- */
+        /* --- ZONE IMAGE RÉDUITE --- */
         .product-img-wrapper {
-            /* Flex: 1 signifie qu'il va prendre l'espace disponible */
-            flex: 1 1 auto;
+            flex: 0 0 140px; /* Hauteur fixe et réduite pour l'image */
             position: relative;
-            min-height: 150px; /* Hauteur minimale pour ne pas écraser l'image */
-            /* Effet de fond lumineux derrière l'image */
-            background: radial-gradient(circle, rgba(0,243,255,0.08) 0%, rgba(0,0,0,0) 70%);
+            background: radial-gradient(circle, rgba(0,243,255,0.05) 0%, rgba(0,0,0,0) 70%);
             padding: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
         }
 
         .product-img {
-            width: 100%;
-            height: 100%;
-            /* CRUCIAL : L'image s'adapte au conteneur sans être déformée */
+            max-height: 100%;
+            max-width: 80%; /* Réduction de la largeur occupée */
             object-fit: contain;
-            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.6));
         }
 
-        /* --- SECTION INFOS (Prend l'espace flexible) --- */
         .info-section {
-            /* Partage l'espace restant avec l'image */
             flex: 1 1 auto;
-            padding: 15px 20px;
+            padding: 15px 25px 25px 25px;
             display: flex;
             flex-direction: column;
-            justify-content: center; /* Centre le contenu verticalement */
+            justify-content: center;
         }
 
         .product-name {
-            font-size: clamp(1.1rem, 3vh, 1.5rem); /* Taille de police dynamique selon la hauteur */
+            font-size: clamp(1.1rem, 3vh, 1.4rem);
             font-weight: 900;
             text-transform: uppercase;
             margin: 0;
-            line-height: 1.1;
             text-align: center;
+            color: #fff;
         }
 
         .product-meta {
@@ -115,21 +118,19 @@
             margin-bottom: 15px;
             text-transform: uppercase;
             text-align: center;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
         }
 
         .stats-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
-            margin-top: auto; /* Pousse vers le bas si possible */
-            margin-bottom: auto;
         }
 
         .stat-box {
             background: rgba(255, 255, 255, 0.02);
             padding: 10px;
-            border-radius: 10px;
+            border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.05);
             text-align: center;
         }
@@ -140,69 +141,49 @@
             color: var(--cyber-cyan);
             text-transform: uppercase;
             margin-bottom: 2px;
-            letter-spacing: 0.5px;
+            font-weight: 700;
         }
 
         .value {
-            font-size: clamp(1rem, 2.5vh, 1.2rem); /* Police dynamique */
+            font-size: 1.1rem;
             font-weight: 700;
         }
 
         .profit-box {
             grid-column: span 2;
-            background: linear-gradient(90deg, rgba(0, 243, 255, 0.15), transparent);
+            background: linear-gradient(90deg, rgba(0, 243, 255, 0.12), transparent);
             border: 1px solid var(--cyber-cyan);
-            padding: 12px;
+            padding: 15px;
+            margin-top: 5px;
         }
 
         .profit-value {
-            font-size: clamp(1.5rem, 4vh, 2rem); /* Police dynamique, plus gros */
+            font-size: clamp(1.8rem, 5vh, 2.2rem);
             color: var(--cyber-cyan);
             font-weight: 900;
-            text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
-        }
-
-        .btn-join {
-            display: block;
-            background: var(--cyber-cyan);
-            color: black;
-            text-decoration: none;
-            padding: 12px;
-            border-radius: 10px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-size: 0.9rem;
-        }
-
-        /* --- Optimisation pour petits écrans très courts (ex: iPhone SE paysage) --- */
-        @media (max-height: 600px) {
-            .recap-card { max-height: 98vh; }
-            .header-brand, .footer-cta { padding: 8px; }
-            .product-img-wrapper { min-height: 100px; }
-            .info-section { padding: 10px; }
-            .stats-container { gap: 5px; }
-            .stat-box { padding: 6px; }
-            .product-meta { margin-bottom: 8px; }
-            .footer-cta p { display: none; } /* Cache le petit texte du footer pour gagner de la place */
+            text-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
         }
     </style>
 </head>
 <body>
-    <div class="recap-card animate__animated animate__zoomInDown">
+    <div class="recap-card">
+        <a href="{{ url_for('add_sale') }}" class="btn-close-recap">
+            <i class="bi bi-x-lg"></i>
+        </a>
+
         <div class="header-brand">
-            <span style="letter-spacing: 4px; font-weight: 300; font-size: 0.7rem; color: rgba(255,255,255,0.7);">RESELL NOTION</span>
+            <span style="letter-spacing: 4px; font-weight: 300; font-size: 0.7rem; color: rgba(255,255,255,0.6);">RESELL NOTION</span>
         </div>
 
         <div class="product-img-wrapper">
-            <img src="{{ sale.image_url if sale.image_url else '/static/img/placeholder-shoe.png' }}"
+            <img src="{{ sale.image_url if sale.image_url else '/static/img/placeholder.png' }}"
                  alt="{{ sale.item_name }}"
                  class="product-img">
         </div>
 
         <div class="info-section">
             <h1 class="product-name">{{ sale.item_name }}</h1>
-            <div class="product-meta">SKU: {{ sale.sku }} | {{ sale.size }}</div>
+            <div class="product-meta">SKU: {{ sale.sku }} | SIZE: {{ sale.size }}</div>
 
             <div class="stats-container">
                 <div class="stat-box">
@@ -214,15 +195,10 @@
                     <span class="value">{{ sale.sale_price|round|int }}€</span>
                 </div>
                 <div class="stat-box profit-box">
-                    <span class="label" style="font-weight: 900;">PROFIT NET</span>
+                    <span class="label" style="font-weight: 900; letter-spacing: 1px;">PROFIT NET</span>
                     <span class="profit-value">+{{ sale.profit|round|int }}€</span>
                 </div>
             </div>
-        </div>
-
-        <div class="footer-cta">
-            <p style="font-size: 0.7rem; margin: 0 0 10px 0; color: #999;">Toi aussi, rejoins l'élite et encaisse.</p>
-            <a href="/register" class="btn-join">COMMENCER MAINTENANT</a>
         </div>
     </div>
 </body>
