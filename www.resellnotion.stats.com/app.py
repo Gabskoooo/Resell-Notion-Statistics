@@ -1582,6 +1582,28 @@ def delete_product(id):
             cur.close()
 
 
+@app.route('/sales/share/<int:sale_id>')
+@login_required
+def share_sale(sale_id):
+    conn = g.db
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    # Utilisation des colonnes exactes de votre table 'sales'
+    cur.execute('''
+        SELECT item_name, image_url, sku, size, purchase_price_at_sale, sale_price, profit 
+        FROM sales 
+        WHERE id = %s AND user_id = %s
+    ''', (sale_id, current_user.id))
+
+    sale = cur.fetchone()
+    cur.close()
+
+    if not sale:
+        return "Vente non trouvée", 404
+
+    return render_template('share_recap.html', sale=sale)
+
+
 @app.route('/sales/add', methods=['GET', 'POST'])
 @login_required
 def add_sale():
@@ -1594,6 +1616,8 @@ def add_sale():
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         webhook_url = "https://discord.com/api/webhooks/1404523543512748035/teqgeczafL9-rViNAysRP-EPViALok9DGfH1v19Kvekvk2mbACbNzB9ltqv7ZxRV6gW5"
 
+        last_sale_id = None  # Pour stocker l'ID du récapitulatif
+
         try:
             for sale_data in data['sales']:
                 product_id = sale_data.get('product_id')
@@ -1603,31 +1627,39 @@ def add_sale():
                 platform = sale_data.get('platform', 'Autre')
 
                 # 1. Récupération des infos produit
-                cur.execute("SELECT name, purchase_price, quantity, sku, size, image_url FROM products WHERE id = %s AND user_id = %s", (product_id, current_user.id))
+                cur.execute(
+                    "SELECT name, purchase_price, quantity, sku, size, image_url FROM products WHERE id = %s AND user_id = %s",
+                    (product_id, current_user.id))
                 product = cur.fetchone()
 
                 if not product:
-                    continue # On passe au suivant si le produit est introuvable
+                    continue
 
                 profit = sale_price - product['purchase_price']
 
-                # 2. Insertion en base de données
+                # 2. Insertion en base de données avec RETURNING pour le bouton Partager
                 cur.execute('''
                     INSERT INTO sales (user_id, product_id, item_name, quantity, sale_price, purchase_price_at_sale, profit, sale_date, payment_status, sku, size, image_url)
                     VALUES (%s, %s, %s, 1, %s, %s, %s, %s, %s, %s, %s, %s)
-                ''', (current_user.id, product_id, product['name'], sale_price, product['purchase_price'], profit, sale_date, payment_status, product['sku'], product['size'], product['image_url']))
+                    RETURNING id
+                ''', (
+                current_user.id, product_id, product['name'], sale_price, product['purchase_price'], profit, sale_date,
+                payment_status, product['sku'], product['size'], product['image_url']))
+
+                # On récupère l'ID généré
+                last_sale_id = cur.fetchone()['id']
 
                 # 3. Mise à jour du stock
                 if product['quantity'] <= 1:
                     cur.execute("DELETE FROM products WHERE id = %s", (product_id,))
                 else:
-                    cur.execute("UPDATE products SET quantity = quantity - 1 WHERE id = %s", (product_id, ))
+                    cur.execute("UPDATE products SET quantity = quantity - 1 WHERE id = %s", (product_id,))
 
                 # 4. ENVOI DU WEBHOOK DISCORD
                 discord_data = {
                     "embeds": [{
                         "title": "👟 Nouvelle Vente !",
-                        "color": 3066993, # Vert émeraude
+                        "color": 3066993,
                         "fields": [
                             {"name": "Modèle", "value": f"**{product['name']}**", "inline": False},
                             {"name": "SKU", "value": f"`{product['sku']}`", "inline": True},
@@ -1636,7 +1668,6 @@ def add_sale():
                             {"name": "Plateforme", "value": f"{platform}", "inline": True}
                         ],
                         "thumbnail": {"url": product['image_url'] if product['image_url'] else ""}
-
                     }]
                 }
                 try:
@@ -1645,7 +1676,12 @@ def add_sale():
                     print(f"Erreur Webhook Discord: {e}")
 
             conn.commit()
-            return jsonify({"success": True, "redirect": url_for('dashboard')})
+            # On renvoie le sale_id pour permettre l'affichage du bouton de partage
+            return jsonify({
+                "success": True,
+                "redirect": url_for('dashboard'),
+                "sale_id": last_sale_id
+            })
 
         except Exception as e:
             conn.rollback()

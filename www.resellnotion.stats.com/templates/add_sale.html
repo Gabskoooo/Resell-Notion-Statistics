@@ -13,6 +13,8 @@
         --success-glow: #00ffa3;
         --danger-glow: #ff4d4d;
         --warning-glow: #ffcc00;
+        /* DA CYBER PREMIUM */
+        --cyber-cyan: #00f3ff;
     }
 
     body {
@@ -47,6 +49,30 @@
         transform-origin: 50% 50%; stroke-dasharray: 48; stroke-dashoffset: 48;
         animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
     }
+
+    /* BOUTON PARTAGER DA CYBER */
+    .btn-share-premium {
+        margin-top: 30px;
+        background: transparent;
+        border: 2px solid var(--cyber-cyan);
+        color: var(--cyber-cyan);
+        padding: 12px 30px;
+        border-radius: 12px;
+        font-weight: 800;
+        text-decoration: none !important;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: 0.3s all;
+        box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+        display: none; /* Caché par défaut, activé par JS */
+    }
+    .btn-share-premium:hover {
+        background: var(--cyber-cyan);
+        color: #0b0e14;
+        box-shadow: 0 0 25px rgba(0, 243, 255, 0.5);
+        transform: translateY(-2px);
+    }
+
     @keyframes stroke { 100% { stroke-dashoffset: 0; } }
     @keyframes scale { 0%, 100% { transform: none; } 50% { transform: scale3d(1.1, 1.1, 1); } }
     @keyframes fill { 100% { box-shadow: inset 0px 0px 0px 50px var(--success-glow); } }
@@ -116,6 +142,10 @@
         </svg>
     </div>
     <h2 class="mt-4 text-white fw-bold">Vente enregistrée !</h2>
+
+    <a href="#" id="btn-share-link" class="btn-share-premium">
+        <i class="bi bi-share-fill me-2"></i> Partager ma vente
+    </a>
 </div>
 
 <div class="container py-5" style="max-width: 900px;">
@@ -238,7 +268,7 @@
 </div>
 
 <script>
-// LOGIQUE JS CONSERVÉE À L'IDENTIQUE
+// LOGIQUE JS CONSERVÉE À L'IDENTIQUE + INTÉGRATION BOUTON PARTAGER
 document.addEventListener('DOMContentLoaded', function() {
     let allSales = [];
     let currentSale = {};
@@ -301,7 +331,7 @@ document.addEventListener('DOMContentLoaded', function() {
         goToStep(1);
     });
 
-    // 5. Envoi final avec animation
+    // 5. Envoi final avec animation et BOUTON PARTAGER
     document.getElementById('saveAll').addEventListener('click', async function() {
         this.disabled = true;
         const res = await fetch('/sales/add', {
@@ -313,9 +343,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if(data.success) {
             document.getElementById('success-overlay').style.display = 'flex';
+
+            // Mise à jour du lien de partage avec le sale_id retourné
+            if (data.sale_id) {
+                const shareBtn = document.getElementById('btn-share-link');
+                shareBtn.href = `/sales/share/${data.sale_id}`;
+                shareBtn.style.display = 'inline-block';
+            }
+
             setTimeout(() => {
                 window.location.href = data.redirect;
-            }, 2500);
+            }, 4000); // Augmenté à 4s pour laisser le temps de cliquer sur Partager
         } else {
             alert("Erreur: " + data.message);
             this.disabled = false;
