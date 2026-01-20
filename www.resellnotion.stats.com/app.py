@@ -1862,49 +1862,31 @@ def sales():
 
 @app.route('/sales/<int:sale_id>/update_status', methods=['POST'])
 @login_required
-
 def update_sale_status(sale_id):
     conn = g.db
     cur = None
-
     try:
-        # Assurez-vous d'avoir 'from flask import jsonify, request'
+        # Récupération du nouveau statut depuis la requête JSON
         data = request.get_json()
-    except Exception as e:
-        return jsonify({"success": False, "message": "Format de données invalide."}), 400
+        new_status = data.get('status')
 
-    new_status = data.get('status')
-
-    if new_status not in ['reçu', 'en_attente']:
-        return jsonify({"success": False, "message": "Statut de paiement invalide."}), 400
-
-    try:
         cur = conn.cursor()
+        # On vérifie aussi l'user_id par sécurité
+        cur.execute('''
+            UPDATE sales 
+            SET payment_status = %s 
+            WHERE id = %s AND user_id = %s
+        ''', (new_status, sale_id, current_user.id))
 
-        cur.execute(
-            "SELECT id FROM sales WHERE id = %s AND user_id = %s",
-            (sale_id, current_user.id)
-        )
-        if not cur.fetchone():
-            cur.close()
-            return jsonify({"success": False, "message": "Vente non trouvée ou accès refusé."}), 403
-
-        cur.execute(
-            "UPDATE sales SET payment_status = %s WHERE id = %s",
-            (new_status, sale_id)
-        )
         conn.commit()
-        cur.close()
-
-        return jsonify({"success": True, "message": "Statut mis à jour.", "new_status": new_status})
-
+        return jsonify({"success": True, "status": new_status}), 200
     except Exception as e:
-        conn.rollback()
-        print(f"Erreur lors de la mise à jour du statut de paiement: {e}")
-        return jsonify({"success": False, "message": f"Erreur serveur: {e}"}), 500
+        print(f"Erreur update_status: {e}")
+        return jsonify({"success": False}), 500
     finally:
-        if cur and not cur.closed:
-            cur.close()
+        if cur: cur.close()
+
+
 @app.route('/sales/<int:id>/edit', methods=('GET', 'POST'))
 @login_required
 

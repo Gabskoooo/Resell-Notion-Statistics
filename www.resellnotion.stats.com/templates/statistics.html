@@ -200,6 +200,10 @@
     </div>
 
     <div id="tab-goals" class="tab-pane">
+        <div class="d-flex flex-wrap justify-content-between align-items-end mb-4 gap-3">
+            <div><h3 class="fw-bold text-white mb-1">Objectifs Performance</h3><p class="text-muted small">Analyse sur la période : <strong>{{ period|capitalize }}</strong></p></div>
+            {% if has_ref %}<div class="bg-white bg-opacity-5 p-1 rounded-3 d-flex gap-1"><button onclick="setGoalCoef(1.2)" id="btn-low" class="period-btn active">Prudent (x1.2)</button><button onclick="setGoalCoef(1.8)" id="btn-high" class="period-btn">Aggressif (x1.8)</button></div>{% endif %}
+        </div>
         <div class="row g-4">
             <div class="col-md-6"><div class="premium-card"><div class="d-flex justify-content-between mb-2"><span class="stat-label">Cible Chiffre d'Affaires</span><span id="badge-rev-reached" class="badge bg-success text-dark d-none">PALIER FRANCHI</span></div><div class="d-flex justify-content-between flex-wrap"><div class="stat-numb text-white text-truncate" id="goal-rev-val">-- €</div><div class="text-end"><div class="text-primary fw-bold" id="goal-rev-percent">0%</div><div class="text-muted small" id="goal-rev-rem">Gap: -- €</div></div></div><div class="progress-custom mt-3"><div id="progress-rev" class="progress-bar-glow h-100 bg-primary" style="width: 0%"></div></div></div></div>
             <div class="col-md-6"><div class="premium-card"><div class="d-flex justify-content-between mb-2"><span class="stat-label">Cible Bénéfice Net</span><span id="badge-prof-reached" class="badge bg-success text-dark d-none">RENTABILITÉ VALIDÉE</span></div><div class="d-flex justify-content-between flex-wrap"><div class="stat-numb text-success text-truncate" id="goal-prof-val">-- €</div><div class="text-end"><div class="text-success fw-bold" id="goal-prof-percent">0%</div><div class="text-muted small" id="goal-prof-rem">Gap: -- €</div></div></div><div class="progress-custom mt-3"><div id="progress-prof" class="progress-bar-glow h-100 bg-success" style="width: 0%"></div></div></div></div>
@@ -271,6 +275,36 @@
     const sizesData = {{ sizes_dist|tojson }};
     const platformsData = {{ platforms_dist|tojson }};
 
+    // --- LOGIQUE OBJECTIFS ---
+    let currentGoalCoef = 1.2;
+    const baseRefRev = {{ ref_rev|default(0)|tojson }};
+    const baseRefProf = {{ ref_prof|default(0)|tojson }};
+    const actualRevenue = {{ revenue|default(0)|tojson }};
+    const actualProfit = {{ profit|default(0)|tojson }};
+
+    function setGoalCoef(c) { currentGoalCoef = c; updateGoalsUI(); }
+    function updateGoalsUI() {
+        if (!{{ has_ref|default(false)|tojson }}) return;
+        const targetRev = baseRefRev * currentGoalCoef;
+        const targetProf = baseRefProf * currentGoalCoef;
+        const revP = Math.min(100, (actualRevenue / targetRev) * 100);
+        document.getElementById('goal-rev-val').innerText = Math.round(targetRev).toLocaleString() + " €";
+        document.getElementById('goal-rev-percent').innerText = Math.round(revP) + "%";
+        document.getElementById('goal-rev-rem').innerText = (targetRev - actualRevenue) > 0 ? `Gap: ${Math.round(targetRev - actualRevenue)}€` : "Quota franchi";
+        document.getElementById('progress-rev').style.width = revP + "%";
+        document.getElementById('badge-rev-reached').classList.toggle('d-none', actualRevenue < targetRev);
+        const profP = Math.min(100, (actualProfit / targetProf) * 100);
+        document.getElementById('goal-prof-val').innerText = Math.round(targetProf).toLocaleString() + " €";
+        document.getElementById('goal-prof-percent').innerText = Math.round(profP) + "%";
+        document.getElementById('goal-prof-rem').innerText = (targetProf - actualProfit) > 0 ? `Gap: ${Math.round(targetProf - actualProfit)}€` : "Objectif validé";
+        document.getElementById('progress-prof').style.width = profP + "%";
+        document.getElementById('badge-prof-reached').classList.toggle('d-none', actualProfit < targetProf);
+        const btnLow = document.getElementById('btn-low');
+        const btnHigh = document.getElementById('btn-high');
+        if(btnLow) btnLow.classList.toggle('active', currentGoalCoef === 1.2);
+        if(btnHigh) btnHigh.classList.toggle('active', currentGoalCoef === 1.8);
+    }
+
     function updateDashboardAdvice() {
         let adv = "";
         if (hScore >= 9 && roiAvg >= 30) adv = `OPTIMISATION DE LA RENTABILITÉ : Performance exceptionnelle avec un ROI moyen de ${roiAvg}% et un Health Score de ${hScore}/10. Recommandation : Visez une augmentation du volume de 20% pour décupler vos profits sans sacrifier la marge.`;
@@ -337,6 +371,6 @@
     const ctxEv = document.getElementById('evolutionChart').getContext('2d');
     new Chart(ctxEv, { type: 'line', data: { labels: [{% for s in sales %}"{{ s.sale_date.strftime('%d/%m') }}",{% endfor %}], datasets: [{ label: 'Ventes', data: [{% for s in sales %}{{ s.sale_price }},{% endfor %}], borderColor: '#8a2be2', backgroundColor: 'rgba(138, 43, 226, 0.1)', fill: true, tension: 0.4, borderWidth: 3 }, { label: 'Bénéfice', data: [{% for s in sales %}{{ s.profit }},{% endfor %}], borderColor: '#00ffa3', borderDash: [5, 5], fill: false, tension: 0.4, borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8e9297' } }, x: { grid: { display: false }, ticks: { color: '#8e9297' } } } } });
 
-    updateDashboardAdvice(); updateFinances(); updateStockAdvice();
+    updateDashboardAdvice(); updateFinances(); updateStockAdvice(); updateGoalsUI();
 </script>
 {% endblock %}

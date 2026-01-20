@@ -231,9 +231,38 @@
         const allCards = document.querySelectorAll('[data-sale-id]');
         const actionPanel = document.getElementById('actionPanel');
         const hideActionPanelBtn = document.getElementById('hideActionPanelBtn');
+        const setReceivedBtn = document.getElementById('setReceivedBtn');
+        const setPendingBtn = document.getElementById('setPendingBtn');
         const baseUrl = "{{ url_for('sales') }}";
 
         let currentSaleId = null, currentSaleCard = null;
+
+        async function updateStatus(newStatus) {
+            if (!currentSaleId) return;
+            try {
+                const response = await fetch(`${baseUrl}/${currentSaleId}/update_status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                if (response.ok) {
+                    currentSaleCard.dataset.paymentStatus = newStatus;
+                    const badge = currentSaleCard.querySelector('.status-badge');
+                    if (newStatus === 'reçu') {
+                        badge.className = 'status-badge status-reçu';
+                        badge.textContent = 'Reçu';
+                    } else {
+                        badge.className = 'status-badge status-attente';
+                        badge.textContent = 'Attente';
+                    }
+                    actionPanel.classList.remove('show');
+                    applyFilters();
+                }
+            } catch (error) {
+                console.error("Erreur mise à jour statut:", error);
+            }
+        }
 
         function applyFilters() {
             const searchTerm = salesSearchInput.value.toLowerCase();
@@ -268,6 +297,8 @@
             });
         });
 
+        setReceivedBtn.addEventListener('click', () => updateStatus('reçu'));
+        setPendingBtn.addEventListener('click', () => updateStatus('en_attente'));
         hideActionPanelBtn.addEventListener('click', () => actionPanel.classList.remove('show'));
         salesSearchInput.addEventListener('input', applyFilters);
         [periodFilterSelect, paymentStatusFilterSelect].forEach(el => el.addEventListener('change', applyFilters));
