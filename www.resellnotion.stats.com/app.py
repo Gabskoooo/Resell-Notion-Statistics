@@ -1887,6 +1887,44 @@ def update_sale_status(sale_id):
         if cur: cur.close()
 
 
+@app.route('/badges')
+@login_required
+def show_badges():
+    conn = g.db
+    cur = None
+    try:
+        cur = conn.cursor()
+
+        # On récupère le mois et l'année actuels
+        now = datetime.now()
+        current_month = now.month
+        current_year = now.year
+
+        # Requête SQL filtrée sur le mois et l'année en cours
+        cur.execute('''
+            SELECT SUM(profit) 
+            FROM sales 
+            WHERE user_id = %s 
+            AND EXTRACT(MONTH FROM sale_date) = %s
+            AND EXTRACT(YEAR FROM sale_date) = %s
+        ''', (current_user.id, current_month, current_year))
+
+        result = cur.fetchone()
+
+        # Conversion en float, avec sécurité si aucun profit n'existe (0.0)
+        total_sales_profit = float(result[0]) if result and result[0] is not None else 0.0
+
+        return render_template('badges.html', total_sales_profit=total_sales_profit)
+
+    except Exception as e:
+        print(f"--- ERREUR CALCUL BADGES MENSUELS ---")
+        print(f"Détails : {e}")
+        flash(f"Erreur lors du calcul de vos statistiques mensuelles.", 'danger')
+        return redirect(url_for('dashboard'))
+
+    finally:
+        if cur and not cur.closed:
+            cur.close()
 @app.route('/sales/<int:id>/edit', methods=('GET', 'POST'))
 @login_required
 

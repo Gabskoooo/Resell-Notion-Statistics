@@ -1,0 +1,193 @@
+{# templates/badges.html #}
+{% extends 'base.html' %}
+
+{% block title %}Mes Insignes | ResellNotion{% endblock %}
+
+{% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --primary-glow: #8a2be2;
+    }
+
+    body {
+        background: #0b0e14;
+        /* Rappel : Utiliser .png pour tout fichier de fond externe */
+        background-image:
+            radial-gradient(circle at 0% 0%, rgba(138, 43, 226, 0.1) 0%, transparent 35%),
+            radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.05) 0%, transparent 35%);
+        color: #f8f9fa;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        min-height: 100vh;
+    }
+
+    .badge-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 30px;
+        text-align: center;
+        transition: 0.4s all ease;
+        position: relative;
+        overflow: hidden;
+        height: 100%;
+        filter: grayscale(100%);
+        opacity: 0.4;
+    }
+
+    .badge-card.unlocked {
+        filter: grayscale(0%);
+        opacity: 1;
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .badge-icon-container {
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        border-radius: 50%;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Styles spécifiques par palier (identiques au dashboard pour la cohérence) */
+    .rank-bronze { background: linear-gradient(135deg, #a85d32, #63351b); color: #ffd1b3; box-shadow: 0 0 20px rgba(168, 93, 50, 0.4); }
+    .rank-silver { background: linear-gradient(135deg, #9ea1a5, #484b4f); color: #e3e4e5; box-shadow: 0 0 20px rgba(158, 161, 165, 0.4); }
+    .rank-gold { background: linear-gradient(135deg, #ffd700, #b8860b); color: #fff; box-shadow: 0 0 30px rgba(255, 215, 0, 0.5); }
+    .rank-mythic {
+        background: linear-gradient(45deg, #ff00cc, #3333ff, #00ffa3);
+        background-size: 200% 200%;
+        color: #fff;
+        box-shadow: 0 0 40px rgba(138, 43, 226, 0.7);
+        animation: gradientShift 3s ease infinite;
+    }
+
+    @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    .lock-overlay {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        font-size: 1.2rem;
+        color: rgba(255,255,255,0.2);
+    }
+
+    .unlocked .lock-overlay {
+        color: #00ffa3;
+    }
+
+    .progress-track {
+        background: rgba(255,255,255,0.05);
+        height: 8px;
+        border-radius: 10px;
+        margin-top: 20px;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: var(--primary-glow);
+        transition: width 1s ease-in-out;
+    }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in { animation: fadeInUp 0.6s ease-out forwards; }
+</style>
+
+<div class="container py-5">
+    <div class="text-center mb-5 animate-in">
+        <h1 class="fw-bold">Mes Succès Sneaker</h1>
+        <p class="text-white-50">Cumulez du profit pour débloquer des insignes de prestige.</p>
+        <div class="badge bg-dark border border-secondary p-2 px-3 mt-2">
+            Bénéfice actuel : <span class="text-success fw-bold">{{ '%.2f'|format(total_sales_profit) }}€</span>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-md-6 col-lg-3 animate-in" style="animation-delay: 0.1s;">
+            <div class="badge-card {% if total_sales_profit >= 0 %}unlocked{% endif %}">
+                <div class="lock-overlay">
+                    <i class="bi {% if total_sales_profit >= 0 %}bi-patch-check-fill{% else %}bi-lock-fill{% endif %}"></i>
+                </div>
+                <div class="badge-icon-container rank-bronze">
+                    <i class="bi bi-star"></i>
+                </div>
+                <h4 class="fw-bold">Rookie</h4>
+                <p class="small text-white-50">Le début de l'aventure.</p>
+                <div class="mt-3 small fw-bold text-uppercase">Condition : 0€</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-3 animate-in" style="animation-delay: 0.2s;">
+            <div class="badge-card {% if total_sales_profit >= 200 %}unlocked{% endif %}">
+                <div class="lock-overlay">
+                    <i class="bi {% if total_sales_profit >= 200 %}bi-patch-check-fill{% else %}bi-lock-fill{% endif %}"></i>
+                </div>
+                <div class="badge-icon-container rank-silver">
+                    <i class="bi bi-lightning-fill"></i>
+                </div>
+                <h4 class="fw-bold">Reseller</h4>
+                <p class="small text-white-50">Vous maîtrisez le flux.</p>
+                <div class="mt-3 small fw-bold text-uppercase">Condition : 200€</div>
+                <div class="progress-track">
+                    <div class="progress-bar" style="width: {{ [ (total_sales_profit / 200) * 100, 100 ] | min }}%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-3 animate-in" style="animation-delay: 0.3s;">
+            <div class="badge-card {% if total_sales_profit >= 1000 %}unlocked{% endif %}">
+                <div class="lock-overlay">
+                    <i class="bi {% if total_sales_profit >= 1000 %}bi-patch-check-fill{% else %}bi-lock-fill{% endif %}"></i>
+                </div>
+                <div class="badge-icon-container rank-gold">
+                    <i class="bi bi-gem"></i>
+                </div>
+                <h4 class="fw-bold">Collector</h4>
+                <p class="small text-white-50">Un acteur sérieux du marché.</p>
+                <div class="mt-3 small fw-bold text-uppercase">Condition : 1000€</div>
+                <div class="progress-track">
+                    <div class="progress-bar" style="width: {{ [ (total_sales_profit / 1000) * 100, 100 ] | min }}%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-3 animate-in" style="animation-delay: 0.4s;">
+            <div class="badge-card {% if total_sales_profit >= 3000 %}unlocked{% endif %}">
+                <div class="lock-overlay">
+                    <i class="bi {% if total_sales_profit >= 3000 %}bi-patch-check-fill{% else %}bi-lock-fill{% endif %}"></i>
+                </div>
+                <div class="badge-icon-container rank-mythic">
+                    <i class="bi bi-fire"></i>
+                </div>
+                <h4 class="fw-bold">Sneaker Mogul</h4>
+                <p class="small text-white-50">Légende absolue du resell.</p>
+                <div class="mt-3 small fw-bold text-uppercase">Condition : 3000€</div>
+                <div class="progress-track">
+                    <div class="progress-bar" style="width: {{ [ (total_sales_profit / 3000) * 100, 100 ] | min }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-5 animate-in" style="animation-delay: 0.5s;">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-light rounded-pill px-4">
+            <i class="bi bi-arrow-left me-2"></i> Retour au Tableau de Bord
+        </a>
+    </div>
+</div>
+{% endblock %}

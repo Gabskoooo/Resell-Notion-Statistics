@@ -27,6 +27,63 @@
         min-height: 100vh;
     }
 
+    /* --- INSIGNES DE RANG (Nouvelle version Avatar) --- */
+    .rank-avatar-link {
+        text-decoration: none;
+        display: block;
+    }
+
+    .rank-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        color: #fff;
+        box-shadow: 0 0 20px rgba(138, 43, 226, 0.4);
+        border: 2px solid rgba(255,255,255,0.1);
+        flex-shrink: 0;
+        transition: transform 0.3s ease;
+        animation: pulse-glow 3s infinite alternate;
+    }
+
+    .rank-avatar:hover {
+        transform: scale(1.05);
+    }
+
+    @keyframes pulse-glow {
+        0% { box-shadow: 0 0 20px rgba(255,255,255,0.2); }
+        100% { box-shadow: 0 0 30px rgba(255,255,255,0.5); }
+    }
+
+    .rank-bronze-avatar {
+        background: linear-gradient(135deg, #a85d32, #63351b);
+        color: #ffd1b3;
+        box-shadow: 0 0 20px rgba(168, 93, 50, 0.4);
+    }
+    .rank-silver-avatar {
+        background: linear-gradient(135deg, #9ea1a5, #484b4f);
+        color: #e3e4e5;
+        box-shadow: 0 0 20px rgba(158, 161, 165, 0.4);
+    }
+    .rank-gold-avatar {
+        background: linear-gradient(135deg, #ffd700, #b8860b);
+        color: #fff;
+        box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+    }
+    .rank-mythic-avatar {
+        background: linear-gradient(45deg, #ff00cc, #3333ff, #00ffa3);
+        background-size: 200% 200%;
+        box-shadow: 0 0 40px rgba(138, 43, 226, 0.8);
+        animation: gradientShift 3s ease infinite, epicPulse 2s infinite alternate;
+        border: 2px solid rgba(255,255,255,0.6);
+    }
+
+    @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    @keyframes epicPulse { from { transform: scale(1); filter: brightness(1); } to { transform: scale(1.08); filter: brightness(1.3); } }
+
     /* --- HERO SECTION --- */
     .dashboard-hero {
         background: linear-gradient(135deg, rgba(138, 43, 226, 0.2), rgba(0, 0, 0, 0));
@@ -37,20 +94,6 @@
         backdrop-filter: blur(10px);
         position: relative;
         overflow: hidden;
-    }
-    .hero-avatar {
-        width: 80px;
-        height: 80px;
-        border-radius: 22px;
-        background: var(--primary-glow);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 2rem;
-        font-weight: bold;
-        box-shadow: 0 0 20px rgba(138, 43, 226, 0.4);
-        border: 2px solid rgba(255,255,255,0.1);
-        flex-shrink: 0;
     }
 
     /* --- QUICK ACTIONS --- */
@@ -190,7 +233,8 @@
             flex-direction: column !important;
             gap: 15px !important;
         }
-        .hero-avatar { width: 70px; height: 70px; }
+        /* .hero-avatar { width: 70px; height: 70px; } PLUS UTILISÉ */
+        .rank-avatar { width: 70px; height: 70px; font-size: 2rem; }
         .quick-action-btn { width: 100%; justify-content: center; }
 
         .stat-numb { font-size: 1.5rem; }
@@ -221,9 +265,17 @@
     <div class="dashboard-hero animate-in" style="animation-delay: 0.1s;">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-4">
             <div class="d-flex align-items-center gap-4">
-                <div class="hero-avatar">
-                    {{ current_user.username[0] | upper }}
-                </div>
+                <a href="{{ url_for('show_badges') }}" class="rank-avatar-link" title="Voir mes badges">
+                    {% if total_sales_profit < 200 %}
+                        <div class="rank-avatar rank-bronze-avatar"><i class="bi bi-star"></i></div>
+                    {% elif total_sales_profit < 1000 %}
+                        <div class="rank-avatar rank-silver-avatar"><i class="bi bi-lightning-fill"></i></div>
+                    {% elif total_sales_profit < 3000 %}
+                        <div class="rank-avatar rank-gold-avatar"><i class="bi bi-gem"></i></div>
+                    {% else %}
+                        <div class="rank-avatar rank-mythic-avatar"><i class="bi bi-fire"></i></div>
+                    {% endif %}
+                </a>
                 <div>
                     <h1 class="fw-bold mb-1">Salut, {{ current_user.username }} ! 👋</h1>
                     <p class="text-white-50 mb-0">Ravi de vous revoir. Voici l'état de votre business sneaker.</p>
