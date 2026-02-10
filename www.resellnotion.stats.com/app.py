@@ -16,6 +16,11 @@ import matplotlib.dates as mdates # Assurez-vous d'avoir cet import
 matplotlib.use('Agg') # Important: Utilisez le backend 'Agg' pour la génération d'images non-interactives
 import matplotlib.pyplot as plt
 import base64
+import pandas as pd
+import json
+import os
+import re
+from flask import Response, stream_with_context, jsonify, request, g, flash, redirect, url_for
 from flask_mail import Mail, Message
 from datetime import datetime, date, timedelta
 from PIL import Image, ImageDraw, ImageFont
@@ -484,6 +489,25 @@ def key_active_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
+def clean_val(value):
+    """Nettoie une chaîne pour la convertir en float (enlève €, $, espaces, change virgule en point)"""
+    if value is None or str(value).strip() == "":
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    # Nettoyage complet
+    cleaned = str(value).replace('€', '').replace('$', '').strip()
+    cleaned = cleaned.replace('\xa0', '')  # Espaces insécables Excel
+    cleaned = cleaned.replace(' ', '')  # Espaces classiques
+    cleaned = cleaned.replace(',', '.')  # Format européen vers standard
+
+    try:
+        return float(cleaned)
+    except ValueError:
+        return 0.0
+
 # --- Classe User pour Flask-Login (MISES À JOUR ICI) ---
 class User(UserMixin):
     def __init__(self, id, email, username, avatar_url, is_admin, discord_id, key_status):
@@ -785,6 +809,120 @@ def key_activation_required():
 import psycopg2.extras # Assurez-vous que cet import est présent en haut de votre fichier
 
 
+@app.route('/import-excel', methods=['GET', 'POST'])
+@login_required
+def import_excel_page():
+    if request.method == 'POST':
+        try:
+            file = request.files.get('excel_file')
+            if not file:
+                return jsonify({"error": "Aucun fichier détecté"}), 400
+
+            # 1. Vérification du format
+            if not file.filename.endswith(('.xlsx', '.xls')):
+                return jsonify({"error": "Format invalide (Utilisez .xlsx)"}), 400
+
+            # 2. Lecture sécurisée
+            df = pd.read_excel(file)
+            columns = [str(col) for col in df.columns.tolist()]  # On force en texte
+
+            # 3. Sauvegarde avec chemin absolu pour éviter les erreurs Windows
+            temp_filename = f"temp_import_{current_user.id}.xlsx"
+            upload_dir = os.path.join(app.root_path, 'static', 'uploads')
+
+            if not os.path.exists(upload_dir):
+                os.makedirs(upload_dir)
+
+            temp_path = os.path.join(upload_dir, temp_filename)
+            df.to_excel(temp_path, index=False)
+
+            # On renvoie un chemin relatif pour le JavaScript
+            relative_path = f"static/uploads/{temp_filename}"
+            return jsonify({"columns": columns, "temp_path": relative_path})
+
+        except Exception as e:
+            # ICI : Regarde ta console PyCharm quand tu uploades !
+            print(f"--- ERREUR SERVEUR UPLOAD ---")
+            print(str(e))
+            return jsonify({"error": f"Erreur serveur : {str(e)}"}), 500
+
+    return render_template('import_sales.html')
+
+
+@app.route('/process-import', methods=['POST'])
+@login_required
+def process_import_logic():
+    data = request.json
+    mapping = data.get('mapping')
+    temp_path = data.get('temp_path')
+
+    def generate():
+        if not temp_path or not os.path.exists(temp_path):
+            yield f"data: {json.dumps({'msg': 'Fichier introuvable.', 'type': 'danger'})}\n\n"
+            return
+
+        df = pd.read_excel(temp_path)
+        df = df.fillna('')
+        total_rows = len(df)
+
+        # On envoie le total_rows dès le début pour la barre de progression
+        yield f"data: {json.dumps({'msg': 'Initialisation...', 'type': 'start', 'total': total_rows})}\n\n"
+
+        conn = g.db
+        success_count = 0
+
+        # Blacklist pour ignorer les lignes de résumé
+        blacklist_words = ['TOTAL', 'JANVIER', 'FÉVRIER', 'MARS', 'AVRIL', 'MAI', 'JUIN',
+                           'JUILLET', 'AOÛT', 'SEPTEMBRE', 'OCTOBRE', 'NOVEMBRE', 'DÉCEMBRE']
+
+        for index, row in df.iterrows():
+            try:
+                item_name = str(row[mapping['item_name']]).strip()
+
+                # Filtrage anti-résumé
+                is_year = item_name.isdigit() and len(item_name) == 4
+                contains_blacklist = any(word in item_name.upper() for word in blacklist_words)
+
+                if not item_name or is_year or contains_blacklist:
+                    # On envoie quand même un signal de progression pour les lignes sautées
+                    yield f"data: {json.dumps({'type': 'skip', 'index': index + 1})}\n\n"
+                    continue
+
+                # Extraction des données mappées
+                sku = str(row[mapping['sku']]).strip() if mapping.get('sku') and mapping['sku'] in row else 'N/A'
+                size = str(row[mapping['size']]).strip() if mapping.get('size') and mapping['size'] in row else 'N/A'
+
+                # Gestion de la date
+                if mapping.get('sale_date') and mapping['sale_date'] in row and str(
+                        row[mapping['sale_date']]).strip() != '':
+                    try:
+                        sale_date = pd.to_datetime(row[mapping['sale_date']]).strftime('%Y-%m-%d %H:%M:%S')
+                    except:
+                        sale_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    sale_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+                sale_price = clean_val(row[mapping['sale_price']])
+                profit = clean_val(row[mapping['profit']])
+
+                with conn.cursor() as cur:
+                    cur.execute('''
+                        INSERT INTO sales (user_id, item_name, sku, size, quantity, sale_price, profit, sale_date, payment_status)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'reçu')
+                    ''', (current_user.id, item_name, sku, size, 1, sale_price, profit, sale_date))
+                conn.commit()
+
+                success_count += 1
+                yield f"data: {json.dumps({'msg': f'Importé: {item_name}', 'type': 'success', 'index': index + 1})}\n\n"
+
+            except Exception as e:
+                conn.rollback()
+                yield f"data: {json.dumps({'msg': f'Erreur ligne {index + 1}', 'type': 'danger', 'index': index + 1})}\n\n"
+
+        yield f"data: {json.dumps({'msg': f'{success_count} ventes importées.', 'type': 'finish'})}\n\n"
+        if os.path.exists(temp_path): os.remove(temp_path)
+
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
 @app.route('/')
 @login_required
 
@@ -1925,6 +2063,8 @@ def show_badges():
     finally:
         if cur and not cur.closed:
             cur.close()
+
+
 @app.route('/sales/<int:id>/edit', methods=('GET', 'POST'))
 @login_required
 
