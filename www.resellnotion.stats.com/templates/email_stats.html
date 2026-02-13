@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Stats Campagnes | ResellNotion{% endblock %}
+
+{% block content %}
+<div class="stats-container">
+    <h1 class="text-white fw-bold mb-4">Analytique des Emails</h1>
+
+    <div class="premium-card">
+        <div class="table-responsive">
+            <table class="table table-premium align-middle">
+                <thead>
+                    <tr class="text-muted small uppercase">
+                        <th>DATE</th>
+                        <th>CAMPAGNE / OBJET</th>
+                        <th>ENVOYÉS</th>
+                        <th>OUVERTURES</th>
+                        <th>CLICS</th>
+                        <th>TAUX</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for camp in campaigns %}
+                    <tr>
+                        <td class="small">{{ camp.date_envoi.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>
+                            <div class="fw-bold text-white">{{ camp.subject }}</div>
+                            <div class="text-muted small">ID: {{ camp.campaign_id }}</div>
+                        </td>
+                        <td class="text-white">{{ camp.total_envoyes }}</td>
+                        <td class="text-success fw-bold">{{ camp.total_ouvertures }}</td>
+                        <td class="text-primary fw-bold">{{ camp.total_clics }}</td>
+                        <td>
+                            {% set rate = (camp.total_ouvertures / camp.total_envoyes * 100) if camp.total_envoyes > 0 else 0 %}
+                            <span class="badge bg-primary bg-opacity-25 text-white">{{ "%.1f"|format(rate) }}%</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

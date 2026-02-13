@@ -80,7 +80,7 @@
     .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(10px); z-index: 10000; align-items: center; justify-content: center; }
     .overlay-content { background: #161a2b; padding: 35px; border-radius: 24px; max-width: 600px; width: 90%; border: 1px solid var(--glass-border); position: relative; max-height: 90vh; overflow-y: auto; }
 
-    /* --- CARDS STOCK INDIVIDUELLES --- */
+    /* --- CARDS STOCK INDIVIDUELLES (OVERLAY) --- */
     .stock-focus-card {
         background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: 20px;
         padding: 16px; display: flex; align-items: center; gap: 18px; transition: 0.3s;
@@ -196,6 +196,14 @@
             <div class="col-6 col-md-3"><div class="premium-card border-warning border-opacity-25"><span class="stat-label text-warning">En Attente</span><div class="stat-numb text-truncate" style="font-size: 1.5rem">{{ "%.2f"|format(pending_payments) }}€</div></div></div>
             <div class="col-6 col-md-3"><div class="premium-card border-primary border-opacity-50"><span class="stat-label text-glow-purple">Puissance Totale</span><div class="stat-numb text-glow-purple text-truncate" id="val-total-base" style="font-size: 1.5rem">{{ "%.2f"|format(total_base_cash) }}€</div></div></div>
         </div>
+
+        <h3 class="fw-bold text-white mb-4">Projections de Capital (ROI Global)</h3>
+        <div class="row g-3 mb-5 text-center">
+            <div class="col-12 col-md-4"><div class="premium-card"><span class="stat-label">Projection 1 Mois</span><div class="stat-numb text-white text-truncate" id="proj-roi-1m">--€</div></div></div>
+            <div class="col-12 col-md-4"><div class="premium-card border-success border-opacity-25"><span class="stat-label text-success">Projection 3 Mois</span><div class="stat-numb text-white text-truncate" id="proj-roi-3m">--€</div></div></div>
+            <div class="col-12 col-md-4"><div class="premium-card border-warning border-opacity-25"><span class="stat-label text-warning">Projection 1 An</span><div class="stat-numb text-white text-truncate" id="proj-roi-1y">--€</div></div></div>
+        </div>
+
         <div class="premium-card mb-5" style="background: rgba(138, 43, 226, 0.05); border-left: 4px solid var(--primary-glow);"><h5 class="text-white fw-bold mb-3 text-uppercase small"><i class="bi bi-robot text-primary me-2"></i>AVIS DE L'EXPERT</h5><p id="finance-expert-advice" class="expert-text text-white-50 mb-0">Analyse de la solvabilité...</p></div>
     </div>
 
@@ -262,6 +270,7 @@
         document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
         document.getElementById(id).classList.add('active'); e.currentTarget.classList.add('active');
         if (id === 'tab-analytique' && !analytiqueChart) initAnalytique();
+        if (id === 'tab-goals') updateGoalsUI();
     }
 
     const staticStock = {{ stock_value|default(0)|tojson }};
@@ -275,7 +284,6 @@
     const sizesData = {{ sizes_dist|tojson }};
     const platformsData = {{ platforms_dist|tojson }};
 
-    // --- LOGIQUE OBJECTIFS ---
     let currentGoalCoef = 1.2;
     const baseRefRev = {{ ref_rev|default(0)|tojson }};
     const baseRefProf = {{ ref_prof|default(0)|tojson }};
@@ -287,18 +295,31 @@
         if (!{{ has_ref|default(false)|tojson }}) return;
         const targetRev = baseRefRev * currentGoalCoef;
         const targetProf = baseRefProf * currentGoalCoef;
+
         const revP = Math.min(100, (actualRevenue / targetRev) * 100);
-        document.getElementById('goal-rev-val').innerText = Math.round(targetRev).toLocaleString() + " €";
-        document.getElementById('goal-rev-percent').innerText = Math.round(revP) + "%";
-        document.getElementById('goal-rev-rem').innerText = (targetRev - actualRevenue) > 0 ? `Gap: ${Math.round(targetRev - actualRevenue)}€` : "Quota franchi";
-        document.getElementById('progress-rev').style.width = revP + "%";
-        document.getElementById('badge-rev-reached').classList.toggle('d-none', actualRevenue < targetRev);
+        const goalRevVal = document.getElementById('goal-rev-val');
+        if(goalRevVal) goalRevVal.innerText = Math.round(targetRev).toLocaleString() + " €";
+        const goalRevPercent = document.getElementById('goal-rev-percent');
+        if(goalRevPercent) goalRevPercent.innerText = Math.round(revP) + "%";
+        const goalRevRem = document.getElementById('goal-rev-rem');
+        if(goalRevRem) goalRevRem.innerText = (targetRev - actualRevenue) > 0 ? `Gap: ${Math.round(targetRev - actualRevenue)}€` : "Quota franchi";
+        const progressRev = document.getElementById('progress-rev');
+        if(progressRev) progressRev.style.width = revP + "%";
+        const badgeRev = document.getElementById('badge-rev-reached');
+        if(badgeRev) badgeRev.classList.toggle('d-none', actualRevenue < targetRev);
+
         const profP = Math.min(100, (actualProfit / targetProf) * 100);
-        document.getElementById('goal-prof-val').innerText = Math.round(targetProf).toLocaleString() + " €";
-        document.getElementById('goal-prof-percent').innerText = Math.round(profP) + "%";
-        document.getElementById('goal-prof-rem').innerText = (targetProf - actualProfit) > 0 ? `Gap: ${Math.round(targetProf - actualProfit)}€` : "Objectif validé";
-        document.getElementById('progress-prof').style.width = profP + "%";
-        document.getElementById('badge-prof-reached').classList.toggle('d-none', actualProfit < targetProf);
+        const goalProfVal = document.getElementById('goal-prof-val');
+        if(goalProfVal) goalProfVal.innerText = Math.round(targetProf).toLocaleString() + " €";
+        const goalProfPercent = document.getElementById('goal-prof-percent');
+        if(goalProfPercent) goalProfPercent.innerText = Math.round(profP) + "%";
+        const goalProfRem = document.getElementById('goal-prof-rem');
+        if(goalProfRem) goalProfRem.innerText = (targetProf - actualProfit) > 0 ? `Gap: ${Math.round(targetProf - actualProfit)}€` : "Objectif validé";
+        const progressProf = document.getElementById('progress-prof');
+        if(progressProf) progressProf.style.width = profP + "%";
+        const badgeProf = document.getElementById('badge-prof-reached');
+        if(badgeProf) badgeProf.classList.toggle('d-none', actualProfit < targetProf);
+
         const btnLow = document.getElementById('btn-low');
         const btnHigh = document.getElementById('btn-high');
         if(btnLow) btnLow.classList.toggle('active', currentGoalCoef === 1.2);
@@ -312,31 +333,52 @@
         else if (hScore >= 5 && roiAvg < 15) adv = `RESTRUCTURATION DES MARGES : Volume soutenu mais ROI de ${roiAvg}% inférieur aux standards. Allouez une part plus importante de votre budget à des actifs à plus forte valeur ajoutée (ROI > 20%).`;
         else if (hScore < 4) adv = `AUDIT DE VIABILITÉ : Alerte : Health Score de ${hScore}/10 indique une fragilité structurelle. Suspendez toute nouvelle acquisition et liquidez les actifs les moins performants.`;
         else adv = `STABILITÉ STRATÉGIQUE : Activité saine et équilibrée. Avec un ROI de ${roiAvg}% et une gestion cohérente, votre structure est prête pour explorer de nouveaux segments de marché.`;
-        document.getElementById('dashboard-expert-advice').innerText = adv;
+        const adviceBox = document.getElementById('dashboard-expert-advice');
+        if(adviceBox) adviceBox.innerText = adv;
     }
 
     function updateFinances() {
-        const cash = parseFloat(document.getElementById('input-cash').value) || 0;
+        const inputCash = document.getElementById('input-cash');
+        const cash = inputCash ? parseFloat(inputCash.value) || 0 : 0;
         const total = cash + staticStock + staticPending;
-        document.getElementById('val-total-base').innerText = total.toFixed(2) + "€";
-        document.getElementById('finance-expert-advice').innerText = `CONTRÔLE DE TRÉSORERIE : Votre capital total s'élève à ${total.toFixed(2)}€. Vos projections prévoient une capitalisation de ${(total + (dailyProf * 30)).toFixed(2)}€ d'ici 30 jours, basée sur l'ajout linéaire de votre profit journalier moyen.`;
+        const valTotalBase = document.getElementById('val-total-base');
+        if(valTotalBase) valTotalBase.innerText = total.toFixed(2) + "€";
+
+        // LOGIQUE DE PROJECTION CAPITAL (ROI)
+        const roi = roiAvg / 100;
+        const proj1m = total * (1 + roi);
+        const proj3m = total * Math.pow((1 + roi), 3);
+        const proj1y = total * Math.pow((1 + roi), 12);
+
+        const el1m = document.getElementById('proj-roi-1m');
+        const el3m = document.getElementById('proj-roi-3m');
+        const el1y = document.getElementById('proj-roi-1y');
+        if(el1m) el1m.innerText = proj1m.toFixed(2) + "€";
+        if(el3m) el3m.innerText = proj3m.toFixed(2) + "€";
+        if(el1y) el1y.innerText = Math.round(proj1y).toLocaleString() + "€";
+
+        const financeAdvice = document.getElementById('finance-expert-advice');
+        if(financeAdvice) financeAdvice.innerText = `CONTRÔLE DE TRÉSORERIE : Votre capital total s'élève à ${total.toFixed(2)}€. Vos projections prévoient une capitalisation de ${(total + (dailyProf * 30)).toFixed(2)}€ d'ici 30 jours, basée sur l'ajout linéaire de votre profit journalier moyen.`;
     }
 
     function updateStockAdvice() {
         const age = {{ stock_avg_age|tojson }};
         const pLat = {{ profit_latent|tojson }};
-        document.getElementById('stock-expert-advice').innerText = `AUDIT D'INVENTAIRE : Rotation moyenne de ${age} jours avec un profit latent de +${pLat.toFixed(2)}€. Votre structure est cohérente avec les standards. Un suivi des unités approchant les 45 jours est conseillé.`;
+        const stockAdvice = document.getElementById('stock-expert-advice');
+        if(stockAdvice) stockAdvice.innerText = `AUDIT D'INVENTAIRE : Rotation moyenne de ${age} jours avec un profit latent de +${pLat.toFixed(2)}€. Votre structure est cohérente avec les standards. Un suivi des unités approchant les 45 jours est conseillé.`;
     }
 
     let analytiqueChart = null;
     function initAnalytique() {
-        const ctx = document.getElementById('analytiqueChart').getContext('2d');
-        analytiqueChart = new Chart(ctx, {
+        const ctx = document.getElementById('analytiqueChart');
+        if(!ctx) return;
+        analytiqueChart = new Chart(ctx.getContext('2d'), {
             type: 'bar',
             data: { labels: [], datasets: [{ label: 'Profit (€)', data: [], backgroundColor: 'rgba(138, 43, 226, 0.4)', borderColor: '#8a2be2', borderWidth: 2 }] },
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8e9297' } }, x: { ticks: { color: '#8e9297' } } } }
         });
-        switchAnalytique(document.querySelector('.analytique-nav .period-btn'), 'days');
+        const firstBtn = document.querySelector('.analytique-nav .period-btn');
+        if(firstBtn) switchAnalytique(firstBtn, 'days');
     }
 
     function switchAnalytique(btn, type) {
@@ -361,15 +403,21 @@
             const bestPlat = labels[profits.indexOf(Math.max(...profits))];
             advice = `EFFICIENCE DES CANAUX : ${bestPlat} s'impose comme votre canal dominant. Analyse : Ce canal offre le meilleur ratio visibilité/frais. Priorisez-y vos actifs 'Haute Valeur' pour optimiser votre marge nette.`;
         }
-        document.getElementById('analytique-chart-title').innerText = title;
-        document.getElementById('analytique-expert-advice').innerText = advice;
-        analytiqueChart.data.labels = labels; analytiqueChart.data.datasets[0].data = profits; analytiqueChart.update();
+        const chartTitle = document.getElementById('analytique-chart-title');
+        if(chartTitle) chartTitle.innerText = title;
+        const analytiqueAdvice = document.getElementById('analytique-expert-advice');
+        if(analytiqueAdvice) analytiqueAdvice.innerText = advice;
+        if(analytiqueChart) {
+            analytiqueChart.data.labels = labels; analytiqueChart.data.datasets[0].data = profits; analytiqueChart.update();
+        }
     }
 
     function openHelp(id) { document.getElementById('overlay-' + id).style.display = 'flex'; }
     function closeHelp(id) { document.getElementById('overlay-' + id).style.display = 'none'; }
-    const ctxEv = document.getElementById('evolutionChart').getContext('2d');
-    new Chart(ctxEv, { type: 'line', data: { labels: [{% for s in sales %}"{{ s.sale_date.strftime('%d/%m') }}",{% endfor %}], datasets: [{ label: 'Ventes', data: [{% for s in sales %}{{ s.sale_price }},{% endfor %}], borderColor: '#8a2be2', backgroundColor: 'rgba(138, 43, 226, 0.1)', fill: true, tension: 0.4, borderWidth: 3 }, { label: 'Bénéfice', data: [{% for s in sales %}{{ s.profit }},{% endfor %}], borderColor: '#00ffa3', borderDash: [5, 5], fill: false, tension: 0.4, borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8e9297' } }, x: { grid: { display: false }, ticks: { color: '#8e9297' } } } } });
+    const ctxEv = document.getElementById('evolutionChart');
+    if(ctxEv) {
+        new Chart(ctxEv.getContext('2d'), { type: 'line', data: { labels: [{% for s in sales %}"{{ s.sale_date.strftime('%d/%m') }}",{% endfor %}], datasets: [{ label: 'Ventes', data: [{% for s in sales %}{{ s.sale_price }},{% endfor %}], borderColor: '#8a2be2', backgroundColor: 'rgba(138, 43, 226, 0.1)', fill: true, tension: 0.4, borderWidth: 3 }, { label: 'Bénéfice', data: [{% for s in sales %}{{ s.profit }},{% endfor %}], borderColor: '#00ffa3', borderDash: [5, 5], fill: false, tension: 0.4, borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8e9297' } }, x: { grid: { display: false }, ticks: { color: '#8e9297' } } } } });
+    }
 
     updateDashboardAdvice(); updateFinances(); updateStockAdvice(); updateGoalsUI();
 </script>

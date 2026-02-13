@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
+    <style>
+        /* Styles responsifs pour mobiles */
+        @media screen and (max-width: 600px) {
+            .container {
+                width: 100% !important;
+                border-radius: 0 !important;
+                border: none !important;
+            }
+            .content-padding {
+                padding: 20px !important;
+            }
+            .header-padding {
+                padding: 30px 20px 10px 20px !important;
+            }
+        }
+
+        /* Support du Mode Sombre (pour les clients compatibles) */
+        @media (prefers-color-scheme: dark) {
+            body { background-color: #0b0e14 !important; }
+            .wrapper-table { background-color: #0b0e14 !important; }
+            .container { background-color: #161a2b !important; border-color: rgba(138, 43, 226, 0.3) !important; }
+            .content-box { background-color: rgba(255, 255, 255, 0.02) !important; border-color: rgba(255, 255, 255, 0.05) !important; }
+            .text-main { color: #f8f9fa !important; }
+            .text-muted { color: #8e9297 !important; }
+            .brand-name { color: #ffffff !important; }
+        }
+    </style>
+</head>
+<body style="background-color: #f4f4f7; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', 'Segoe UI', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+    <table class="wrapper-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f4f7; padding: 40px 0;">
+        <tr>
+            <td align="center">
+                <div class="container" style="max-width: 600px; width: 95%; background-color: #ffffff; border: 1px solid #e1e4e8; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-align: left;">
+
+                    <div class="header-padding" style="padding: 40px 40px 20px 40px; border-bottom: 1px solid rgba(0, 0, 0, 0.05); background: linear-gradient(to bottom, rgba(138, 43, 226, 0.03), transparent);">
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                            <tr>
+                                <td>
+                                    <h1 class="brand-name" style="color: #161a2b; margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -1px;">
+                                        RESELL<span style="color: #8a2be2;">NOTION</span>
+                                    </h1>
+                                    <div style="height: 2px; width: 40px; background-color: #00ffa3; margin-top: 10px; border-radius: 2px;"></div>
+                                </td>
+                                <td align="right">
+                                    <img src="{{ base_url }}{{ url_for('static', filename='logo.png') }}" alt="Logo" style="height: 40px; width: auto; display: block;">
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="content-padding" style="padding: 40px; color: #2d333a; line-height: 1.8; font-size: 16px;">
+                        <p class="text-main" style="margin-bottom: 25px; color: #2d333a; font-weight: 500;">
+                            Bonjour,<br><br>
+                            Voici de nouvelles informations concernant Resell Notion.
+                        </p>
+
+                        <div class="content-box" style="background-color: #f8f9fa; border: 1px solid #e1e4e8; border-radius: 16px; padding: 25px; color: #2d333a;">
+                            {{ content | replace('\n', '<br>') | safe }}
+                        </div>
+
+                        <p class="text-main" style="margin-top: 25px; color: #2d333a; font-weight: 500;">
+                            Merci de votre fidélité et à bientôt sur votre interface de gestion.<br>
+                            L'équipe ResellNotion
+                        </p>
+                    </div>
+
+                    <div style="padding: 30px 40px; background-color: rgba(0, 0, 0, 0.03); text-align: center;">
+                        <p class="text-muted" style="color: #6a737d; font-size: 11px; margin: 0 0 15px 0; letter-spacing: 0.5px;">
+                            © 2026 ResellNotion. Technologie de gestion d'inventaire sécurisée.<br>
+                            Cet email est une transmission automatisée cryptée.
+                        </p>
+                        <a href="#" style="color: #00ffa3; text-decoration: none; font-size: 11px; font-weight: bold; text-transform: uppercase;">Se désabonner</a>
+                        <span style="color: #ddd; margin: 0 10px;">|</span>
+                        <a href="#" style="color: #8a2be2; text-decoration: none; font-size: 11px; font-weight: bold; text-transform: uppercase;">Support</a>
+                    </div>
+                </div>
+
+                <p class="text-muted" style="color: #959da5; font-size: 10px; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px;">
+                    Propulsé par l'écosystème ResellNotion
+                </p>
+            </td>
+        </tr>
+    </table>
+
+    {% if tracking_token %}
+    <img src="{{ base_url }}/track/open/{{ tracking_token }}.png" width="1" height="1" style="display:none !important;" alt="">
+    {% endif %}
+</body>
+</html>

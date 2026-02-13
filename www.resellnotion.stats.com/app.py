@@ -2389,6 +2389,115 @@ def statistics():
                            days_dist=days_dist, sizes_dist=sizes_dist, platforms_dist=platforms_dist)
 
 
+@app.route('/admin/broadcast', methods=['GET', 'POST'])
+@login_required
+def broadcast_email():
+    if current_user.email != 'bidardgab@gmail.com':
+        return redirect(url_for('statistics'))
+
+    conn = g.db
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    if request.method == 'POST':
+        subject = request.form.get('subject')
+        content = request.form.get('content')
+        selected_recipients = request.form.getlist('selected_emails')
+        attachments = request.files.getlist('attachments')
+
+        # Génération d'un ID unique pour TOUTE cette campagne d'envoi
+        campaign_id = str(uuid.uuid4())[:8]
+        base_url = request.host_url.rstrip('/')
+
+        with mail.connect() as conn_mail:
+            for email_addr in selected_recipients:
+                tracking_token = str(uuid.uuid4())
+
+                # On enregistre le token ET le campaign_id
+                cur.execute(
+                    "INSERT INTO email_analytics (token, recipient_email, subject, campaign_id) VALUES (%s, %s, %s, %s)",
+                    (tracking_token, email_addr, subject, campaign_id)
+                )
+                conn.commit()
+
+                html_body = render_template('email_layout.html',
+                                            content=content,
+                                            tracking_token=tracking_token,
+                                            base_url=base_url)
+
+                msg = Message(recipients=[email_addr], subject=subject, html=html_body)
+
+                for file in attachments:
+                    if file and file.filename:
+                        msg.attach(file.filename, file.content_type, file.read())
+                        file.seek(0)
+
+                conn_mail.send(msg)
+
+        flash(f"Diffusion (ID: {campaign_id}) envoyée avec succès.", "success")
+        return redirect(url_for('broadcast_email'))
+
+    cur.execute("SELECT email, username FROM users ORDER BY username ASC")
+    return render_template('send_email.html', users=cur.fetchall(), base_url=request.host_url.rstrip('/'))
+
+@app.route('/admin/email_stats')
+@login_required
+def email_stats():
+    if current_user.email != 'bidardgab@gmail.com':
+        return redirect(url_for('statistics'))
+
+    conn = g.db
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    # SQL pour grouper par campagne
+    query = """
+        SELECT 
+            campaign_id,
+            subject,
+            MIN(sent_at) as date_envoi,
+            COUNT(*) as total_envoyes,
+            SUM(CASE WHEN opened THEN 1 ELSE 0 END) as total_ouvertures,
+            SUM(clicks) as total_clics
+        FROM email_analytics
+        GROUP BY campaign_id, subject
+        ORDER BY date_envoi DESC
+    """
+    cur.execute(query)
+    campaigns = cur.fetchall()
+
+    return render_template('email_stats.html', campaigns=campaigns)
+
+# 2. Route pour le Pixel d'Ouverture
+@app.route('/track/open/<token>.png')
+def track_open(token):
+    conn = g.db
+    cur = conn.cursor()
+    # On marque comme ouvert seulement si c'est la première fois
+    cur.execute(
+        "UPDATE email_analytics SET opened = TRUE, opened_at = CURRENT_TIMESTAMP WHERE token = %s AND opened = FALSE",
+        (token,)
+    )
+    conn.commit()
+
+    # Renvoie une image 1x1 transparente
+    pixel = io.BytesIO(
+        b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82')
+    return send_file(pixel, mimetype='image/png')
+
+
+# 3. Route pour le Tracking de Clic
+@app.route('/track/click')
+def track_click():
+    token = request.args.get('t')
+    target_url = request.args.get('url')
+
+    if token:
+        conn = g.db
+        cur = conn.cursor()
+        cur.execute("UPDATE email_analytics SET clicks = clicks + 1 WHERE token = %s", (token,))
+        conn.commit()
+
+    return redirect(target_url or url_for('statistics'))
+
 @app.route('/secret-monitor-v5')
 @login_required
 def admin_monitor():

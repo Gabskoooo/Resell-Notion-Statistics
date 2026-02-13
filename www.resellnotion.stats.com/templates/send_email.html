@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% block title %}Diffusion Email | ResellNotion{% endblock %}
+
+{% block content %}
+<style>
+    .email-container { max-width: 900px; margin: 40px auto; padding: 20px; }
+    .email-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 24px;
+        padding: 35px;
+        backdrop-filter: blur(12px);
+    }
+    .user-selection-box {
+        max-height: 250px;
+        overflow-y: auto;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 15px;
+        padding: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        margin-bottom: 20px;
+    }
+    .user-selection-box::-webkit-scrollbar { width: 6px; }
+    .user-selection-box::-webkit-scrollbar-thumb { background: #8a2be2; border-radius: 10px; }
+
+    .user-item {
+        display: flex;
+        align-items: center;
+        padding: 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        transition: 0.2s;
+    }
+    .user-item:hover { background: rgba(138, 43, 226, 0.1); }
+    .user-item label { cursor: pointer; flex-grow: 1; margin-left: 10px; color: #f8f9fa; font-size: 0.9rem; }
+
+    .form-label { color: #8e9297; font-weight: 700; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; }
+    .custom-input { background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; }
+
+    .btn-send {
+        background: #8a2be2; color: white; border: none; padding: 14px;
+        border-radius: 14px; font-weight: 800; width: 100%; transition: 0.3s;
+        box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3);
+    }
+    .btn-send:hover { transform: translateY(-2px); box-shadow: 0 0 25px rgba(138, 43, 226, 0.5); }
+
+    .generator-box {
+        margin-top: 40px;
+        padding: 25px;
+        border-radius: 20px;
+        background: rgba(138, 43, 226, 0.05);
+        border: 1px dashed rgba(138, 43, 226, 0.3);
+    }
+</style>
+
+<div class="email-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-white fw-bold m-0">Diffusion Ciblée</h1>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('email_stats') }}" class="btn btn-primary btn-sm rounded-pill px-3">Statistiques</a>
+            <a href="{{ url_for('statistics') }}" class="btn btn-outline-light btn-sm rounded-pill px-3">Retour</a>
+        </div>
+    </div>
+
+    <div class="email-card">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-end mb-2">
+                    <label class="form-label">Destinataires</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="selectAll" onclick="toggleAll(this)">
+                        <label class="form-check-label small text-primary fw-bold" for="selectAll" style="cursor:pointer;">Tout sélectionner</label>
+                    </div>
+                </div>
+
+                <div class="user-selection-box">
+                    {% for user in users %}
+                    <div class="user-item">
+                        <input class="form-check-input user-checkbox" type="checkbox" name="selected_emails" value="{{ user.email }}" id="user-{{ loop.index }}">
+                        <label for="user-{{ loop.index }}">
+                            <span class="fw-bold">{{ user.username }}</span>
+                            <span class="text-muted ms-2" style="font-size: 0.8rem;">({{ user.email }})</span>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">Objet du message</label>
+                <input type="text" name="subject" class="form-control custom-input" placeholder="Sujet de l'email" required>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">Corps du mail (HTML autorisé)</label>
+                <textarea name="content" class="form-control custom-input" rows="8" placeholder="Rédigez votre message ici..." required></textarea>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">Pièces jointes</label>
+                <input type="file" name="attachments" class="form-control custom-input" multiple>
+            </div>
+
+            <button type="submit" class="btn-send">LANCER LA DIFFUSION</button>
+        </form>
+
+        <div class="generator-box">
+            <h5 class="text-white fw-bold mb-3" style="font-size: 0.9rem;">
+                <i class="bi bi-magic text-primary me-2"></i>GÉNÉRATEUR DE BOUTON TRACKÉ
+            </h5>
+
+            <div class="alert alert-info py-2 mb-3" style="font-size: 0.75rem; background: rgba(138, 43, 226, 0.1); border: none; color: #8a2be2;">
+                <i class="bi bi-info-circle me-2"></i> <strong>Note :</strong> Utilisez l'URL de votre site en ligne (Render) pour que le suivi fonctionne.
+            </div>
+
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <input type="text" id="rawUrl" class="form-control custom-input" placeholder="URL (ex: https://maboutique.com)">
+                </div>
+                <div class="col-md-4">
+                    <input type="text" id="linkText" class="form-control custom-input" placeholder="Texte du bouton">
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100 fw-bold" type="button" onclick="generateTrackedLink()">GÉNÉRER</button>
+                </div>
+            </div>
+
+            <div id="resultContainer" class="d-none">
+                <label class="form-label text-success">Code HTML cliquable :</label>
+                <div class="position-relative">
+                    <textarea id="trackedResult" class="form-control custom-input small" rows="4" readonly style="font-family: monospace; font-size: 0.8rem; border-color: #00ffa3 !important; color: #00ffa3 !important;"></textarea>
+                    <button class="btn btn-sm btn-dark position-absolute top-0 end-0 m-2" onclick="copyGeneratedLink()">Copier le code</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleAll(source) {
+        const checkboxes = document.getElementsByClassName('user-checkbox');
+        for(let i=0; i<checkboxes.length; i++) {
+            checkboxes[i].checked = source.checked;
+        }
+    }
+
+    function generateTrackedLink() {
+        const rawUrl = document.getElementById('rawUrl').value;
+        const linkText = document.getElementById('linkText').value || "Accéder au lien";
+        if (!rawUrl) return;
+
+        // On utilise l'URL publique de Render pour le tracking
+        const publicUrl = "https://resell-notion-statistics.onrender.com";
+        const trackedUrl = `${publicUrl}/track/click?t={% raw %}{{ tracking_token }}{% endraw %}&url=${encodeURIComponent(rawUrl)}`;
+
+        const htmlButton = `<div style="text-align: center; margin: 25px 0;">
+    <a href="${trackedUrl}" style="background-color:#8a2be2;border-radius:12px;color:#ffffff;display:inline-block;font-family:sans-serif;font-size:16px;font-weight:bold;line-height:45px;text-align:center;text-decoration:none;width:200px;-webkit-text-size-adjust:none;mso-hide:all;">${linkText}</a>
+</div>`;
+
+        document.getElementById('trackedResult').value = htmlButton;
+        document.getElementById('resultContainer').classList.remove('d-none');
+    }
+
+    function copyGeneratedLink() {
+        const copyText = document.getElementById("trackedResult");
+        copyText.select();
+        document.execCommand("copy");
+        const btn = event.target;
+        btn.innerText = "Copié !";
+        setTimeout(() => { btn.innerText = "Copier le code"; }, 2000);
+    }
+</script>
+{% endblock %}
