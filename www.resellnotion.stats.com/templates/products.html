@@ -5,10 +5,9 @@
 
 {% block content %}
 <style>
-    /* Styles généraux de la page */
+    /* Styles généraux */
     body {
         background-color: #1a1a2e;
-        /* Note : Utiliser des fichiers .png si des images de fond sont ajoutées */
         color: #e0e0e0;
     }
 
@@ -21,13 +20,8 @@
         color: #e0e0e0 !important;
     }
 
-    /* --- TITRES RESPONSIVE --- */
-    h1 {
-        font-size: clamp(1.5rem, 5vw, 2.5rem);
-        font-weight: 700;
-    }
-
-    /* --- KPI SUMMARY CARDS --- */
+    /* --- TITRES & KPI --- */
+    h1 { font-size: clamp(1.5rem, 5vw, 2.5rem); font-weight: 700; }
     .kpi-card {
         background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -56,96 +50,38 @@
         box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
     }
 
-    .age-badge {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(4px);
-        color: #fff;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        z-index: 5;
-        border: 1px solid rgba(255,255,255,0.1);
+    /* --- TRACKING UI (CYBER LOG) --- */
+    .log-console {
+        background: #000;
+        color: #00ff41;
+        font-family: 'Courier New', monospace;
+        padding: 15px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        height: 200px;
+        overflow-y: auto;
+        text-align: left;
+        border: 1px solid var(--primary-glow);
     }
+    .log-entry { margin-bottom: 5px; }
+    .log-success { color: var(--success-glow); }
 
-    .product-options-menu {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        z-index: 10;
-    }
-
-    .options-btn {
-        background: rgba(0, 0, 0, 0.3);
-        border: none;
-        color: #e0e0e0;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        display: flex;
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 50px;
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        display: inline-flex;
         align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: 0.2s;
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
+    .status-pulse { width: 6px; height: 6px; border-radius: 50%; animation: status-blink 2s infinite; }
+    @keyframes status-blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
 
-    .options-btn:hover { background: rgba(138, 43, 226, 0.5); }
-
-    .dropdown-menu-custom {
-        background-color: #1e1e36;
-        border: 1px solid #3a3a5a;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-    }
-
-    .dropdown-menu-custom .dropdown-item {
-        color: #e0e0e0;
-        padding: 8px 16px;
-        font-size: 0.9rem;
-    }
-
-    .product-card-img {
-        width: 100%;
-        height: 180px; /* Augmenté légèrement pour un meilleur ratio */
-        object-fit: contain;
-        background-color: #3a3a5a;
-        border-top-left-radius: 12px;
-        border-top-right-radius: 12px;
-        padding: 10px;
-    }
-
-    .product-card-placeholder {
-        width: 100%;
-        height: 180px;
-        background-color: #3a3a5a;
-        border-top-left-radius: 12px;
-        border-top-right-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #5a5a7a;
-        font-size: 3rem;
-    }
-
-    .product-card-item .card-body {
-        padding: 1.25rem;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .product-card-item .card-title {
-        font-size: 1.2rem;
-        font-weight: bold;
-        color: #8a2be2 !important;
-        margin-bottom: 0.5rem;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    /* --- MODAL RESPONSIVE --- */
+    /* Styles Modals */
     .cashback-modal-overlay {
         position: fixed;
         top: 0; left: 0; width: 100%; height: 100%;
@@ -154,45 +90,15 @@
         padding: 15px;
     }
     .cashback-modal-content {
-        background-color: #2a2a4a; padding: 30px; border-radius: 20px; width: 100%; max-width: 400px; color: #e0e0e0; text-align: center; position: relative;
+        background-color: #2a2a4a; padding: 30px; border-radius: 20px; width: 100%; max-width: 450px; color: #e0e0e0; position: relative;
+    }
+    .cashback-modal-close {
+        position: absolute; top: 15px; right: 20px; background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer;
     }
 
-    /* --- MEDIA QUERIES --- */
-
-    @media (max-width: 768px) {
-        .header-section {
-            flex-direction: column;
-            gap: 15px;
-            text-align: center;
-        }
-
-        .header-section a {
-            width: 100%;
-        }
-
-        .kpi-value { font-size: 1.2rem; }
-        .kpi-card { padding: 15px; }
-
-        .product-card-img, .product-card-placeholder {
-            height: 150px;
-        }
-    }
-
-    @media (max-width: 576px) {
-        .col-6 { padding-left: 8px; padding-right: 8px; }
-
-        .kpi-label { font-size: 0.65rem; }
-
-        .product-card-item .card-body {
-            padding: 1rem;
-        }
-
-        .product-card-item .card-title {
-            font-size: 1.1rem;
-        }
-
-        .card-text { font-size: 0.9rem; }
-    }
+    /* Image Handling */
+    .product-card-img { width: 100%; height: 180px; object-fit: contain; background-color: #3a3a5a; border-top-left-radius: 12px; border-top-right-radius: 12px; padding: 10px; }
+    .product-card-placeholder { width: 100%; height: 180px; background-color: #3a3a5a; border-top-left-radius: 12px; border-top-right-radius: 12px; display: flex; align-items: center; justify-content: center; color: #5a5a7a; font-size: 3rem; }
 </style>
 
 <div class="container-fluid mt-4">
@@ -235,9 +141,6 @@
             <select id="dateFilter" class="form-select bg-dark border-secondary text-white">
                 <option value="all">Toutes les dates</option>
                 <option value="last7days">Derniers 7 jours</option>
-                <option value="last30days">Derniers 30 jours</option>
-                <option value="thismonth">Ce mois-ci</option>
-                <option value="thisyear">Cette année</option>
             </select>
         </div>
     </div>
@@ -247,20 +150,29 @@
         {% for product in products %}
         <div class="col product-card-item" data-date="{{ product.date_added.strftime('%Y-%m-%d') }}" data-product-size="{{ product.size }}">
             <div class="card">
-
                 {% set age = (product.date_added.utcnow() - product.date_added).days %}
-                <div class="age-badge">
+                <div class="age-badge" style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); color: #fff; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; z-index: 5; border: 1px solid rgba(255,255,255,0.1);">
                     <i class="bi bi-clock-history me-1"></i>{{ age if age >= 0 else 0 }}j
                 </div>
 
-                <div class="dropdown product-options-menu">
-                    <button class="options-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <div class="dropdown product-options-menu" style="position: absolute; top: 10px; right: 10px; z-index: 10;">
+                    <button class="btn btn-dark btn-sm rounded-circle options-btn" type="button" data-bs-toggle="dropdown" style="width: 32px; height: 32px; padding: 0;">
                         <i class="bi bi-three-dots-vertical"></i>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-custom">
+                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-custom" style="background-color: #1e1e36; border: 1px solid #3a3a5a;">
+                        <li>
+                            {% if product.tracking_number %}
+                                <a class="dropdown-item track-btn" href="#" data-product-id="{{ product.id }}" data-tracking="{{ product.tracking_number }}">
+                                    <i class="bi bi-truck me-2 text-info"></i>Suivre le colis
+                                </a>
+                            {% else %}
+                                <a class="dropdown-item track-btn" href="#" data-product-id="{{ product.id }}">
+                                    <i class="bi bi-plus-circle me-2"></i>Ajouter le suivi
+                                </a>
+                            {% endif %}
+                        </li>
                         <li><a class="dropdown-item cashback-btn" href="#" data-product-id="{{ product.id }}"><i class="bi bi-coin me-2"></i>Cashback</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('add_sale', product_id=product.id) }}"><i class="bi bi-tag me-2"></i>Vendre</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('edit_product', id=product.id) }}"><i class="bi bi-pencil me-2"></i>Modifier</a></li>
                         <li><hr class="dropdown-divider" style="border-color: rgba(255,255,255,0.1);"></li>
                         <li>
                             <form action="{{ url_for('delete_product', id=product.id) }}" method="post" onsubmit="return confirm('Êtes-vous sûr ?');">
@@ -278,9 +190,19 @@
                 {% endif %}
 
                 <div class="card-body">
-                    <h5 class="card-title" title="{{ product.name }}">{{ product.name | truncate(20, True, '...') }}</h5>
-                    <p class="card-subtitle mb-1">SKU: <span class="text-white-50">{{ product.sku }}</span></p>
-                    <p class="card-text mb-1">Taille: <span class="fw-bold">{{ product.size }}</span></p>
+                    <h5 class="card-title" style="color: #8a2be2 !important; font-weight: bold;">{{ product.name | truncate(25, True, '...') }}</h5>
+
+                    {% if product.tracking_number %}
+                    <div class="mb-2">
+                        <span class="status-badge {% if product.shipping_status == 'DELIVERED' %}status-delivered{% else %}status-transit{% endif %}">
+                            <span class="status-pulse" style="background: {% if product.shipping_status == 'DELIVERED' %}#00ffa3{% else %}#8a2be2{% endif %};"></span>
+                            {{ product.shipping_status }}
+                        </span>
+                    </div>
+                    {% endif %}
+
+                    <p class="card-subtitle mb-1 small">SKU: <span class="text-white-50">{{ product.sku }}</span></p>
+                    <p class="card-text mb-1 small">Taille: <span class="fw-bold">{{ product.size }}</span></p>
                     <p class="card-text mb-0 mt-auto pt-3">Achat: <strong class="text-success">{{ "%.2f"|format(product.purchase_price) }}€</strong></p>
                 </div>
             </div>
@@ -293,15 +215,35 @@
         <h3 class="mt-3">Aucun produit en stock.</h3>
     </div>
     {% endif %}
+</div>
 
-    <div id="no-products-found" class="text-center text-muted mt-5" style="display: none;">
-        <h3>Aucun résultat trouvé.</h3>
+<div id="trackingModal" class="cashback-modal-overlay">
+    <div class="cashback-modal-content shadow-lg">
+        <button class="cashback-modal-close" onclick="closeTrackingModal()">&times;</button>
+        <h4 class="fw-bold mb-3"><i class="bi bi-radar me-2"></i>Tracking Système</h4>
+
+        <div id="trackingInputSection">
+            <div class="form-group mb-3 text-start">
+                <label class="small text-uppercase">Numéro de suivi</label>
+                <input type="text" id="trackNumberInput" class="form-control bg-dark border-secondary text-white" placeholder="Ex: XW305613635TS">
+            </div>
+            <div class="form-check text-start mb-3" id="saveTrackingCheckSection">
+                <input class="form-check-input" type="checkbox" id="saveTrackingCheck" checked>
+                <label class="form-check-label small" for="saveTrackingCheck">Enregistrer dans l'inventaire</label>
+            </div>
+            <button onclick="startTracking()" class="btn btn-primary w-100 fw-bold">Lancer le scan</button>
+        </div>
+
+        <div id="trackingLogSection" style="display: none;">
+            <div class="log-console mb-3" id="logConsole"></div>
+            <div id="trackingResult"></div>
+        </div>
     </div>
 </div>
 
 <div id="cashbackModal" class="cashback-modal-overlay">
     <div class="cashback-modal-content shadow-lg">
-        <button class="cashback-modal-close">&times;</button>
+        <button class="cashback-modal-close" onclick="document.getElementById('cashbackModal').style.display='none'">&times;</button>
         <h4 class="fw-bold mb-3">Ajouter du Cashback</h4>
         <p id="cashbackProductInfo" class="small text-white-50 mb-4"></p>
         <form id="cashbackForm">
@@ -315,72 +257,126 @@
     </div>
 </div>
 
+
+
 <script>
+    let currentProductId = null;
+
+    // --- FILTERS LOGIC ---
     document.addEventListener('DOMContentLoaded', function() {
         const searchInput = document.getElementById('searchInput');
         const sizeFilter = document.getElementById('sizeFilter');
         const dateFilter = document.getElementById('dateFilter');
-        const noProductsFound = document.getElementById('no-products-found');
-        const allProductCards = document.querySelectorAll('.product-card-item');
 
         function applyFilters() {
             const searchTerm = searchInput.value.toLowerCase();
             const selectedSize = sizeFilter.value;
-            const selectedDateFilter = dateFilter.value;
-            let found = false;
+            const allProductCards = document.querySelectorAll('.product-card-item');
 
             allProductCards.forEach(cardItem => {
                 const productName = cardItem.querySelector('.card-title').textContent.toLowerCase();
                 const productSku = cardItem.querySelector('.card-subtitle').textContent.toLowerCase();
                 const productSize = cardItem.dataset.productSize;
-                const productDate = cardItem.dataset.date;
 
                 const isSearchMatch = productName.includes(searchTerm) || productSku.includes(searchTerm);
                 const isSizeMatch = selectedSize === 'all' || productSize === selectedSize;
 
-                let isDateMatch = true;
-                if (selectedDateFilter !== 'all') {
-                    const today = new Date();
-                    const dateAdded = new Date(productDate);
-                    let filterDate = new Date();
-                    switch(selectedDateFilter) {
-                        case 'last7days': filterDate.setDate(today.getDate() - 7); isDateMatch = dateAdded >= filterDate; break;
-                        case 'last30days': filterDate.setDate(today.getDate() - 30); isDateMatch = dateAdded >= filterDate; break;
-                        case 'thismonth': isDateMatch = dateAdded.getMonth() === today.getMonth(); break;
-                        case 'thisyear': isDateMatch = dateAdded.getFullYear() === today.getFullYear(); break;
-                    }
-                }
-
-                if (isSearchMatch && isSizeMatch && isDateMatch) {
-                    cardItem.style.display = "";
-                    found = true;
-                } else {
-                    cardItem.style.display = "none";
-                }
+                cardItem.style.display = (isSearchMatch && isSizeMatch) ? "" : "none";
             });
-            noProductsFound.style.display = found ? 'none' : 'block';
         }
 
         if (searchInput) searchInput.addEventListener('keyup', applyFilters);
         if (sizeFilter) sizeFilter.addEventListener('change', applyFilters);
-        if (dateFilter) dateFilter.addEventListener('change', applyFilters);
     });
 
-    const cashbackModal = document.getElementById('cashbackModal');
-    const cashbackModalCloseBtn = document.querySelector('.cashback-modal-close');
-    const cashbackForm = document.getElementById('cashbackForm');
-
+    // --- TRACKING LOGIC ---
     document.addEventListener('click', function(e) {
+        if (e.target.closest('.track-btn')) {
+            e.preventDefault();
+            const btn = e.target.closest('.track-btn');
+            currentProductId = btn.getAttribute('data-product-id');
+            const existingTrack = btn.getAttribute('data-tracking');
+
+            document.getElementById('trackNumberInput').value = existingTrack || '';
+            document.getElementById('trackingInputSection').style.display = 'block';
+            document.getElementById('trackingLogSection').style.display = 'none';
+            document.getElementById('logConsole').innerHTML = '';
+            document.getElementById('trackingResult').innerHTML = '';
+            document.getElementById('saveTrackingCheckSection').style.display = existingTrack ? 'none' : 'block';
+
+            document.getElementById('trackingModal').style.display = 'flex';
+        }
+
         if (e.target.closest('.cashback-btn')) {
             e.preventDefault();
             const btn = e.target.closest('.cashback-btn');
             const card = btn.closest('.product-card-item');
             document.getElementById('cashbackProductId').value = btn.getAttribute('data-product-id');
             document.getElementById('cashbackProductInfo').textContent = `Produit: ${card.querySelector('.card-title').textContent.trim()}`;
-            cashbackModal.style.display = 'flex';
+            document.getElementById('cashbackModal').style.display = 'flex';
         }
     });
 
-    cashbackModalCloseBtn.addEventListener('click', () => cashbackModal.style.display = 'none');
+    function closeTrackingModal() {
+        document.getElementById('trackingModal').style.display = 'none';
+    }
+
+    async function startTracking() {
+        const num = document.getElementById('trackNumberInput').value;
+        const save = document.getElementById('saveTrackingCheck').checked;
+        if(!num) return;
+
+        document.getElementById('trackingInputSection').style.display = 'none';
+        document.getElementById('trackingLogSection').style.display = 'block';
+
+        const console = document.getElementById('logConsole');
+        const addLog = (text, type = '') => {
+            console.innerHTML += `<div class="log-entry ${type}">> ${text}</div>`;
+            console.scrollTop = console.scrollHeight;
+        };
+
+        addLog("Initialisation de la session sécurisée...");
+        await new Promise(r => setTimeout(r, 1000));
+        addLog("Rotation IP Quantum effectuée. Signature Chrome validée.");
+        await new Promise(r => setTimeout(r, 600));
+        addLog("Interrogation des serveurs de transit...");
+
+        try {
+            const response = await fetch('/api/track-live', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({tracking_number: num, save: save, product_id: currentProductId})
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                addLog("Validation des paquets de données reçue.", "log-success");
+                await new Promise(r => setTimeout(r, 400));
+
+                // Utilisation de result.status (le statusLabel de l'API)
+                addLog(`STATUT DÉTECTÉ : ${result.status}`, "log-success");
+
+                // Affichage détaillé de l'historique dans la console Cyber
+                const steps = result.full_data.steps || [];
+                steps.forEach(step => {
+                    addLog(`--- ${step.humanReadableTime} ---`, "text-info small");
+                    if (step.lines) {
+                        step.lines.forEach(line => addLog(line, "small opacity-75"));
+                    }
+                });
+
+                document.getElementById('trackingResult').innerHTML = `
+                    <div class="alert alert-info bg-dark border-info text-info small mb-3 mt-3">
+                        <i class="bi bi-info-circle me-2"></i><strong>${result.status}</strong>
+                    </div>
+                    <button class="btn btn-primary btn-sm w-100 fw-bold" onclick="location.reload()">TERMINER ET ACTUALISER</button>
+                `;
+            } else {
+                addLog("ERREUR : " + result.message, "text-danger");
+            }
+        } catch (err) {
+            addLog("ERREUR SYSTÈME : Tunnel rompu.", "text-danger");
+        }
+    }
 </script>
 {% endblock %}

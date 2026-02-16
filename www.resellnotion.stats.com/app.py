@@ -6,7 +6,11 @@ from flask import current_app, abort
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_bcrypt import Bcrypt
 from dotenv import load_dotenv
+import random
+import urllib.parse
 import psycopg2.extras
+import time
+from curl_cffi import requests as curlr
 from functools import wraps
 from decimal import Decimal
 import matplotlib
@@ -21,6 +25,9 @@ from flask import Response, stream_with_context, jsonify, request, g, flash, red
 from flask_mail import Mail, Message
 from datetime import datetime, date, timedelta
 import io
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 import requests
 import datetime as dt
 import uuid
@@ -62,6 +69,12 @@ UPLOAD_FOLDER = 'static/uploads/listings'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+cloudinary.config(
+  cloud_name = "dzzhezldw",
+  api_key = "861593124633537",
+  api_secret = "VIBSETb9zJqhiM2nKjUQitgdu4A",
+  secure = True
+)
 mail = Mail(app)
 
 if not os.path.exists(UPLOAD_FOLDER):
@@ -348,6 +361,7 @@ def get_db():
         g.db = psycopg2.connect(DATABASE_URL)
     return g.db
 
+
 # Nouvelle fonction pour obtenir une connexion à la DB (retourne un objet connexion psycopg2)
 def get_db_connection():
     result = urlparse(DATABASE_URL)
@@ -366,6 +380,19 @@ def get_db_connection():
     )
     return conn
 
+
+def get_quantum_proxy():
+    """Récupère un proxy depuis ton fichier de 250 proxies Quantum."""
+    proxy_path = os.path.join('static', 'proxy_tracker.txt')
+    try:
+        with open(proxy_path, 'r') as f:
+            lines = [l.strip() for l in f.readlines() if l.strip()]
+        if not lines: return None
+        line = random.choice(lines)
+        host, port, user, password = line.split(':')
+        # Encodage pour les caractères spéciaux Quantum
+        return f"http://{urllib.parse.quote(user)}:{urllib.parse.quote(password)}@{host}:{port}"
+    except: return None
 # Gérer la connexion à la base de données pour chaque requête
 @app.before_request
 def before_request():
@@ -419,32 +446,33 @@ def storage():
         category = request.form.get('category')
         content = request.form.get('content')
         file = request.files.get('file')
-        file_path = None
+        file_url = None
 
         if file and file.filename != '':
-            # On génère un nom unique
-            filename = secure_filename(f"{current_user.id}_{int(datetime.now().timestamp())}_{file.filename}")
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            # On ne stocke QUE le nom du fichier en base pour éviter les erreurs de chemin
-            file_path = filename
+            try:
+                # Envoi direct vers Cloudinary dans un dossier spécifique
+                upload_result = cloudinary.uploader.upload(file, folder="resell_notion_storage")
+                file_url = upload_result['secure_url'] # L'URL permanente
+            except Exception as e:
+                flash(f"Erreur Cloudinary : {e}", "danger")
+                return redirect(url_for('storage'))
 
         try:
             cur.execute("""
                 INSERT INTO user_storage (user_id, title, category, content, file_path)
                 VALUES (%s, %s, %s, %s, %s)
-            """, (current_user.id, title, category, content, file_path))
+            """, (current_user.id, title, category, content, file_url))
             conn.commit()
-            flash("Élément sécurisé dans votre Cloud.", "success")
+            flash("Élément sauvegardé sur le Cloud permanent.", "success")
         except Exception as e:
             conn.rollback()
-            flash(f"Erreur technique : {e}", "danger")
+            flash(f"Erreur DB : {e}", "danger")
         return redirect(url_for('storage'))
 
     cur.execute("SELECT * FROM user_storage WHERE user_id = %s ORDER BY created_at DESC", (current_user.id,))
     items = cur.fetchall()
     cur.close()
     return render_template('storage.html', items=items)
-
 
 @app.route('/storage/item/<int:item_id>')
 @login_required
@@ -454,37 +482,21 @@ def view_storage_item(item_id):
     cur.execute("SELECT * FROM user_storage WHERE id = %s AND user_id = %s", (item_id, current_user.id))
     item = cur.fetchone()
     cur.close()
-
     if not item:
         flash("Document introuvable.", "danger")
         return redirect(url_for('storage'))
-
     return render_template('view_storage_item.html', item=item)
-
-
-
-
 
 @app.route('/storage/delete/<int:item_id>', methods=['POST'])
 @login_required
 def delete_storage_item(item_id):
     conn = g.db
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    # On récupère le chemin pour supprimer le fichier physique aussi
-    cur.execute("SELECT file_path FROM user_storage WHERE id = %s AND user_id = %s", (item_id, current_user.id))
-    item = cur.fetchone()
-
-    if item and item['file_path']:
-        full_path = os.path.join(app.config['UPLOAD_FOLDER'], item['file_path'])
-        if os.path.exists(full_path):
-            os.remove(full_path)
-
+    cur = conn.cursor()
     cur.execute("DELETE FROM user_storage WHERE id = %s AND user_id = %s", (item_id, current_user.id))
     conn.commit()
     cur.close()
-    flash("Document supprimé définitivement.", "info")
+    flash("Élément supprimé de votre Cloud.", "info")
     return redirect(url_for('storage'))
-
 
 @app.route('/storage/file/<int:item_id>')
 @login_required
@@ -1104,6 +1116,8 @@ def delete_product(id):
         if cur and not cur.closed:
             cur.close()
 
+
+# --- Mise à jour de la route existante ---
 @app.route('/products')
 @login_required
 def products():
@@ -1111,18 +1125,96 @@ def products():
     cur = None
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute('SELECT id, sku, name, size, purchase_price, quantity, price, image_url, date_added FROM products WHERE user_id = %s AND quantity > 0 ORDER BY date_added DESC',                                     (current_user.id,))
+        # On récupère bien les colonnes de tracking
+        cur.execute('''
+            SELECT id, sku, name, size, purchase_price, quantity, price, image_url, 
+                   date_added, tracking_number, shipping_status 
+            FROM products 
+            WHERE user_id = %s AND quantity > 0 
+            ORDER BY date_added DESC
+        ''', (current_user.id,))
         products_data = cur.fetchall()
-        cur.close()
-        return render_template('products.html', products=products_data)
+
+        cur.execute('SELECT DISTINCT size FROM products WHERE user_id = %s', (current_user.id,))
+        available_sizes = [row['size'] for row in cur.fetchall()]
+
+        # On ferme le bloc try avec le return
+        return render_template('products.html', products=products_data, available_sizes=available_sizes)
+
     except Exception as e:
         flash(f"Une erreur est survenue lors du chargement des produits: {e}", 'danger')
         print(f"Erreur produits: {e}")
         return redirect(url_for('dashboard'))
+
     finally:
+        # C'est ce bloc qui manquait ou qui était mal placé
         if cur and not cur.closed:
             cur.close()
 
+
+# --- MAINTENANT TU PEUX AJOUTER LA NOUVELLE ROUTE ---
+
+@app.route('/api/track-live', methods=['POST'])
+@login_required
+def track_live():
+    data = request.json
+    num = data.get('tracking_number')
+    product_id = data.get('product_id')
+    save_to_db = data.get('save', False)
+
+    session = requests.Session()
+    proxy_url = get_quantum_proxy()
+    if proxy_url:
+        session.proxies = {"http": proxy_url, "https": proxy_url}
+
+    headers = {
+        'authority': 'api.ordertracker.com',
+        'accept': 'application/json, text/plain, */*',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
+        'referer': 'https://www.ordertracker.com/',
+        'origin': 'https://www.ordertracker.com',
+        'accept-language': 'fr-FR,fr;q=0.9',
+        'content-type': 'application/json'
+    }
+
+    try:
+        # ÉTAPE 1 : Initialisation HTML
+        url_html = f"https://www.ordertracker.com/fr/track/{num}"
+        session.get(url_html, headers=headers, timeout=20)
+        time.sleep(1.5)
+
+        # ÉTAPE 2 : Validation des liens
+        url_links = f"https://api.ordertracker.com/public/trackinglinks?trackingstring={num}"
+        headers['referer'] = url_html
+        session.get(url_links, headers=headers, timeout=20)
+        time.sleep(1)
+
+        # ÉTAPE 3 : Statut Final
+        url_final = f"https://api.ordertracker.com/public/track/{num}?lang=FR"
+        response = session.get(url_final, headers=headers, timeout=20)
+
+        if response.status_code == 200:
+            res_data = response.json()
+
+            # Extraction basée sur ton JSON debuggué
+            status = res_data.get('statusLabel', 'En transit')
+
+            if save_to_db and product_id:
+                cur = g.db.cursor()
+                cur.execute("""
+                    UPDATE products 
+                    SET tracking_number = %s, shipping_status = %s, last_tracking_update = %s 
+                    WHERE id = %s AND user_id = %s
+                """, (num, status, datetime.now(), product_id, current_user.id))
+                g.db.commit()
+                cur.close()
+
+            return jsonify({"success": True, "status": status, "full_data": res_data})
+
+        return jsonify({"success": False, "message": f"Refus Serveur ({response.status_code})"}), 400
+
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Erreur tunnel : {str(e)}"}), 500
 # SALES
 
 @app.route('/import-excel', methods=['GET', 'POST'])
