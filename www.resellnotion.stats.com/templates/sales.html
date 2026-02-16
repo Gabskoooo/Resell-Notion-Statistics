@@ -18,7 +18,6 @@
 
     body {
         background: #0b0e14;
-        /* Note : Utiliser des fichiers .png si des images de fond sont ajoutées */
         background-image:
             radial-gradient(circle at 0% 0%, rgba(138, 43, 226, 0.1) 0%, transparent 35%),
             radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.05) 0%, transparent 35%);
@@ -35,7 +34,7 @@
         backdrop-filter: blur(10px);
     }
     .stat-label { color: #8e9297; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
-    .stat-numb { font-size: 2rem; font-weight: 700; margin-top: 5px; color: #fff; }
+    .stat-numb { font-size: 1.8rem; font-weight: 700; margin-top: 5px; color: #fff; }
     .text-glow-purple { color: #fff; text-shadow: 0 0 15px rgba(138, 43, 226, 0.4); }
     .text-glow-green { color: var(--success-glow); text-shadow: 0 0 15px rgba(0, 255, 163, 0.3); }
 
@@ -46,7 +45,6 @@
         border-radius: 12px !important;
     }
 
-    /* --- CARDS DESIGN --- */
     .sale-card {
         background: rgba(255, 255, 255, 0.02);
         border: 1px solid rgba(255, 255, 255, 0.05);
@@ -59,7 +57,7 @@
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        min-width: 0; /* Anti-débordement flex */
+        min-width: 0;
     }
     .sale-card:hover {
         background: rgba(255, 255, 255, 0.04);
@@ -71,25 +69,32 @@
         background: rgba(138, 43, 226, 0.08) !important;
     }
 
+    /* MENTIONS LIVRAISON */
+    .mention-badge { padding: 4px 10px; border-radius: 30px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.1); }
+    .mention-livre { background: rgba(0, 255, 163, 0.1); color: #00ffa3; }
+    .mention-transit { background: rgba(138, 43, 226, 0.1); color: #8a2be2; }
+
+    .progress-track { height: 8px; background: #161625; border-radius: 10px; margin: 20px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+    .progress-bar-neon { height: 100%; background: linear-gradient(90deg, #8a2be2, #00ffa3); box-shadow: 0 0 15px rgba(138, 43, 226, 0.5); transition: width 1s ease-in-out; }
+    .timeline-item { position: relative; padding-left: 25px; margin-bottom: 15px; border-left: 2px solid rgba(138, 43, 226, 0.3); }
+    .timeline-dot { position: absolute; left: -7px; top: 0; width: 12px; height: 12px; background: #8a2be2; border-radius: 50%; box-shadow: 0 0 10px #8a2be2; }
+    .log-console { background: #000; color: #00ff41; font-family: 'Courier New', monospace; padding: 15px; border-radius: 8px; font-size: 0.85rem; height: 180px; overflow-y: auto; text-align: left; border: 1px solid #333; }
+
     .card-header-flex { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
     .sale-title { font-size: 0.95rem; font-weight: 700; color: #fff; line-height: 1.3; flex: 1; }
-
     .card-meta { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
     .meta-item { font-size: 0.75rem; color: #8e9297; display: flex; align-items: center; font-weight: 500; }
     .meta-item i { margin-right: 8px; width: 14px; text-align: center; opacity: 0.7; }
-
     .card-footer-flex { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.05); gap: 5px; }
     .sale-price-large { font-size: 1.2rem; font-weight: 800; color: #fff; }
 
     .status-badge { padding: 5px 10px; border-radius: 30px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
     .status-reçu { background: rgba(0, 255, 163, 0.15); color: #00ffa3; }
     .status-attente { background: rgba(255, 204, 0, 0.15); color: #ffcc00; }
-
     .profit-pill { padding: 6px 10px; border-radius: 30px; font-weight: 700; font-size: 0.75rem; display: flex; align-items: center; white-space: nowrap; }
     .profit-pos { background: rgba(0, 255, 163, 0.1); color: var(--success-glow); }
     .profit-neg { background: rgba(255, 77, 77, 0.1); color: var(--danger-glow); }
 
-    /* --- ACTION PANEL RESPONSIVE --- */
     #actionPanel {
         position: fixed; top: 0; right: -100%; width: 400px; max-width: 100%; height: 100vh;
         background: rgba(11, 14, 20, 0.98); backdrop-filter: blur(20px);
@@ -97,29 +102,10 @@
         transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
     #actionPanel.show { right: 0; }
+    .cashback-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 1050; padding: 15px; }
+    .cashback-modal-content { background: #2a2a4a; padding: 30px; border-radius: 20px; width: 100%; max-width: 500px; color: #e0e0e0; position: relative; }
+    .cashback-modal-close { position: absolute; top: 15px; right: 20px; background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; }
 
-    /* --- MEDIA QUERIES --- */
-
-    /* Typographie fluide pour le titre principal */
-    h1 { font-size: clamp(1.5rem, 6vw, 2.5rem); }
-
-    @media (max-width: 768px) {
-        .stat-numb { font-size: 1.5rem; }
-        .premium-card { padding: 15px; }
-        #actionPanel { padding: 20px; }
-        .card-footer-flex { flex-direction: column; align-items: flex-start; }
-    }
-
-    @media (max-width: 576px) {
-        .col-6 { padding-left: 8px; padding-right: 8px; }
-        .sale-card { padding: 15px; border-radius: 18px; }
-        .sale-title { font-size: 0.85rem; }
-        .meta-item { font-size: 0.7rem; }
-        .sale-price-large { font-size: 1.1rem; }
-        .profit-pill { font-size: 0.7rem; padding: 4px 8px; }
-    }
-
-    /* Animation */
     @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     .animate-in { animation: fadeInUp 0.6s ease-out forwards; }
 </style>
@@ -127,16 +113,17 @@
 <div class="container py-5">
     <div class="mb-5 animate-in">
         <h1 class="text-white fw-bold">📉 Historique des Ventes</h1>
-        <p class="text-muted">Suivez vos performances en temps réel.</p>
+        <p class="text-muted">Suivez vos performances et expéditions.</p>
     </div>
 
     <div class="row g-3 g-md-4 mb-5 animate-in" style="animation-delay: 0.1s">
-        <div class="col-12 col-md-4"><div class="premium-card"><div class="stat-label">Ventes</div><div class="stat-numb" id="total-sales-count">0</div></div></div>
-        <div class="col-6 col-md-4"><div class="premium-card"><div class="stat-label">CA</div><div class="stat-numb text-glow-purple" id="total-revenue" style="font-size: 1.4rem;">0,00 €</div></div></div>
-        <div class="col-6 col-md-4"><div class="premium-card"><div class="stat-label">Bénéfice</div><div class="stat-numb text-glow-green" id="total-profit" style="font-size: 1.4rem;">0,00 €</div></div></div>
+        <div class="col-6 col-md-3"><div class="premium-card"><div class="stat-label">Ventes</div><div class="stat-numb" id="total-sales-count">0</div></div></div>
+        <div class="col-6 col-md-3"><div class="premium-card"><div class="stat-label">Bénéfice</div><div class="stat-numb text-glow-green" id="total-profit" style="font-size: 1.2rem;">0,00 €</div></div></div>
+        <div class="col-6 col-md-3"><div class="premium-card"><div class="stat-label">CA Total</div><div class="stat-numb text-glow-purple" id="total-revenue" style="font-size: 1.2rem;">0,00 €</div></div></div>
+        <div class="col-6 col-md-3"><div class="premium-card"><div class="stat-label">En Transit</div><div class="stat-numb text-info" style="font-size: 1.2rem;">{{ "%.2f"|format(total_transit_value) }} €</div></div></div>
     </div>
 
-    <div class="premium-card mb-5 animate-in" style="animation-delay: 0.2s; padding: 15px;">
+    <div class="premium-card mb-5 animate-in" style="padding: 15px;">
         <div class="row g-3">
             <div class="col-12 col-md-4"><input type="text" id="salesSearch" class="form-control filter-input" placeholder="Recherche..."></div>
             <div class="col-6 col-md-4">
@@ -149,7 +136,7 @@
             </div>
             <div class="col-6 col-md-4">
                 <select id="paymentStatusFilter" class="form-select filter-input">
-                    <option value="all">Tous les statuts</option>
+                    <option value="all">Tous les paiements</option>
                     <option value="reçu">Reçu</option>
                     <option value="en_attente">Attente</option>
                 </select>
@@ -168,7 +155,8 @@
              data-sale-date="{{ sale.sale_date.strftime('%Y-%m-%d') }}"
              data-sale-price="{{ sale.sale_price }}"
              data-profit="{{ sale.profit }}"
-             data-payment-status="{{ sale.payment_status }}">
+             data-payment-status="{{ sale.payment_status }}"
+             data-tracking="{{ sale.tracking_number or '' }}">
 
             <div class="sale-card">
                 <div>
@@ -176,10 +164,18 @@
                         <h6 class="sale-title text-truncate" title="{{ sale.item_name }}">{{ sale.item_name }}</h6>
                     </div>
 
-                    <div class="mb-2">
+                    <div class="d-flex flex-wrap gap-2 mb-2">
                         <span class="status-badge {% if sale.payment_status == 'reçu' %}status-reçu{% else %}status-attente{% endif %}">
                             {{ 'Reçu' if sale.payment_status == 'reçu' else 'Attente' }}
                         </span>
+
+                        {% if sale.tracking_number %}
+                            {% if 'livré' in (sale.shipping_status|lower) or sale.shipping_status == 'DELIVERED' %}
+                                <span class="mention-badge mention-livre">Livré</span>
+                            {% else %}
+                                <span class="mention-badge mention-transit">En transit</span>
+                            {% endif %}
+                        {% endif %}
                     </div>
 
                     <div class="card-meta">
@@ -203,12 +199,12 @@
 
     <div id="actionPanel">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="text-white fw-bold mb-0">Détails</h4>
+            <h4 class="text-white fw-bold mb-0">Gestion Vente</h4>
             <button id="hideActionPanelBtn" class="btn btn-link text-muted p-0"><i class="bi bi-x-lg fs-5"></i></button>
         </div>
-        <div class="premium-card mb-4" style="background: rgba(255,255,255,0.02)">
+        <div class="premium-card mb-4">
             <h5 id="selected-sale-name-display" class="text-primary fw-bold mb-2" style="font-size: 1.1rem; word-break: break-word;"></h5>
-            <div id="current-status-display"></div>
+            <button id="openTrackingBtn" class="btn btn-outline-info w-100 btn-sm fw-bold"><i class="bi bi-truck me-2"></i>Suivre l'expédition</button>
         </div>
         <div class="d-grid gap-2 mb-4">
             <button type="button" class="btn btn-success py-3 fw-bold" id="setReceivedBtn">Marquer comme Reçu</button>
@@ -223,6 +219,40 @@
     </div>
 </div>
 
+<div id="trackingModal" class="cashback-modal-overlay">
+    <div class="cashback-modal-content shadow-lg">
+        <button class="cashback-modal-close" onclick="closeTrackingModal()">&times;</button>
+        <div id="trackingInputSection">
+            <h4 class="fw-bold mb-3"><i class="bi bi-radar me-2"></i>Suivi Vente</h4>
+            <div class="form-group mb-3 text-start">
+                <label class="small text-uppercase">Numéro de suivi</label>
+                <input type="text" id="trackNumberInput" class="form-control bg-dark border-secondary text-white" placeholder="Ex: XW305613635TS">
+            </div>
+            <button onclick="startTracking()" class="btn btn-primary w-100 fw-bold">Lancer le scan</button>
+        </div>
+
+        <div id="trackingLogSection" style="display: none;">
+            <div class="log-console mb-3" id="logConsole"></div>
+            <div class="text-center"><div class="spinner-border text-primary spinner-border-sm" role="status"></div></div>
+        </div>
+
+        <div id="uiResultSection" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold m-0" id="uiStatusTitle">Expédié</h4>
+                <span class="courier-badge" id="uiCourierName">Transporteur</span>
+            </div>
+            <p class="text-white-50 small mb-1" id="uiStatusLabel">Recherche du statut...</p>
+            <div class="progress-track"><div class="progress-bar-neon" id="uiProgressBar" style="width: 0%"></div></div>
+            <div class="row g-2 mb-4">
+                <div class="col-6"><div class="info-box"><div class="info-label">Transit</div><div class="info-value" id="uiTransitDays">0 Jours</div></div></div>
+                <div class="col-6"><div class="info-box"><div class="info-label">Livraison Est.</div><div class="info-value" id="uiEstDelivery">N/A</div></div></div>
+            </div>
+            <div id="uiTimeline" style="max-height: 180px; overflow-y: auto;"></div>
+            <button class="btn btn-primary w-100 fw-bold mt-4" onclick="location.reload()">ACTUALISER</button>
+        </div>
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const salesSearchInput = document.getElementById('salesSearch');
@@ -233,37 +263,65 @@
         const hideActionPanelBtn = document.getElementById('hideActionPanelBtn');
         const setReceivedBtn = document.getElementById('setReceivedBtn');
         const setPendingBtn = document.getElementById('setPendingBtn');
+        const openTrackingBtn = document.getElementById('openTrackingBtn');
+        const trackingModal = document.getElementById('trackingModal');
         const baseUrl = "{{ url_for('sales') }}";
 
         let currentSaleId = null, currentSaleCard = null;
 
-        async function updateStatus(newStatus) {
-            if (!currentSaleId) return;
-            try {
-                const response = await fetch(`${baseUrl}/${currentSaleId}/update_status`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: newStatus })
-                });
+        // --- TRACKING CLICK ---
+        openTrackingBtn.addEventListener('click', () => {
+            const trackingNum = currentSaleCard.dataset.tracking;
+            document.getElementById('trackNumberInput').value = trackingNum || '';
+            document.getElementById('trackingInputSection').style.display = 'block';
+            document.getElementById('trackingLogSection').style.display = 'none';
+            document.getElementById('uiResultSection').style.display = 'none';
+            trackingModal.style.display = 'flex';
+        });
 
-                if (response.ok) {
-                    currentSaleCard.dataset.paymentStatus = newStatus;
-                    const badge = currentSaleCard.querySelector('.status-badge');
-                    if (newStatus === 'reçu') {
-                        badge.className = 'status-badge status-reçu';
-                        badge.textContent = 'Reçu';
-                    } else {
-                        badge.className = 'status-badge status-attente';
-                        badge.textContent = 'Attente';
-                    }
-                    actionPanel.classList.remove('show');
-                    applyFilters();
+        window.closeTrackingModal = () => { trackingModal.style.display = 'none'; }
+
+        // --- APPEL À LA ROUTE UNIVERSELLE ---
+        window.startTracking = async () => {
+            const num = document.getElementById('trackNumberInput').value;
+            if(!num) return;
+            document.getElementById('trackingInputSection').style.display = 'none';
+            document.getElementById('trackingLogSection').style.display = 'block';
+            const console = document.getElementById('logConsole');
+            console.innerHTML = '> Scan Quantum Vente en cours...';
+
+            try {
+                // Utilisation de la route centralisée /api/track-live avec item_type: 'sale'
+                const res = await fetch('/api/track-live', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        tracking_number: num,
+                        save: true,
+                        item_id: currentSaleId,
+                        item_type: 'sale' // Indique qu'il s'agit d'une vente
+                    })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    const data = result.full_data;
+                    document.getElementById('trackingLogSection').style.display = 'none';
+                    document.getElementById('uiResultSection').style.display = 'block';
+                    document.getElementById('uiStatusTitle').innerText = data.statusPlaceholder || "Transit";
+                    document.getElementById('uiProgressBar').style.width = (data.statusProgressPercentage || 0) + "%";
+                    const timeline = document.getElementById('uiTimeline');
+                    timeline.innerHTML = '';
+                    (data.steps || []).forEach(step => {
+                        const item = document.createElement('div');
+                        item.className = 'timeline-item';
+                        item.innerHTML = `<div class=\"timeline-dot\"></div><div class=\"timeline-date\">${step.humanReadableTime}</div><div class=\"timeline-content\">${step.lines?.[0] || ''}</div>`;
+                        timeline.appendChild(item);
+                    });
                 }
-            } catch (error) {
-                console.error("Erreur mise à jour statut:", error);
-            }
+            } catch (e) { console.innerHTML += '<br>> Erreur réseau.'; }
         }
 
+        // --- FILTRES ---
         function applyFilters() {
             const searchTerm = salesSearchInput.value.toLowerCase();
             const selectedPeriod = periodFilterSelect.value;
@@ -297,8 +355,6 @@
             });
         });
 
-        setReceivedBtn.addEventListener('click', () => updateStatus('reçu'));
-        setPendingBtn.addEventListener('click', () => updateStatus('en_attente'));
         hideActionPanelBtn.addEventListener('click', () => actionPanel.classList.remove('show'));
         salesSearchInput.addEventListener('input', applyFilters);
         [periodFilterSelect, paymentStatusFilterSelect].forEach(el => el.addEventListener('change', applyFilters));

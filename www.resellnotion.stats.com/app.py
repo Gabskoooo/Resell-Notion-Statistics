@@ -1125,7 +1125,6 @@ def products():
     cur = None
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        # On récupère bien les colonnes de tracking
         cur.execute('''
             SELECT id, sku, name, size, purchase_price, quantity, price, image_url, 
                    date_added, tracking_number, shipping_status 
@@ -1135,86 +1134,123 @@ def products():
         ''', (current_user.id,))
         products_data = cur.fetchall()
 
+        # --- LOGIQUE DE CALCUL DES INDICATEURS ---
+        total_value = 0.0
+        present_value = 0.0
+        transit_value = 0.0
+
+        for p in products_data:
+            price = float(p['purchase_price'] or 0)
+            total_value += price
+
+            status = (p['shipping_status'] or "").upper()
+            if p['tracking_number'] and status != 'DELIVERED' and "LIVRÉ" not in status:
+                transit_value += price
+            else:
+                present_value += price
+
         cur.execute('SELECT DISTINCT size FROM products WHERE user_id = %s', (current_user.id,))
         available_sizes = [row['size'] for row in cur.fetchall()]
 
-        # On ferme le bloc try avec le return
-        return render_template('products.html', products=products_data, available_sizes=available_sizes)
+        # On transmet le type 'product' pour l'appel API universel
+        return render_template('products.html',
+                               products=products_data,
+                               available_sizes=available_sizes,
+                               total_value=total_value,
+                               present_value=present_value,
+                               transit_value=transit_value,
+                               item_type='product')
 
     except Exception as e:
         flash(f"Une erreur est survenue lors du chargement des produits: {e}", 'danger')
-        print(f"Erreur produits: {e}")
         return redirect(url_for('dashboard'))
 
     finally:
-        # C'est ce bloc qui manquait ou qui était mal placé
         if cur and not cur.closed:
             cur.close()
-
 
 # --- MAINTENANT TU PEUX AJOUTER LA NOUVELLE ROUTE ---
 
 @app.route('/api/track-live', methods=['POST'])
 @login_required
-def track_live():
+def track_live_universal():
     data = request.json
     num = data.get('tracking_number')
-    product_id = data.get('product_id')
+    item_id = data.get('item_id')
+    item_type = data.get('item_type')
     save_to_db = data.get('save', False)
 
-    session = requests.Session()
-    proxy_url = get_quantum_proxy()
-    if proxy_url:
-        session.proxies = {"http": proxy_url, "https": proxy_url}
+    config = {'product': {'table': 'products'}, 'sale': {'table': 'sales'}}
+    if item_type not in config:
+        return jsonify({"success": False, "message": "Type invalide"}), 400
 
-    headers = {
-        'authority': 'api.ordertracker.com',
-        'accept': 'application/json, text/plain, */*',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
-        'referer': 'https://www.ordertracker.com/',
-        'origin': 'https://www.ordertracker.com',
-        'accept-language': 'fr-FR,fr;q=0.9',
-        'content-type': 'application/json'
-    }
+    max_retries = 3  # Nombre de tentatives avec des proxys différents
+    attempt = 0
+    last_error = ""
 
-    try:
-        # ÉTAPE 1 : Initialisation HTML
-        url_html = f"https://www.ordertracker.com/fr/track/{num}"
-        session.get(url_html, headers=headers, timeout=20)
-        time.sleep(1.5)
+    while attempt < max_retries:
+        attempt += 1
+        session = requests.Session()
+        proxy_url = get_quantum_proxy()  # On récupère un nouveau nœud à chaque essai
 
-        # ÉTAPE 2 : Validation des liens
-        url_links = f"https://api.ordertracker.com/public/trackinglinks?trackingstring={num}"
-        headers['referer'] = url_html
-        session.get(url_links, headers=headers, timeout=20)
-        time.sleep(1)
+        if proxy_url:
+            session.proxies = {"http": proxy_url, "https": proxy_url}
 
-        # ÉTAPE 3 : Statut Final
-        url_final = f"https://api.ordertracker.com/public/track/{num}?lang=FR"
-        response = session.get(url_final, headers=headers, timeout=20)
+        headers = {
+            'authority': 'api.ordertracker.com',
+            'accept': 'application/json, text/plain, */*',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
+            'referer': 'https://www.ordertracker.com/',
+            'origin': 'https://www.ordertracker.com',
+            'accept-language': 'fr-FR,fr;q=0.9',
+            'content-type': 'application/json'
+        }
 
-        if response.status_code == 200:
-            res_data = response.json()
+        try:
+            # ÉTAPE 1 : Init
+            url_html = f"https://www.ordertracker.com/fr/track/{num}"
+            session.get(url_html, headers=headers, timeout=15)
+            time.sleep(1)
 
-            # Extraction basée sur ton JSON debuggué
-            status = res_data.get('statusLabel', 'En transit')
+            # ÉTAPE 2 : Links
+            url_links = f"https://api.ordertracker.com/public/trackinglinks?trackingstring={num}"
+            headers['referer'] = url_html
+            session.get(url_links, headers=headers, timeout=15)
 
-            if save_to_db and product_id:
-                cur = g.db.cursor()
-                cur.execute("""
-                    UPDATE products 
-                    SET tracking_number = %s, shipping_status = %s, last_tracking_update = %s 
-                    WHERE id = %s AND user_id = %s
-                """, (num, status, datetime.now(), product_id, current_user.id))
-                g.db.commit()
-                cur.close()
+            # ÉTAPE 3 : Final
+            url_final = f"https://api.ordertracker.com/public/track/{num}?lang=FR"
+            response = session.get(url_final, headers=headers, timeout=15)
 
-            return jsonify({"success": True, "status": status, "full_data": res_data})
+            if response.status_code == 200:
+                res_data = response.json()
+                status_label = res_data.get('statusLabel', 'En transit')
 
-        return jsonify({"success": False, "message": f"Refus Serveur ({response.status_code})"}), 400
+                if save_to_db and item_id:
+                    table_name = config[item_type]['table']
+                    cur = g.db.cursor()
+                    query = f"UPDATE {table_name} SET tracking_number=%s, shipping_status=%s, tracking_data=%s, last_tracking_update=%s WHERE id=%s AND user_id=%s"
+                    cur.execute(query,
+                                (num, status_label, json.dumps(res_data), datetime.now(), item_id, current_user.id))
+                    g.db.commit()
+                    cur.close()
 
-    except Exception as e:
-        return jsonify({"success": False, "message": f"Erreur tunnel : {str(e)}"}), 500
+                return jsonify({"success": True, "status": status_label, "full_data": res_data})
+
+            # Si le serveur répond mais avec une erreur (ex: 403), on retente
+            last_error = f"Erreur Serveur {response.status_code}"
+
+        except (requests.exceptions.ProxyError, requests.exceptions.ConnectionError) as e:
+            # C'est ici qu'on attrape ton erreur 503
+            last_error = "Proxy saturé (503). Nouvelle tentative..."
+            time.sleep(1)  # Petit délai avant de changer de nœud
+            continue
+
+        except Exception as e:
+            last_error = str(e)
+            break  # Erreur critique, on arrête
+
+    return jsonify(
+        {"success": False, "message": f"Échec après {max_retries} tentatives. Dernière erreur : {last_error}"}), 500
 # SALES
 
 @app.route('/import-excel', methods=['GET', 'POST'])
@@ -1453,6 +1489,7 @@ def sale_success(sale_id):
     finally:
         if cur: cur.close()
 
+
 @app.route('/sales')
 @login_required
 def sales():
@@ -1462,43 +1499,47 @@ def sales():
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute('''
             SELECT
-                id,
-                item_name,
-                quantity,
-                sale_price,
-                purchase_price_at_sale,
-                sale_date,
-                notes,
-                sale_channel,
-                shipping_cost,
-                fees,
-                profit,
+                id, item_name, quantity, sale_price, purchase_price_at_sale,
+                sale_date, notes, sale_channel, shipping_cost, fees, profit,
                 COALESCE(payment_status, 'reçu') as payment_status,
-                sku,
-                size
+                sku, size, tracking_number, shipping_status
             FROM sales
             WHERE user_id = %s
             ORDER BY sale_date DESC
         ''', (current_user.id,))
         sales_data_raw = cur.fetchall()
-        cur.close()
+
+        # --- LOGIQUE DE CALCUL DES INDICATEURS ---
+        total_transit_value = 0.0
+
         sales_for_template = []
         for sale in sales_data_raw:
             sale_dict = dict(sale)
+            price = float(sale['sale_price'] or 0.0)
+
+            # Détermination du statut pour le calcul
+            status = (sale['shipping_status'] or "").upper()
+            if sale['tracking_number'] and status != 'DELIVERED' and "LIVRÉ" not in status:
+                total_transit_value += price
+
             sale_dict['sku'] = sale['sku'] if sale['sku'] else 'N/A'
             sale_dict['size'] = sale['size'] if sale['size'] else 'N/A'
-            sale_dict['sale_price_formatted'] = '{:.2f} €'.format(float(sale_dict['sale_price'] or 0.0))
+            sale_dict['sale_price_formatted'] = '{:.2f} €'.format(price)
             sale_dict['profit_formatted'] = '{:.2f} €'.format(float(sale_dict['profit'] or 0.0))
             sales_for_template.append(sale_dict)
-        return render_template('sales.html', sales=sales_for_template)
+
+        # On ajoute item_type='sale' pour le fonctionnement du tracking universel
+        return render_template('sales.html',
+                               sales=sales_for_template,
+                               total_transit_value=total_transit_value,
+                               item_type='sale')
     except Exception as e:
-        print(f"--- ERREUR CRITIQUE VENTES ---")
-        print(f"Détails : {e}")
-        flash(f"Erreur lors du chargement des ventes. Veuillez contacter l'administrateur.", 'danger')
+        flash(f"Erreur lors du chargement des ventes: {e}", 'danger')
         return redirect(url_for('dashboard'))
     finally:
         if cur and not cur.closed:
             cur.close()
+
 
 @app.route('/sales/<int:sale_id>/update_status', methods=['POST'])
 @login_required
@@ -1962,8 +2003,62 @@ def api_overlay_stats():
         "total_base_cash": s_val + pending
     })
 
+# OTHER
 
+@app.route('/livraisons')
+@login_required
+def livraisons():
+    conn = g.db
+    cur = None
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+        # 1. STOCK EN TRANSIT (Non livré)
+        cur.execute('''
+            SELECT id, name, purchase_price as price, image_url, tracking_number, 
+                   shipping_status, tracking_data 
+            FROM products 
+            WHERE user_id = %s AND tracking_number IS NOT NULL 
+            AND (shipping_status IS NULL OR (UPPER(shipping_status) NOT LIKE '%%LIVRÉ%%' AND UPPER(shipping_status) != 'DELIVERED'))
+        ''', (current_user.id,))
+        incoming_transit = cur.fetchall()
+
+        # 2. VENTES EN TRANSIT (Non livrées)
+        cur.execute('''
+            SELECT id, item_name as name, sale_price as price, tracking_number, 
+                   shipping_status, tracking_data 
+            FROM sales 
+            WHERE user_id = %s AND tracking_number IS NOT NULL 
+            AND (shipping_status IS NULL OR (UPPER(shipping_status) NOT LIKE '%%LIVRÉ%%' AND UPPER(shipping_status) != 'DELIVERED'))
+        ''', (current_user.id,))
+        outgoing_transit = cur.fetchall()
+
+        # 3. TOUS LES COLIS LIVRÉS (Catégorie à part)
+        cur.execute('''
+            SELECT id, name, purchase_price as price, image_url, tracking_number, shipping_status, tracking_data, 'product' as type
+            FROM products 
+            WHERE user_id = %s AND (UPPER(shipping_status) LIKE '%%LIVRÉ%%' OR UPPER(shipping_status) = 'DELIVERED')
+            UNION ALL
+            SELECT id, item_name as name, sale_price as price, NULL as image_url, tracking_number, shipping_status, tracking_data, 'sale' as type
+            FROM sales 
+            WHERE user_id = %s AND (UPPER(shipping_status) LIKE '%%LIVRÉ%%' OR UPPER(shipping_status) = 'DELIVERED')
+        ''', (current_user.id, current_user.id))
+        delivered_items = cur.fetchall()
+
+        # Calcul des totaux UNIQUEMENT sur le transit
+        total_incoming = sum(float(i['price'] or 0) for i in incoming_transit)
+        total_outgoing = sum(float(i['price'] or 0) for i in outgoing_transit)
+
+        return render_template('livraisons.html',
+                               incoming=incoming_transit,
+                               outgoing=outgoing_transit,
+                               delivered=delivered_items,
+                               total_incoming=total_incoming,
+                               total_outgoing=total_outgoing)
+    finally:
+        if cur and not cur.closed: cur.close()
 # ADMIN
+
 
 @app.route('/admin/broadcast', methods=['GET', 'POST'])
 @login_required

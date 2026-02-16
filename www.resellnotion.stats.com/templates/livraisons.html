@@ -1,0 +1,305 @@
+{% extends 'base.html' %}
+
+{% block title %}Logistique & Flux | ResellNotion{% endblock %}
+
+{% block content %}
+<style>
+    /* --- STYLES SYSTÈME CONSERVÉS & OPTIMISÉS --- */
+    body {
+        background-color: #0b0e14;
+        color: #f8f9fa;
+        background-image:
+            radial-gradient(circle at 0% 0%, rgba(138, 43, 226, 0.1) 0%, transparent 35%),
+            radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.05) 0%, transparent 35%);
+        min-height: 100vh;
+    }
+
+    /* Typographie Fluide */
+    h1 { font-size: clamp(1.5rem, 5vw, 2.5rem); }
+
+    .premium-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        padding: 20px;
+        backdrop-filter: blur(10px);
+        height: 100%;
+    }
+
+    .kpi-label { color: #8e9297; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+    .stat-numb { font-size: clamp(1.4rem, 4vw, 1.8rem); font-weight: 700; margin-top: 5px; color: #fff; }
+
+    .delivery-card {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        padding: 18px;
+        margin-bottom: 15px;
+        transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        min-width: 0; /* Empêche le débordement flex */
+    }
+    .delivery-card:hover {
+        border-color: #8a2be2;
+        transform: translateY(-3px);
+        background: rgba(138, 43, 226, 0.06);
+    }
+
+    .delivered-card {
+        opacity: 0.6;
+        border-color: rgba(0, 255, 163, 0.1);
+    }
+    .delivered-card:hover {
+        opacity: 1;
+        border-color: #00ffa3;
+    }
+
+    /* --- MODAL RESPONSIVE --- */
+    .cashback-modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.85); display: none; justify-content: center;
+        align-items: center; z-index: 1050; padding: 15px;
+        backdrop-filter: blur(5px);
+    }
+    .cashback-modal-content {
+        background: #161625; padding: clamp(15px, 5vw, 30px); border-radius: 24px;
+        width: 100%; max-width: 500px; color: #f8f9fa; position: relative;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        max-height: 95vh;
+        overflow-y: auto;
+    }
+    .cashback-modal-close { position: absolute; top: 15px; right: 15px; background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; opacity: 0.5; z-index: 10; }
+
+    /* --- VISUEL PREMIUM --- */
+    .progress-track { height: 8px; background: #0b0e14; border-radius: 10px; margin: 20px 0; overflow: hidden; }
+    .progress-bar-neon { height: 100%; background: linear-gradient(90deg, #8a2be2, #00ffa3); box-shadow: 0 0 15px rgba(138, 43, 226, 0.5); transition: width 1s; }
+
+    .timeline-item { position: relative; padding-left: 25px; margin-bottom: 15px; border-left: 2px solid rgba(138, 43, 226, 0.3); }
+    .timeline-dot { position: absolute; left: -7px; top: 0; width: 12px; height: 12px; background: #8a2be2; border-radius: 50%; box-shadow: 0 0 10px #8a2be2; }
+    .timeline-date { font-size: 0.75rem; color: #8e9297; margin-bottom: 2px; }
+    .timeline-content { font-size: 0.85rem; }
+
+    .info-box { background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 12px; text-align: center; }
+
+    .log-console {
+        background: #000; color: #00ff41; font-family: 'Courier New', monospace;
+        padding: 15px; border-radius: 12px; font-size: 0.8rem; height: 180px;
+        overflow-y: auto; border: 1px solid #333; text-align: left;
+    }
+
+    /* --- AJUSTEMENTS RESPONSIVE --- */
+    @media (max-width: 768px) {
+        .container { padding-top: 20px; }
+        .stat-numb { font-size: 1.5rem; }
+        .delivery-card { padding: 15px; }
+        .log-console { height: 150px; }
+    }
+
+    @media (max-width: 576px) {
+        .row.g-4 { --bs-gutter-y: 1rem; }
+        .col-6 { padding-left: 5px; padding-right: 5px; }
+        .delivery-card .fw-bold { font-size: 0.9rem; }
+        .stat-numb { font-size: 1.3rem; }
+        .info-box .small { font-size: 0.6rem; }
+        .info-box .fw-bold { font-size: 0.8rem; }
+    }
+</style>
+
+<div class="container py-4">
+    <div class="mb-4 mb-md-5 text-center text-md-start">
+        <h1 class="text-white fw-bold">📦 Gestion Logistique</h1>
+        <p class="text-muted">Suivi des flux de marchandises en temps réel.</p>
+    </div>
+
+    <div class="row g-3 g-md-4 mb-4 mb-md-5">
+        <div class="col-12 col-md-6">
+            <div class="premium-card">
+                <div class="kpi-label">Valeur Entrante (En Transit)</div>
+                <div class="stat-numb text-truncate">{{ "%.2f"|format(total_incoming) }} €</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="premium-card">
+                <div class="kpi-label">Valeur Sortante (En Transit)</div>
+                <div class="stat-numb text-truncate" style="color: #00ffa3;">{{ "%.2f"|format(total_outgoing) }} €</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-lg-6">
+            <h5 class="fw-bold mb-3 mb-md-4 d-flex align-items-center"><i class="bi bi-box-seam me-2 text-primary"></i>Entrants <span class="d-none d-sm-inline ms-1">(En transit)</span></h5>
+            {% for item in incoming %}
+            <div class="delivery-card"
+                 onclick="handleTrackerClick(this)"
+                 data-id="{{ item.id }}"
+                 data-type="product"
+                 data-num="{{ item.tracking_number }}"
+                 data-tracking='{{ item.tracking_data | tojson | safe if item.tracking_data else "" }}'>
+                <div class="d-flex align-items-center gap-3">
+                    <img src="{{ item.image_url or '' }}" class="rounded-3" style="width: 50px; height: 50px; min-width: 50px; object-fit: contain; background: #1a1a2e; padding: 5px;" onerror="this.src='https://placehold.co/50x50/1a1a2e/white?text=Box'">
+                    <div class="flex-grow-1 min-width-0">
+                        <div class="fw-bold text-truncate mb-1">{{ item.name }}</div>
+                        <span class="badge bg-dark border border-secondary text-primary" style="font-size: 0.6rem;">{{ "%.2f"|format(item.price) }} €</span>
+                    </div>
+                    <div class="text-end ps-2"><i class="bi bi-chevron-right opacity-30"></i></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="col-lg-6">
+            <h5 class="fw-bold mb-3 mb-md-4 d-flex align-items-center"><i class="bi bi-send me-2 text-success"></i>Sortants <span class="d-none d-sm-inline ms-1">(En transit)</span></h5>
+            {% for item in outgoing %}
+            <div class="delivery-card"
+                 onclick="handleTrackerClick(this)"
+                 data-id="{{ item.id }}"
+                 data-type="sale"
+                 data-num="{{ item.tracking_number }}"
+                 data-tracking='{{ item.tracking_data | tojson | safe if item.tracking_data else "" }}'>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center bg-dark" style="width: 50px; height: 50px; min-width: 50px;"><i class="bi bi-tag text-success fs-5"></i></div>
+                    <div class="flex-grow-1 min-width-0">
+                        <div class="fw-bold text-truncate mb-1">{{ item.name }}</div>
+                        <span class="badge bg-dark border border-secondary text-success" style="font-size: 0.6rem;">{{ "%.2f"|format(item.price) }} €</span>
+                    </div>
+                    <div class="text-end ps-2"><i class="bi bi-chevron-right opacity-30"></i></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="pt-4 border-top border-secondary mt-5">
+        <h5 class="fw-bold mb-4 opacity-50"><i class="bi bi-check2-all me-2"></i>Livraisons Terminées</h5>
+        <div class="row g-2 g-md-3">
+            {% for item in delivered %}
+            <div class="col-6 col-md-4">
+                <div class="delivery-card delivered-card h-100 mb-0"
+                     onclick="handleTrackerClick(this)"
+                     data-id="{{ item.id }}"
+                     data-type="{{ item.type }}"
+                     data-num="{{ item.tracking_number }}"
+                     data-tracking='{{ item.tracking_data | tojson | safe if item.tracking_data else "" }}'>
+                    <div class="d-flex align-items-center gap-2">
+                        {% if item.type == 'product' %}
+                            <img src="{{ item.image_url or '' }}" class="rounded-2 d-none d-sm-block" style="width: 30px; height: 30px; object-fit: contain; background: #1a1a2e; padding: 2px;" onerror="this.src='https://placehold.co/30x30/1a1a2e/white?text=B'">
+                        {% else %}
+                            <i class="bi bi-tag text-success d-none d-sm-block"></i>
+                        {% endif %}
+                        <div class="flex-grow-1 text-truncate small fw-bold">{{ item.name }}</div>
+                        <div class="small opacity-50">{{ "%.0f"|format(item.price) }}€</div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div id="trackerModal" class="cashback-modal-overlay">
+    <div class="cashback-modal-content">
+        <button class="cashback-modal-close" onclick="closeTracker()">&times;</button>
+
+        <div id="scanSection" style="display: none;">
+            <h4 class="fw-bold mb-3"><i class="bi bi-search me-2"></i>Analyse Logistique</h4>
+            <div class="log-console mb-3" id="logBox"></div>
+            <div class="text-center"><div class="spinner-border text-primary spinner-border-sm"></div></div>
+        </div>
+
+        <div id="uiSection" style="display: none;">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                <h4 class="fw-bold m-0" id="resStatus">Statut</h4>
+                <button onclick="startFreshScan()" class="btn btn-dark btn-sm rounded-pill border-secondary px-3">
+                    <i class="bi bi-arrow-clockwise me-1"></i><span class="d-none d-sm-inline">Actualiser</span>
+                </button>
+            </div>
+
+            <p class="text-white-50 small mb-1" id="resDetail">Dernière mise à jour...</p>
+            <div class="progress-track"><div class="progress-bar-neon" id="resBar" style="width: 0%"></div></div>
+
+            <div class="row g-2 mb-4">
+                <div class="col-6"><div class="info-box"><div class="small opacity-50">Transit</div><div class="fw-bold" id="resDays">--</div></div></div>
+                <div class="col-6"><div class="info-box"><div class="small opacity-50">Transporteur</div><div class="fw-bold text-truncate" id="resCourier">--</div></div></div>
+            </div>
+
+            <h6 class="text-uppercase small fw-bold mb-3" style="letter-spacing: 1px; color: #8a2be2;">Chronologie</h6>
+            <div id="resTimeline" style="max-height: 200px; overflow-y: auto; padding-right: 10px;"></div>
+
+            <button class="btn btn-primary w-100 fw-bold mt-4 py-2" onclick="location.reload()">TERMINER</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let activeId, activeType, activeNum;
+
+    function handleTrackerClick(element) {
+        activeId = element.dataset.id;
+        activeType = element.dataset.type;
+        activeNum = element.dataset.num;
+
+        const rawData = element.dataset.tracking;
+        document.getElementById('trackerModal').style.display = 'flex';
+
+        if (rawData && rawData.trim() !== "") {
+            try {
+                const data = JSON.parse(rawData);
+                renderPremiumUI(data);
+            } catch (e) {
+                console.error("Erreur parsing JSON:", e);
+                startFreshScan();
+            }
+        } else {
+            startFreshScan();
+        }
+    }
+
+    function closeTracker() {
+        document.getElementById('trackerModal').style.display = 'none';
+    }
+
+    function renderPremiumUI(data) {
+        document.getElementById('scanSection').style.display = 'none';
+        document.getElementById('uiSection').style.display = 'block';
+
+        document.getElementById('resStatus').innerText = data.statusPlaceholder || "Suivi";
+        document.getElementById('resDetail').innerText = data.statusLabel || "En transit";
+        document.getElementById('resCourier').innerText = data.couriers?.[0]?.name || "Inconnu";
+        document.getElementById('resBar').style.width = (data.statusProgressPercentage || 0) + "%";
+        document.getElementById('resDays').innerText = (data.daysInTransit || 0) + " Jours";
+
+        const timeline = document.getElementById('resTimeline');
+        timeline.innerHTML = '';
+        (data.steps || []).forEach(step => {
+            const div = document.createElement('div');
+            div.className = 'timeline-item';
+            div.innerHTML = `<div class="timeline-dot"></div><div class="timeline-date">${step.humanReadableTime}</div><div class="timeline-content">${step.lines?.[0] || step.meaning}</div>`;
+            timeline.appendChild(div);
+        });
+    }
+
+    async function startFreshScan() {
+        document.getElementById('uiSection').style.display = 'none';
+        document.getElementById('scanSection').style.display = 'block';
+        const box = document.getElementById('logBox');
+        box.innerHTML = `> Connexion Tunnel Quantum [${activeType}]...`;
+
+        try {
+            const res = await fetch('/api/track-live', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({tracking_number: activeNum, save: true, item_id: activeId, item_type: activeType})
+            });
+            const result = await res.json();
+            if (result.success) {
+                renderPremiumUI(result.full_data);
+            } else {
+                box.innerHTML += `<br>> ERREUR : ${result.message}`;
+            }
+        } catch (e) {
+            box.innerHTML += `<br>> ERREUR RÉSEAU.`;
+        }
+    }
+</script>
+{% endblock %}
