@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .cyber-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 24px; padding: 30px; backdrop-filter: blur(12px); }
+    .storage-item { background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 20px; transition: 0.3s; height: 100%; display: flex; flex-direction: column; }
+    .storage-item:hover { border-color: var(--primary-glow); background: rgba(138, 43, 226, 0.05); transform: translateY(-5px); }
+    .category-badge { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 800; color: var(--success-glow); background: rgba(0, 255, 163, 0.1); padding: 4px 10px; border-radius: 8px; }
+    .input-cyber { background: rgba(0,0,0,0.3) !important; border: 1px solid var(--glass-border) !important; color: white !important; border-radius: 12px !important; }
+    .btn-view { background: rgba(138, 43, 226, 0.1); color: var(--primary-glow); border: 1px solid var(--primary-glow); border-radius: 50px; font-weight: 700; font-size: 0.8rem; transition: 0.3s; }
+    .btn-view:hover { background: var(--primary-glow); color: white; box-shadow: 0 0 15px var(--primary-glow); }
+</style>
+
+<div class="container py-4">
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="cyber-card">
+                <h4 class="text-white mb-4"><i class="bi bi-cloud-plus me-2 text-primary"></i>Nouveau dépôt</h4>
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="label-caps">Titre</label>
+                        <input type="text" name="title" class="form-control input-cyber" placeholder="Nom du document..." required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="label-caps">Catégorie</label>
+                        <select name="category" class="form-select input-cyber">
+                            <option value="Note">Note / Texte</option>
+                            <option value="Facture">Facture</option>
+                            <option value="Carte Cadeau">Carte Cadeau</option>
+                            <option value="Contact">Contact</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="label-caps">Notes</label>
+                        <textarea name="content" class="form-control input-cyber" rows="3"></textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="label-caps">Fichier</label>
+                        <input type="file" name="file" class="form-control input-cyber">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold">ENREGISTRER</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="row g-3">
+                {% for item in items %}
+                <div class="col-md-6 col-xl-4">
+                    <div class="storage-item p-4">
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="category-badge">{{ item.category }}</span>
+                            <form action="{{ url_for('delete_storage_item', item_id=item.id) }}" method="POST">
+                                <button type="submit" class="btn btn-link text-danger p-0"><i class="bi bi-trash3"></i></button>
+                            </form>
+                        </div>
+                        <h5 class="text-white fw-bold mb-2 text-truncate">{{ item.title }}</h5>
+                        <div class="flex-grow-1">
+                            <p class="text-muted small text-truncate">{{ item.content or "Fichier joint" }}</p>
+                        </div>
+                        <a href="{{ url_for('view_storage_item', item_id=item.id) }}" class="btn btn-view w-100 mt-3 py-2">
+                            <i class="bi bi-eye-fill me-2"></i>CONSULTER
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

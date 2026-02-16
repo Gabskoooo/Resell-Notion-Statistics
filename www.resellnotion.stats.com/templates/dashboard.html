@@ -18,7 +18,6 @@
 
     body {
         background: #0b0e14;
-        /* Rappel : Utiliser .png pour tout fichier de fond externe si ajouté ultérieurement */
         background-image:
             radial-gradient(circle at 0% 0%, rgba(138, 43, 226, 0.1) 0%, transparent 35%),
             radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.05) 0%, transparent 35%);
@@ -174,7 +173,7 @@
         align-items: center;
         gap: 20px;
         transition: 0.3s;
-        min-width: 0; /* Permet le truncate correct du texte en flexbox */
+        min-width: 0;
     }
     .sale-row-card:hover {
         background: rgba(255,255,255,0.06);
@@ -216,8 +215,6 @@
     .animate-in { animation: fadeInUp 0.6s ease-out forwards; }
 
     /* --- AJOUTS RESPONSIVE DESIGN --- */
-
-    /* Typographie fluide */
     h1 { font-size: clamp(1.5rem, 5vw, 2.5rem); }
 
     @media (max-width: 768px) {
@@ -233,7 +230,6 @@
             flex-direction: column !important;
             gap: 15px !important;
         }
-        /* .hero-avatar { width: 70px; height: 70px; } PLUS UTILISÉ */
         .rank-avatar { width: 70px; height: 70px; font-size: 2rem; }
         .quick-action-btn { width: 100%; justify-content: center; }
 
@@ -253,7 +249,6 @@
         .sale-row-card h6 { font-size: 0.85rem; }
     }
 
-    /* Patch pour très petits écrans (iPhone SE, etc.) */
     @media (max-width: 380px) {
         .stat-numb { font-size: 1.1rem; }
         .profit-badge { padding: 4px 8px; font-size: 0.7rem; }
@@ -309,9 +304,11 @@
                 <div class="card-icon" style="background: rgba(0, 255, 163, 0.1); color: var(--success-glow);">
                     <i class="bi bi-lightning-charge"></i>
                 </div>
-                <div class="stat-label">Profit (Mois)</div>
-                <div class="stat-numb glow-green">{{ '%.2f'|format(total_sales_profit) }}€</div>
-                <div class="small text-muted mt-2 d-none d-sm-block"><i class="bi bi-check2-circle me-1"></i>Bénéfice net</div>
+                <div class="stat-label">Bénéfice Net (Mois)</div>
+                <div class="stat-numb glow-green">{{ '%.2f'|format(total_net_profit) }}€</div>
+                <div class="small text-muted mt-2 d-none d-sm-block">
+                    <i class="bi bi-check2-circle me-1"></i>Ventes: {{ '%.2f'|format(total_sales_profit) }}€ | Op: {{ '%.2f'|format(total_ops_amount) }}€
+                </div>
             </div>
         </div>
 
@@ -395,7 +392,7 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        console.log("Tableau de bord ResellNotion initialisé avec optimisations mobiles.");
+        console.log("Tableau de bord ResellNotion initialisé avec calcul du Bénéfice Net.");
     });
 </script>
 {% endblock %}

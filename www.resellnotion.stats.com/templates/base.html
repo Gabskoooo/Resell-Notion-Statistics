@@ -177,6 +177,7 @@
                     {% if current_user.is_authenticated %}
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('statistics') }}"><i class="bi bi-graph-up"></i> Stats</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('storage') }}"><i class="bi bi-cloud"></i> Storage</a></li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Inventaire</a>
                             <ul class="dropdown-menu">
@@ -191,6 +192,7 @@
                                <li><a class="dropdown-item" href="{{ url_for('add_sale') }}">Nouvelle vente</a></li>
                                <li><hr class="dropdown-divider"></li>
                                <li><a class="dropdown-item" href="{{ url_for('import_excel_page') }}"><i class="bi bi-file-earmark-excel"></i> Importation Excel</a></li>
+                               <li><a class="dropdown-item" href="{{ url_for('supplementary_operations') }}"><i class="bi bi-calculator"></i> Opérations Supp.</a></li>
                             </ul>
                         </li>
                     {% endif %}
@@ -218,6 +220,7 @@
                 <span class="mobile-nav-label">Général</span>
                 <a href="{{ url_for('dashboard') }}" class="mobile-nav-link"><i class="bi bi-house"></i> Dashboard</a>
                 <a href="{{ url_for('statistics') }}" class="mobile-nav-link"><i class="bi bi-activity"></i> Statistiques</a>
+                <a href="{{ url_for('storage') }}" class="mobile-nav-link"><i class="bi bi-cloud"></i> Storage</a>
             </div>
             <div class="mobile-nav-group">
                 <span class="mobile-nav-label">Inventaire</span>
@@ -229,6 +232,7 @@
                 <a href="{{ url_for('sales') }}" class="mobile-nav-link"><i class="bi bi-receipt"></i> Historique</a>
                 <a href="{{ url_for('add_sale') }}" class="mobile-nav-link" style="border-color: var(--success-glow)"><i class="bi bi-cart-check"></i> Nouvelle vente</a>
                 <a href="{{ url_for('import_excel_page') }}" class="mobile-nav-link"><i class="bi bi-file-earmark-excel"></i> Importation Excel</a>
+                <a href="{{ url_for('supplementary_operations') }}" class="mobile-nav-link"><i class="bi bi-calculator"></i> Opérations Supp.</a>
             </div>
             <div class="mt-5 pt-4 border-top border-secondary">
                 <a href="{{ url_for('profile') }}" class="mobile-nav-link"><i class="bi bi-person"></i> Profil</a>
