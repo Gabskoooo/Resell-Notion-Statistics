@@ -652,12 +652,11 @@ def register():
             return render_template('register.html', email=email, username=username)
     return render_template('register.html')
 
+
 @app.route('/login', methods=('GET', 'POST'))
 def login():
+    # Modification 1 : Si l'utilisateur est déjà connecté, on redirige directement sans vérifier la clé
     if current_user.is_authenticated:
-        if current_user.key_status == 'inactive':
-            flash("Votre clé est inactive. Veuillez la réactiver via le bot Discord pour accéder au contenu.", "warning")
-            return redirect(url_for('key_activation_required'))
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
@@ -670,6 +669,7 @@ def login():
             cur.execute("SELECT * FROM users WHERE email = %s", (email,))
             user_data = cur.fetchone()
             cur.close()
+
             if user_data and bcrypt.check_password_hash(user_data['password_hash'], password):
                 user = User(
                     id=user_data['id'],
@@ -681,19 +681,18 @@ def login():
                     key_status=user_data['key_status']
                 )
                 login_user(user, remember=remember)
-                if user.key_status == 'inactive':
-                    flash("Connexion réussie, mais votre clé est inactive. Veuillez la réactiver via le bot Discord pour accéder au contenu.", "warning")
-                    return redirect(url_for('key_activation_required'))
-                else:
-                    flash("Connexion réussie !", "success")
-                    return redirect(url_for('dashboard'))
+
+                # Modification 2 : Suppression du bloc "if user.key_status == 'inactive'"
+                # On passe directement au succès
+                flash("Connexion réussie !", "success")
+                return redirect(url_for('dashboard'))
             else:
                 flash("Email ou mot de passe incorrect.", "danger")
         except Exception as e:
             flash(f"Une erreur est survenue lors de la connexion: {e}", 'danger')
-            print(f"Erreur de connexion: {e}") # Pour le débogage
-    return render_template('login.html')
+            print(f"Erreur de connexion: {e}")  # Pour le débogage
 
+    return render_template('login.html')
 @app.route('/logout')
 @login_required
 def logout():
@@ -795,45 +794,53 @@ def dashboard():
     finally:
         if cur: cur.close()
 
-@app.route('/profile', methods=('GET', 'POST'))
+@app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
     conn = g.db
     cur = None
     if request.method == 'POST':
         new_username = request.form.get('username')
-        new_discord_id = request.form.get('discord_id')
-        if not new_username:
-            flash("Le nom d'utilisateur ne peut pas être vide.", "danger")
+        new_email = request.form.get('email')
+        new_password = request.form.get('password')
+
+        if not new_username or not new_email:
+            flash("Le nom d'utilisateur et l'email ne peuvent pas être vides.", "danger")
             return render_template('profile.html', user=current_user)
+
         try:
             cur = conn.cursor()
-            cur.execute(
-                "UPDATE users SET username = %s, discord_id = %s WHERE id = %s",
-                (new_username, new_discord_id, current_user.id)
-            )
+
+            # Si un nouveau mot de passe est saisi, on le hache et on met tout à jour
+            if new_password and new_password.strip() != "":
+                hashed_pw = generate_password_hash(new_password)
+                cur.execute(
+                    "UPDATE users SET username = %s, email = %s, password = %s WHERE id = %s",
+                    (new_username, new_email, hashed_pw, current_user.id)
+                )
+            else:
+                # Sinon, on ne met à jour que le nom et l'email
+                cur.execute(
+                    "UPDATE users SET username = %s, email = %s WHERE id = %s",
+                    (new_username, new_email, current_user.id)
+                )
+
             conn.commit()
-            cur.close()
+
+            # Mise à jour de l'objet en session
             current_user.username = new_username
-            current_user.discord_id = new_discord_id
+            current_user.email = new_email
+
             flash("Votre profil a été mis à jour avec succès !", "success")
             return redirect(url_for('profile'))
-        except psycopg2.IntegrityError as e:
-            conn.rollback()
-            if 'duplicate key value violates unique constraint "users_discord_id_key"' in str(e) or 'duplicate key value violates unique constraint' in str(e): # Exemple de message PostgreSQL
-                flash("Cet ID Discord est déjà utilisé par un autre compte.", "danger")
-            else:
-                flash("Une erreur est survenue lors de la mise à jour de votre profil.", "danger")
-            print(f"Database error on profile update: {e}")
-            return render_template('profile.html', user=current_user)
+
         except Exception as e:
             conn.rollback()
-            flash(f"Une erreur inattendue est survenue : {e}", "danger")
+            flash(f"Une erreur est survenue lors de la mise à jour : {e}", "danger")
             print(f"Error updating profile: {e}")
-            return render_template('profile.html', user=current_user)
         finally:
-            if cur and not cur.closed:
-                cur.close()
+            if cur: cur.close()
+
     return render_template('profile.html', user=current_user)
 
 @app.route('/leaderboard')
