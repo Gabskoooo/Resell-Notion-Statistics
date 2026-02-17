@@ -21,6 +21,8 @@ import base64
 import pandas as pd
 import json
 import os
+import requests
+from flask import session, redirect, request, url_for, flash
 from flask import Response, stream_with_context, jsonify, request, g, flash, redirect, url_for
 from flask_mail import Mail, Message
 from datetime import datetime, date, timedelta
@@ -56,7 +58,12 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.needs_refresh_message = "Votre session a expiré, veuillez vous reconnecter."
 login_manager.needs_refresh_message_category = "info"
-
+CLIENT_ID = '1473320427140026521'
+CLIENT_SECRET = 'Tdg1G4bo7BwvK5eA8TccHut_vY6UeQxf'
+# L'URL de redirection doit être EXACTEMENT la même que sur le portail Discord
+REDIRECT_URI = 'https://resell-notion-statistics.onrender.com/callback'
+GUILD_ID = '1387477216392384633'
+REQUIRED_ROLE_ID = '1473326555609694269'
 TABLE_NAME = "sku_database"
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 ASSETS_DIR = os.path.join(PROJECT_ROOT, '..', 'www.resellnotion.stats.com', 'assets')
@@ -79,6 +86,7 @@ mail = Mail(app)
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+
 
 def send_gmail_stats(recipient_email, subject, html_body):
     sender_email = "resell.notion2025@gmail.com"
@@ -703,6 +711,12 @@ def logout():
 @app.route('/')
 @login_required
 def dashboard():
+    # --- VERIFICATION DISCORD ---
+    if not session.get('discord_auth'):
+        flash("Veuillez vous connecter avec Discord pour accéder au tableau de bord.", "warning")
+        return redirect(url_for('login_discord'))
+    # ----------------------------
+
     conn = g.db
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
@@ -793,7 +807,6 @@ def dashboard():
         return redirect(url_for('login'))
     finally:
         if cur: cur.close()
-
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
@@ -2066,6 +2079,71 @@ def livraisons():
         if cur and not cur.closed: cur.close()
 # ADMIN
 
+@app.route('/login-discord')
+def login_discord():
+    # On demande l'accès à l'identité et à la liste des membres des serveurs
+    scope = "identify guilds.members.read"
+    discord_auth_url = (
+        f"https://discord.com/api/oauth2/authorize?client_id={CLIENT_ID}"
+        f"&redirect_uri={REDIRECT_URI}&response_type=code&scope={scope}"
+    )
+    return redirect(discord_auth_url)
+
+
+@app.route('/callback')
+def callback():
+    code = request.args.get('code')
+    if not code:
+        return "Erreur : Aucun code d'autorisation reçu.", 400
+
+    # 1. Échange du code contre un Access Token
+    data = {
+        'client_id': CLIENT_ID,
+        'client_secret': CLIENT_SECRET,
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': REDIRECT_URI
+    }
+    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
+    token_response = requests.post("https://discord.com/api/v10/oauth2/token", data=data, headers=headers)
+    token_json = token_response.json()
+    access_token = token_json.get('access_token')
+
+    if not access_token:
+        return f"Erreur lors de la récupération du token : {token_json}", 400
+
+    # 2. Récupération des infos du membre sur ton serveur spécifique
+    # Cette URL permet de voir les rôles de l'utilisateur sur ton serveur GUILD_ID
+    member_headers = {'Authorization': f'Bearer {access_token}'}
+    member_url = f"https://discord.com/api/v10/users/@me/guilds/{GUILD_ID}/member"
+
+    member_response = requests.get(member_url, headers=member_headers)
+
+    if member_response.status_code != 200:
+        flash("Accès refusé : Vous n'êtes pas présent sur le serveur Discord requis.", "danger")
+        return redirect(url_for('login'))
+
+    member_data = member_response.json()
+    user_roles = member_data.get('roles', [])
+
+    # 3. Vérification de la présence du rôle requis
+    if REQUIRED_ROLE_ID in user_roles:
+        # On enregistre l'autorisation en session
+        session['discord_auth'] = True
+        session['discord_user'] = member_data.get('user', {}).get('username')
+        flash(f"Bienvenue {session['discord_user']} ! Accès autorisé.", "success")
+        return redirect(url_for('statistics'))
+    else:
+        flash("Accès refusé : Vous n'avez pas le rôle requis sur le serveur.", "danger")
+        return redirect(url_for('login'))
+
+
+@app.route('/logout-discord')
+def logout_discord():
+    session.pop('discord_auth', None)
+    session.pop('discord_user', None)
+    return redirect(url_for('login'))
 
 @app.route('/admin/broadcast', methods=['GET', 'POST'])
 @login_required
@@ -2212,6 +2290,29 @@ def page_not_found(e):
 @app.route('/offline.html')
 def offline_page():
     return render_template('offline.html')
+
+@app.before_request
+def verify_discord_globally():
+    # 1. Liste des endpoints qui ne doivent PAS être bloqués
+    # (Sinon, on crée une boucle infinie de redirections)
+    allowed_endpoints = [
+        'login',
+        'login_discord',
+        'callback',
+        'static',
+        'logout_discord'
+    ]
+
+    # 2. On récupère le nom de la route actuelle
+    endpoint = request.endpoint
+
+    # 3. La Logique de filtrage :
+    # Si la route demandée n'est pas dans la liste autorisée...
+    if endpoint not in allowed_endpoints:
+        # ...et si l'utilisateur est connecté à son compte mais PAS à Discord
+        if current_user.is_authenticated and not session.get('discord_auth'):
+            flash("Veuillez valider votre accès Discord pour continuer.", "warning")
+            return redirect(url_for('login_discord'))
 
 
 def init_db():
