@@ -116,7 +116,7 @@
         <div class="mb-4">
             {% if oldest_pair %}
             <div class="stock-focus-card">
-                <div class="stock-img-box"><img src="{{ oldest_pair.image_url }}" onerror="this.src='/static/placeholder.png'"></div>
+                <div class="stock-img-box"><img src="{{ oldest_pair.image_url }}"></div>
                 <div class="stock-info-box">
                     <span class="stock-tag text-danger">Unité la plus ancienne</span>
                     <div class="stock-name">{{ oldest_pair.name }}</div>
@@ -128,7 +128,7 @@
             {% endif %}
             {% for p in expensive_pairs %}
             <div class="stock-focus-card">
-                <div class="stock-img-box"><img src="{{ p.image_url }}" onerror="this.src='/static/placeholder.png'"></div>
+                <div class="stock-img-box"><img src="{{ p.image_url }}"></div>
                 <div class="stock-info-box">
                     <span class="stock-tag" style="color: var(--primary-glow);">Actif haute valeur</span>
                     <div class="stock-name">{{ p.name }}</div>
