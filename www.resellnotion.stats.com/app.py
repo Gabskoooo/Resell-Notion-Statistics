@@ -40,6 +40,7 @@ from flask import Flask, render_template, send_from_directory
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = 'resell_notion_ultra_secret_key_2026_!@#'
 app.config['DEBUG'] = True
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)  # Session dure 7 jours
@@ -61,7 +62,8 @@ login_manager.needs_refresh_message_category = "info"
 CLIENT_ID = '1473320427140026521'
 CLIENT_SECRET = 'Tdg1G4bo7BwvK5eA8TccHut_vY6UeQxf'
 # L'URL de redirection doit être EXACTEMENT la même que sur le portail Discord
-REDIRECT_URI = 'https://resell-notion-statistics.onrender.com/callback'
+REDIRECT_URI = 'http://127.0.0.1:8000/callback'
+BOT_TOKEN = "MTQ3MzMyMDQyNzE0MDAyNjUyMQ.GJZbib.cOopdBhBRoktehqIoGvGpbmrPcX-yRuHojlIUw"
 GUILD_ID = '1387477216392384633'
 REQUIRED_ROLE_ID = '1473326555609694269'
 TABLE_NAME = "sku_database"
@@ -2092,11 +2094,13 @@ def login_discord():
 
 @app.route('/callback')
 def callback():
+    print("\n--- [DEBUG] ENTRÉE DANS CALLBACK ---")
     code = request.args.get('code')
     if not code:
-        return "Erreur : Aucun code d'autorisation reçu.", 400
+        print("!!! ERREUR : Pas de code reçu de Discord")
+        return "Erreur : Aucun code reçu.", 400
 
-    # 1. Échange du code contre un Access Token
+    # Échange du token
     data = {
         'client_id': CLIENT_ID,
         'client_secret': CLIENT_SECRET,
@@ -2104,41 +2108,59 @@ def callback():
         'code': code,
         'redirect_uri': REDIRECT_URI
     }
-    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
-    token_response = requests.post("https://discord.com/api/v10/oauth2/token", data=data, headers=headers)
+    token_response = requests.post("https://discord.com/api/v10/oauth2/token", data=data)
+    print(f"Statut Token Discord : {token_response.status_code}")
+
     token_json = token_response.json()
     access_token = token_json.get('access_token')
 
     if not access_token:
-        return f"Erreur lors de la récupération du token : {token_json}", 400
+        print(f"!!! ERREUR TOKEN : {token_json}")
+        return "Erreur Token", 400
 
-    # 2. Récupération des infos du membre sur ton serveur spécifique
-    # Cette URL permet de voir les rôles de l'utilisateur sur ton serveur GUILD_ID
+    # Récupération du membre
     member_headers = {'Authorization': f'Bearer {access_token}'}
     member_url = f"https://discord.com/api/v10/users/@me/guilds/{GUILD_ID}/member"
-
     member_response = requests.get(member_url, headers=member_headers)
 
-    if member_response.status_code != 200:
-        flash("Accès refusé : Vous n'êtes pas présent sur le serveur Discord requis.", "danger")
-        return redirect(url_for('login'))
-
+    print(f"Statut Membre Discord : {member_response.status_code}")
     member_data = member_response.json()
-    user_roles = member_data.get('roles', [])
 
-    # 3. Vérification de la présence du rôle requis
-    if REQUIRED_ROLE_ID in user_roles:
-        # On enregistre l'autorisation en session
-        session['discord_auth'] = True
-        session['discord_user'] = member_data.get('user', {}).get('username')
-        flash(f"Bienvenue {session['discord_user']} ! Accès autorisé.", "success")
-        return redirect(url_for('statistics'))
-    else:
-        flash("Accès refusé : Vous n'avez pas le rôle requis sur le serveur.", "danger")
+    if member_response.status_code != 200:
+        print(f"!!! ERREUR MEMBRE : {member_data}")
+        flash("Non présent sur le serveur.", "danger")
         return redirect(url_for('login'))
 
+    user_roles = member_data.get('roles', [])
+    username = member_data.get('user', {}).get('username')
 
+    print(f"Utilisateur identifié : {username}")
+    print(f"Rôles de l'utilisateur (reçus) : {user_roles}")
+    print(f"Rôle requis (attendu) : {REQUIRED_ROLE_ID}")
+
+    # Comparaison STRICTE
+    has_role = str(REQUIRED_ROLE_ID) in [str(r) for r in user_roles]
+    print(f"Résultat de la vérification du rôle : {has_role}")
+
+    if has_role:
+        session.clear()  # On repart sur une session propre
+        session['discord_auth'] = True
+        session['discord_user'] = username
+        session['discord_user_id'] = member_data.get('user', {}).get('id')
+        session['last_discord_check'] = time.time()
+        session.permanent = True
+        session.modified = True
+
+        print("✅ Session Discord validée et enregistrée !")
+        print(f"Contenu de la session juste avant redirect : {dict(session)}")
+
+        flash(f"Bienvenue {username} !", "success")
+        return redirect(url_for('dashboard'))
+    else:
+        print("❌ Accès refusé : Rôle non trouvé dans la liste.")
+        flash("Rôle manquant.", "danger")
+        return redirect(url_for('login'))
 @app.route('/logout-discord')
 def logout_discord():
     session.pop('discord_auth', None)
@@ -2291,29 +2313,77 @@ def page_not_found(e):
 def offline_page():
     return render_template('offline.html')
 
+
 @app.before_request
-def verify_discord_globally():
-    # 1. Liste des endpoints qui ne doivent PAS être bloqués
-    # (Sinon, on crée une boucle infinie de redirections)
-    allowed_endpoints = [
-        'login',
-        'login_discord',
-        'callback',
-        'static',
-        'logout_discord'
-    ]
+def global_security_check():
+    # A. On initialise la DB d'abord pour éviter l'AttributeError: db
+    if not hasattr(g, 'db'):
+        from database import get_db_connection  # ou ta fonction de connexion
+        g.db = get_db_connection()
 
-    # 2. On récupère le nom de la route actuelle
-    endpoint = request.endpoint
+    # B. Liste blanche : pages accessibles sans vérification Discord
+    allowed_endpoints = ['login', 'login_discord', 'callback', 'static', 'logout']
+    if request.endpoint in allowed_endpoints or not request.endpoint:
+        return
 
-    # 3. La Logique de filtrage :
-    # Si la route demandée n'est pas dans la liste autorisée...
-    if endpoint not in allowed_endpoints:
-        # ...et si l'utilisateur est connecté à son compte mais PAS à Discord
-        if current_user.is_authenticated and not session.get('discord_auth'):
-            flash("Veuillez valider votre accès Discord pour continuer.", "warning")
+    # C. Vérification de l'identité Flask-Login
+    if current_user.is_authenticated:
+
+        # 1. Est-ce qu'il est déjà passé par l'auth Discord ?
+        if not session.get('discord_auth'):
             return redirect(url_for('login_discord'))
 
+        # 2. LE VIGILE : Vérification dynamique (toutes les 5 minutes)
+        last_check = session.get('last_discord_check', 0)
+        if time.time() - last_check > 300:  # 300 secondes = 5 mins
+            discord_id = session.get('discord_user_id')
+
+            # On interroge Discord via le Bot (invisible pour l'utilisateur)
+            url = f"https://discord.com/api/v10/guilds/{GUILD_ID}/members/{discord_id}"
+            headers = {"Authorization": f"Bot {BOT_TOKEN}"}
+
+            try:
+                r = requests.get(url, headers=headers, timeout=5)
+                if r.status_code == 200:
+                    data = r.json()
+                    # Si le rôle n'est plus là -> DECONNEXION
+                    if str(REQUIRED_ROLE_ID) not in data.get('roles', []):
+                        session.clear()
+                        flash("Accès révoqué : rôle Discord retiré.", "danger")
+                        return redirect(url_for('login'))
+                    else:
+                        session['last_discord_check'] = time.time()  # On valide pour 5 mins
+                else:
+                    # Si l'utilisateur a quitté le serveur
+                    session.clear()
+                    return redirect(url_for('login'))
+            except Exception as e:
+                print(f"Erreur check vigile: {e}")
+                # En cas d'erreur API, on laisse passer pour ne pas bloquer le site
+                pass
+
+@app.before_request
+def debug_security_check():
+    # On ignore le check pour les pages de login/callback et le statique
+    allowed = ['login', 'login_discord', 'callback', 'static']
+    if request.endpoint in allowed or not request.endpoint:
+        return
+
+    # Si on arrive ici, on est sur une page protégée (ex: dashboard)
+    print(f"\n--- [DEBUG] CHECK SÉCURITÉ sur : {request.endpoint} ---")
+    print(f"Utilisateur Flask identifié : {current_user.is_authenticated}")
+    print(f"Session Discord Auth : {session.get('discord_auth')}")
+
+    if current_user.is_authenticated:
+        if not session.get('discord_auth'):
+            print("⚠️ Pas de session Discord -> REDIRECTION VERS AUTH")
+            return redirect(url_for('login_discord'))
+        else:
+            print("🟢 Accès autorisé (Session OK)")
+@app.route('/logout-debug')
+def logout_debug():
+    session.clear() # Efface TOUTE la session
+    return "Session vidée. Refais le test maintenant."
 
 def init_db():
     with app.app_context():
