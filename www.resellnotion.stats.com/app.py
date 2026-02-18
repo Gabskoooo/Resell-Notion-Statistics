@@ -59,13 +59,12 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.needs_refresh_message = "Votre session a expiré, veuillez vous reconnecter."
 login_manager.needs_refresh_message_category = "info"
-CLIENT_ID = '1473320427140026521'
-CLIENT_SECRET = 'Tdg1G4bo7BwvK5eA8TccHut_vY6UeQxf'
-# L'URL de redirection doit être EXACTEMENT la même que sur le portail Discord
-REDIRECT_URI = 'https://resell-notion-statistics.onrender.com/callback'
-BOT_TOKEN = "MTQ3MzMyMDQyNzE0MDAyNjUyMQ.GJZbib.cOopdBhBRoktehqIoGvGpbmrPcX-yRuHojlIUw"
-GUILD_ID = '1387477216392384633'
-REQUIRED_ROLE_ID = '1473326555609694269'
+CLIENT_ID = os.getenv('CLIENT_ID')
+CLIENT_SECRET = os.getenv('CLIENT_SECRET')
+REDIRECT_URI = os.getenv('REDIRECT_URI')
+BOT_TOKEN = os.getenv('BOT_TOKEN')
+GUILD_ID = os.getenv('GUILD_ID')
+REQUIRED_ROLE_ID = os.getenv('REQUIRED_ROLE_ID')
 TABLE_NAME = "sku_database"
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 ASSETS_DIR = os.path.join(PROJECT_ROOT, '..', 'www.resellnotion.stats.com', 'assets')
