@@ -51,7 +51,7 @@ app.config['MAIL_USE_SSL'] = False
 app.config['MAIL_USERNAME'] = 'resell.notion2025@gmail.com'
 app.config['MAIL_PASSWORD'] = 'aiym thsq fqwo mbqj'
 app.config['MAIL_DEFAULT_SENDER'] = 'resell.notion2025@gmail.com'
-
+pwa_sync_tokens = {}
 mail = Mail(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager()
@@ -2167,7 +2167,7 @@ def callback():
         print("!!! ERREUR : Pas de code reçu de Discord")
         return "Erreur : Aucun code reçu.", 400
 
-    # Échange du token
+    # 1. Échange du code contre un Access Token
     data = {
         'client_id': CLIENT_ID,
         'client_secret': CLIENT_SECRET,
@@ -2186,7 +2186,7 @@ def callback():
         print(f"!!! ERREUR TOKEN : {token_json}")
         return "Erreur Token", 400
 
-    # Récupération du membre
+    # 2. Récupération des infos du membre sur ton serveur
     member_headers = {'Authorization': f'Bearer {access_token}'}
     member_url = f"https://discord.com/api/v10/users/@me/guilds/{GUILD_ID}/member"
     member_response = requests.get(member_url, headers=member_headers)
@@ -2196,43 +2196,101 @@ def callback():
 
     if member_response.status_code != 200:
         print(f"!!! ERREUR MEMBRE : {member_data}")
-        flash("Non présent sur le serveur.", "danger")
+        flash("Non présent sur le serveur Discord.", "danger")
         return redirect(url_for('login'))
 
     user_roles = member_data.get('roles', [])
     username = member_data.get('user', {}).get('username')
+    discord_user_id = member_data.get('user', {}).get('id')
 
     print(f"Utilisateur identifié : {username}")
-    print(f"Rôles de l'utilisateur (reçus) : {user_roles}")
-    print(f"Rôle requis (attendu) : {REQUIRED_ROLE_ID}")
+    print(f"Rôles reçus : {user_roles}")
 
-    # Comparaison STRICTE
+    # 3. Vérification du rôle VIP
     has_role = str(REQUIRED_ROLE_ID) in [str(r) for r in user_roles]
-    print(f"Résultat de la vérification du rôle : {has_role}")
+    print(f"Résultat vérification rôle : {has_role}")
 
     if has_role:
-        session.clear()  # On repart sur une session propre
+        # --- INITIALISATION DE LA SESSION (Navigateur) ---
+        session.clear()
         session['discord_auth'] = True
         session['discord_user'] = username
-        session['discord_user_id'] = member_data.get('user', {}).get('id')
+        session['discord_user_id'] = discord_user_id
         session['last_discord_check'] = time.time()
         session.permanent = True
         session.modified = True
 
-        print("✅ Session Discord validée et enregistrée !")
-        print(f"Contenu de la session juste avant redirect : {dict(session)}")
+        # --- GÉNÉRATION DU TOKEN DE SYNCHRONISATION PWA ---
+        # On crée un jeton unique pour "passer" la connexion du navigateur vers la PWA
+        sync_token = str(uuid.uuid4())
+        pwa_sync_tokens[sync_token] = {
+            'user_id': discord_user_id,
+            'username': username,
+            'expires': time.time() + 300  # Expire dans 5 minutes
+        }
 
-        flash(f"Bienvenue {username} !", "success")
-        return redirect(url_for('dashboard'))
+        print(f"✅ Session validée pour {username}")
+        print(f"🚀 Pont PWA créé. Token : {sync_token}")
+
+        # On redirige vers la page intermédiaire qui va "aspirer" la session dans la PWA
+        return redirect(url_for('sync_pwa', token=sync_token))
+
     else:
-        print("❌ Accès refusé : Rôle non trouvé dans la liste.")
-        flash("Rôle manquant.", "danger")
+        print("❌ Accès refusé : Rôle requis manquant.")
+        flash("Accès refusé : Vous n'avez pas le rôle VIP sur Discord.", "danger")
         return redirect(url_for('login'))
-@app.route('/logout-discord')
-def logout_discord():
-    session.pop('discord_auth', None)
-    session.pop('discord_user', None)
-    return redirect(url_for('login'))
+
+
+@app.route('/sync-pwa')
+def sync_pwa():
+    token = request.args.get('token')
+    # Cette page s'affiche dans Safari après l'auth Discord
+    return f'''
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Synchronisation VIP</title>
+        <style>
+            body {{ background: #0b0e14; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }}
+            .btn {{ background: #8a2be2; color: white; padding: 18px 30px; border-radius: 15px; text-decoration: none; font-weight: bold; display: inline-block; box-shadow: 0 5px 20px rgba(138, 43, 226, 0.4); }}
+        </style>
+    </head>
+    <body>
+        <div style="padding: 20px;">
+            <h2 style="margin-bottom: 10px;">Accès validé !</h2>
+            <p style="color: #8e9297; margin-bottom: 40px;">Cliquez ci-dessous pour ouvrir votre application avec votre accès VIP.</p>
+            <a href="/login-token?token={token}" class="btn">OUVRIR L'APPLICATION</a>
+        </div>
+    </body>
+    </html>
+    '''
+
+
+@app.route('/login-token')
+def login_token():
+    token = request.args.get('token')
+
+    # On vérifie si le token existe et n'est pas expiré
+    token_data = pwa_sync_tokens.get(token)
+
+    if token_data and time.time() < token_data['expires']:
+        # MAGIE : On crée la session DIRECTEMENT dans l'environnement de la PWA
+        session['discord_auth'] = True
+        session['discord_user'] = token_data['username']
+        session['discord_user_id'] = token_data['user_id']
+        session['last_discord_check'] = time.time()
+        session.permanent = True
+        session.modified = True
+
+        # On supprime le token (usage unique)
+        del pwa_sync_tokens[token]
+
+        print(f"🚀 PWA synchronisée pour {token_data['username']}")
+        return redirect(url_for('dashboard'))  # Ou 'statistics'
+
+    return "Lien expiré ou invalide. Veuillez recommencer la connexion.", 403
 
 @app.route('/admin/broadcast', methods=['GET', 'POST'])
 @login_required
