@@ -2083,13 +2083,80 @@ def livraisons():
 
 @app.route('/login-discord')
 def login_discord():
-    # On demande l'accès à l'identité et à la liste des membres des serveurs
+    # Construction de l'URL Discord
     scope = "identify guilds.members.read"
     discord_auth_url = (
         f"https://discord.com/api/oauth2/authorize?client_id={CLIENT_ID}"
         f"&redirect_uri={REDIRECT_URI}&response_type=code&scope={scope}"
     )
-    return redirect(discord_auth_url)
+
+    # Au lieu d'un redirect(), on renvoie une page HTML "Passerelle"
+    return f'''
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+        <title>Vérification VIP | ResellNotion</title>
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet">
+        <style>
+            body {{
+                background: #0b0e14;
+                color: white;
+                font-family: 'Plus Jakarta Sans', sans-serif;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+                margin: 0;
+                padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+                overflow: hidden;
+            }}
+            .container {{
+                text-align: center;
+                padding: 20px;
+                max-width: 400px;
+            }}
+            .logo-placeholder {{
+                width: 80px;
+                height: 80px;
+                background: rgba(138, 43, 226, 0.1);
+                border-radius: 20px;
+                margin: 0 auto 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: 1px solid rgba(138, 43, 226, 0.3);
+            }}
+            h1 {{ font-size: 1.5rem; margin-bottom: 10px; }}
+            p {{ color: #8e9297; font-size: 0.9rem; margin-bottom: 30px; line-height: 1.5; }}
+
+            .btn-discord {{
+                background: #5865F2;
+                color: white;
+                text-decoration: none;
+                padding: 16px 32px;
+                border-radius: 14px;
+                font-weight: 700;
+                display: inline-block;
+                box-shadow: 0 4px 15px rgba(88, 101, 242, 0.4);
+                transition: transform 0.2s;
+            }}
+            .btn-discord:active {{ transform: scale(0.95); }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="logo-placeholder">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#8a2be2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
+            <h1>Vérification requise</h1>
+            <p>Pour accéder à vos statistiques, nous devons confirmer votre accès VIP via Discord.</p>
+            <a href="{discord_auth_url}" class="btn-discord">AUTORISER L'ACCÈS</a>
+        </div>
+    </body>
+    </html>
+    '''
 
 
 @app.route('/callback')
