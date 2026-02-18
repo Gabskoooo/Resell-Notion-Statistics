@@ -21,7 +21,6 @@ import base64
 import pandas as pd
 import json
 import os
-import requests
 from flask import session, redirect, request, url_for, flash
 from flask import Response, stream_with_context, jsonify, request, g, flash, redirect, url_for
 from flask_mail import Mail, Message
