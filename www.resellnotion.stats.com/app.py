@@ -2448,51 +2448,49 @@ def offline_page():
 
 
 @app.before_request
-def global_security_check():
-    # A. On initialise la DB d'abord pour éviter l'AttributeError: db
-    if not hasattr(g, 'db'):
-        from database import get_db_connection  # ou ta fonction de connexion
-        g.db = get_db_connection()
-
-    # B. Liste blanche : pages accessibles sans vérification Discord
-    allowed_endpoints = ['login', 'login_discord', 'callback', 'static', 'logout']
-    if request.endpoint in allowed_endpoints or not request.endpoint:
+def security_check():
+    # 1. On ignore les pages publiques
+    allowed = ['login', 'login_discord', 'callback', 'static', 'sync_pwa', 'login_token']
+    if request.endpoint in allowed or not request.endpoint:
         return
 
-    # C. Vérification de l'identité Flask-Login
-    if current_user.is_authenticated:
-
-        # 1. Est-ce qu'il est déjà passé par l'auth Discord ?
-        if not session.get('discord_auth'):
-            return redirect(url_for('login_discord'))
-
-        # 2. LE VIGILE : Vérification dynamique (toutes les 5 minutes)
+    # 2. Si l'utilisateur est connecté via Flask-Login
+    if current_user.is_authenticated and session.get('discord_auth'):
         last_check = session.get('last_discord_check', 0)
-        if time.time() - last_check > 300:  # 300 secondes = 5 mins
-            discord_id = session.get('discord_user_id')
 
-            # On interroge Discord via le Bot (invisible pour l'utilisateur)
-            url = f"https://discord.com/api/v10/guilds/{GUILD_ID}/members/{discord_id}"
-            headers = {"Authorization": f"Bot {BOT_TOKEN}"}
+        # 3. Si le délai de 5 minutes est dépassé
+        if time.time() - last_check > 300:
+            discord_user_id = session.get('discord_user_id')
+
+            # --- VÉRIFICATION SILENCIEUSE VIA LE BOT ---
+            url = f"https://discord.com/api/v10/guilds/{GUILD_ID}/members/{discord_user_id}"
+            headers = {"Authorization": f"Bot {BOT_TOKEN}"}  # Utilise bien le TOKEN du BOT
 
             try:
                 r = requests.get(url, headers=headers, timeout=5)
+
                 if r.status_code == 200:
-                    data = r.json()
-                    # Si le rôle n'est plus là -> DECONNEXION
-                    if str(REQUIRED_ROLE_ID) not in data.get('roles', []):
-                        session.clear()
-                        flash("Accès révoqué : rôle Discord retiré.", "danger")
-                        return redirect(url_for('login'))
+                    member_data = r.json()
+                    user_roles = member_data.get('roles', [])
+
+                    if str(REQUIRED_ROLE_ID) in [str(r) for r in user_roles]:
+                        # ✅ TOUT EST OK : On met juste à jour l'heure, pas de redirection !
+                        session['last_discord_check'] = time.time()
+                        session.modified = True
+                        return  # L'utilisateur accède à sa page normalement
                     else:
-                        session['last_discord_check'] = time.time()  # On valide pour 5 mins
+                        # ❌ RÔLE PERDU : On déconnecte
+                        session.clear()
+                        flash("Accès révoqué : Rôle VIP manquant.", "danger")
+                        return redirect(url_for('login'))
                 else:
-                    # Si l'utilisateur a quitté le serveur
+                    # Utilisateur parti du serveur ou erreur API
                     session.clear()
                     return redirect(url_for('login'))
+
             except Exception as e:
-                print(f"Erreur check vigile: {e}")
-                # En cas d'erreur API, on laisse passer pour ne pas bloquer le site
+                # En cas de micro-coupure API, on laisse passer pour ne pas bloquer le site
+                print(f"Erreur API Discord : {e}")
                 pass
 
 @app.before_request
