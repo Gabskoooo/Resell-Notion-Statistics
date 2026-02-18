@@ -62,7 +62,7 @@ login_manager.needs_refresh_message_category = "info"
 CLIENT_ID = '1473320427140026521'
 CLIENT_SECRET = 'Tdg1G4bo7BwvK5eA8TccHut_vY6UeQxf'
 # L'URL de redirection doit être EXACTEMENT la même que sur le portail Discord
-REDIRECT_URI = 'http://127.0.0.1:8000/callback'
+REDIRECT_URI = 'https://resell-notion-statistics.onrender.com/callback'
 BOT_TOKEN = "MTQ3MzMyMDQyNzE0MDAyNjUyMQ.GJZbib.cOopdBhBRoktehqIoGvGpbmrPcX-yRuHojlIUw"
 GUILD_ID = '1387477216392384633'
 REQUIRED_ROLE_ID = '1473326555609694269'
