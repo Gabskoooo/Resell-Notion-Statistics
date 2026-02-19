@@ -41,6 +41,11 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = 'resell_notion_ultra_secret_key_2026_!@#'
+app.config.update(
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=True, # Obligatoire pour le HTTPS de Render
+    PERMANENT_SESSION_LIFETIME=2592000 # Session de 30 jours pour ne pas se reconnecter sans arrêt
+)
 app.config['DEBUG'] = True
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)  # Session dure 7 jours
