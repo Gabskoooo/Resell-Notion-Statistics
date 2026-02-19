@@ -108,6 +108,13 @@
 
     @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     .animate-in { animation: fadeInUp 0.6s ease-out forwards; }
+
+    /* PAGINATION STYLES */
+    .pagination-container { display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 40px; }
+    .page-btn { background: var(--glass-bg); border: 1px solid var(--glass-border); color: white; padding: 10px 20px; border-radius: 12px; cursor: pointer; transition: 0.3s; }
+    .page-btn:hover:not(:disabled) { background: rgba(255,255,255,0.1); border-color: var(--primary-glow); }
+    .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    #pageInfo { font-weight: 600; color: #8e9297; }
 </style>
 
 <div class="container py-5">
@@ -147,8 +154,8 @@
     {% if sales %}
     <div class="row g-3" id="salesGrid">
         {% for sale in sales %}
-        <div class="col-6 col-lg-3 animate-in"
-             style="animation-delay: {{ 0.3 + loop.index0 * 0.05 }}s;"
+        <div class="col-6 col-lg-3 animate-in sale-item-container"
+             style="animation-delay: 0.1s;"
              data-sale-id="{{ sale.id }}"
              data-sale-name="{{ sale.item_name }}"
              data-sale-sku="{{ sale.sku | lower }}"
@@ -194,6 +201,12 @@
             </div>
         </div>
         {% endfor %}
+    </div>
+
+    <div class="pagination-container animate-in">
+        <button id="prevPage" class="page-btn"><i class="bi bi-chevron-left"></i></button>
+        <span id="pageInfo">Page 1 sur 1</span>
+        <button id="nextPage" class="page-btn"><i class="bi bi-chevron-right"></i></button>
     </div>
     {% endif %}
 
@@ -258,7 +271,7 @@
         const salesSearchInput = document.getElementById('salesSearch');
         const periodFilterSelect = document.getElementById('periodFilter');
         const paymentStatusFilterSelect = document.getElementById('paymentStatusFilter');
-        const allCards = document.querySelectorAll('[data-sale-id]');
+        const allCards = document.querySelectorAll('.sale-item-container');
         const actionPanel = document.getElementById('actionPanel');
         const hideActionPanelBtn = document.getElementById('hideActionPanelBtn');
         const setReceivedBtn = document.getElementById('setReceivedBtn');
@@ -267,9 +280,13 @@
         const trackingModal = document.getElementById('trackingModal');
         const baseUrl = "{{ url_for('sales') }}";
 
+        // Variables pagination
+        let currentPage = 1;
+        const itemsPerPage = 24; // 4 colonnes x 6 lignes
+        let filteredCards = [];
+
         let currentSaleId = null, currentSaleCard = null;
 
-        // --- TRACKING CLICK ---
         openTrackingBtn.addEventListener('click', () => {
             const trackingNum = currentSaleCard.dataset.tracking;
             document.getElementById('trackNumberInput').value = trackingNum || '';
@@ -281,17 +298,15 @@
 
         window.closeTrackingModal = () => { trackingModal.style.display = 'none'; }
 
-        // --- APPEL À LA ROUTE UNIVERSELLE ---
         window.startTracking = async () => {
             const num = document.getElementById('trackNumberInput').value;
             if(!num) return;
             document.getElementById('trackingInputSection').style.display = 'none';
             document.getElementById('trackingLogSection').style.display = 'block';
-            const console = document.getElementById('logConsole');
-            console.innerHTML = '> Scan Quantum Vente en cours...';
+            const consoleLog = document.getElementById('logConsole');
+            consoleLog.innerHTML = '> Scan Quantum Vente en cours...';
 
             try {
-                // Utilisation de la route centralisée /api/track-live avec item_type: 'sale'
                 const res = await fetch('/api/track-live', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -299,7 +314,7 @@
                         tracking_number: num,
                         save: true,
                         item_id: currentSaleId,
-                        item_type: 'sale' // Indique qu'il s'agit d'une vente
+                        item_type: 'sale'
                     })
                 });
                 const result = await res.json();
@@ -318,32 +333,84 @@
                         timeline.appendChild(item);
                     });
                 }
-            } catch (e) { console.innerHTML += '<br>> Erreur réseau.'; }
+            } catch (e) { consoleLog.innerHTML += '<br>> Erreur réseau.'; }
         }
 
-        // --- FILTRES ---
+        function updateDisplay() {
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+
+            // On cache tout d'abord
+            allCards.forEach(card => card.style.display = 'none');
+
+            // On affiche seulement ceux de la page active parmi les filtrés
+            filteredCards.slice(start, end).forEach(card => {
+                card.style.display = 'block';
+            });
+
+            // Update UI pagination
+            const totalPages = Math.ceil(filteredCards.length / itemsPerPage) || 1;
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} sur ${totalPages}`;
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages;
+
+            if (filteredCards.length === 0) {
+                 document.getElementById('pageInfo').textContent = "Aucun résultat";
+            }
+        }
+
         function applyFilters() {
             const searchTerm = salesSearchInput.value.toLowerCase();
             const selectedPeriod = periodFilterSelect.value;
             const selectedStatus = paymentStatusFilterSelect.value;
             const today = new Date(); today.setHours(0,0,0,0);
-            let count = 0, revenue = 0, profit = 0;
+
+            let revenue = 0, profit = 0;
+            filteredCards = [];
 
             allCards.forEach(card => {
-                const name = card.dataset.saleName.toLowerCase(), sku = card.dataset.saleSku.toLowerCase(), status = card.dataset.paymentStatus, date = new Date(card.dataset.saleDate);
+                const name = card.dataset.saleName.toLowerCase();
+                const sku = card.dataset.saleSku.toLowerCase();
+                const status = card.dataset.paymentStatus;
+                const date = new Date(card.dataset.saleDate);
                 date.setHours(0,0,0,0);
-                const isSearch = name.includes(searchTerm) || sku.includes(searchTerm), isStatus = selectedStatus === 'all' || status === selectedStatus;
-                let isPeriod = selectedPeriod === 'all' || (selectedPeriod === 'today' && date.getTime() === today.getTime());
+
+                const isSearch = name.includes(searchTerm) || sku.includes(searchTerm);
+                const isStatus = selectedStatus === 'all' || status === selectedStatus;
+
+                let isPeriod = selectedPeriod === 'all';
+                if (selectedPeriod === 'today' && date.getTime() === today.getTime()) isPeriod = true;
+                if (selectedPeriod === 'this_week') {
+                    const weekAgo = new Date(); weekAgo.setDate(today.getDate() - 7);
+                    if (date >= weekAgo) isPeriod = true;
+                }
+                if (selectedPeriod === 'this_month') {
+                    if (date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear()) isPeriod = true;
+                }
 
                 if (isSearch && isStatus && isPeriod) {
-                    card.style.display = 'block'; count++;
-                    revenue += parseFloat(card.dataset.salePrice); profit += parseFloat(card.dataset.profit);
-                } else card.style.display = 'none';
+                    filteredCards.push(card);
+                    revenue += parseFloat(card.dataset.salePrice);
+                    profit += parseFloat(card.dataset.profit);
+                }
             });
-            document.getElementById('total-sales-count').textContent = count;
+
+            document.getElementById('total-sales-count').textContent = filteredCards.length;
             document.getElementById('total-revenue').textContent = revenue.toLocaleString('fr-FR', {style:'currency', currency:'EUR'});
             document.getElementById('total-profit').textContent = profit.toLocaleString('fr-FR', {style:'currency', currency:'EUR'});
+
+            currentPage = 1;
+            updateDisplay();
         }
+
+        // Event listeners pagination
+        document.getElementById('prevPage').addEventListener('click', () => {
+            if (currentPage > 1) { currentPage--; updateDisplay(); window.scrollTo(0, 0); }
+        });
+        document.getElementById('nextPage').addEventListener('click', () => {
+            const totalPages = Math.ceil(filteredCards.length / itemsPerPage);
+            if (currentPage < totalPages) { currentPage++; updateDisplay(); window.scrollTo(0, 0); }
+        });
 
         allCards.forEach(card => {
             card.addEventListener('click', function() {
@@ -358,6 +425,7 @@
         hideActionPanelBtn.addEventListener('click', () => actionPanel.classList.remove('show'));
         salesSearchInput.addEventListener('input', applyFilters);
         [periodFilterSelect, paymentStatusFilterSelect].forEach(el => el.addEventListener('change', applyFilters));
+
         applyFilters();
     });
 </script>

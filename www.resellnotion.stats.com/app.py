@@ -2084,6 +2084,37 @@ def livraisons():
                                total_outgoing=total_outgoing)
     finally:
         if cur and not cur.closed: cur.close()
+
+
+@app.route('/api/logistic-update', methods=['POST'])
+@login_required
+def logistic_update():
+    data = request.get_json()
+    item_id = data.get('item_id')
+    item_type = data.get('item_type')  # 'product' ou 'sale'
+    action = data.get('action')  # 'delivered' ou 'remove'
+
+    conn = g.db
+    cur = None
+    try:
+        cur = conn.cursor()
+        table = "products" if item_type == "product" else "sales"
+
+        if action == 'delivered':
+            cur.execute(f"UPDATE {table} SET shipping_status = 'LIVRÉ' WHERE id = %s AND user_id = %s",
+                        (item_id, current_user.id))
+        elif action == 'remove':
+            # On supprime le tracking_number pour que l'item disparaisse de la logistique
+            cur.execute(
+                f"UPDATE {table} SET tracking_number = NULL, tracking_data = NULL WHERE id = %s AND user_id = %s",
+                (item_id, current_user.id))
+
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+    finally:
+        if cur: cur.close()
 # ADMIN
 
 @app.route('/login-discord')
