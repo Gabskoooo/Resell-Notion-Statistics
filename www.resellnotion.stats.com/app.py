@@ -120,13 +120,15 @@ def send_gmail_stats(recipient_email, subject, html_body):
         return False
 
 class UserSession:
-    def __init__(self, user_id):
+    def __init__(self, user_id, username, discord_id=None):
         self.id = user_id
+        self.username = username  # <-- C'est cette ligne qui manque !
+        self.discord_id = discord_id
+
     def get_id(self): return str(self.id)
     def is_active(self): return True
     def is_authenticated(self): return True
     def is_anonymous(self): return False
-
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -430,9 +432,30 @@ def admin_required(f):
 
     return decorated_function
 
+
 @login_manager.user_loader
 def load_user(user_id):
-    return User.get(user_id)
+    conn = g.db
+    cur = None
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        # On récupère bien id, username et discord_id sur la table "users"
+        cur.execute('SELECT id, username, discord_id FROM "users" WHERE id = %s', (user_id,))
+        user_data = cur.fetchone()
+
+        if user_data:
+            # On passe les 3 arguments : id, username, et discord_id
+            return UserSession(
+                user_id=user_data['id'],
+                username=user_data['username'],
+                discord_id=user_data['discord_id']
+            )
+        return None
+    except Exception as e:
+        print(f"Erreur load_user: {e}")
+        return None
+    finally:
+        if cur: cur.close()
 
 SKU_DATA = []
 SKU_FILE_PATH = os.path.join(ASSETS_DIR, 'sku_img_with_name.json')
@@ -2221,8 +2244,6 @@ def callback():
     }
 
     token_response = requests.post("https://discord.com/api/v10/oauth2/token", data=data)
-    print(f"Statut Token Discord : {token_response.status_code}")
-
     token_json = token_response.json()
     access_token = token_json.get('access_token')
 
@@ -2234,28 +2255,33 @@ def callback():
     member_headers = {'Authorization': f'Bearer {access_token}'}
     member_url = f"https://discord.com/api/v10/users/@me/guilds/{GUILD_ID}/member"
     member_response = requests.get(member_url, headers=member_headers)
-
-    print(f"Statut Membre Discord : {member_response.status_code}")
     member_data = member_response.json()
 
     if member_response.status_code != 200:
-        print(f"!!! ERREUR MEMBRE : {member_data}")
         flash("Non présent sur le serveur Discord.", "danger")
         return redirect(url_for('login'))
 
     user_roles = member_data.get('roles', [])
     username = member_data.get('user', {}).get('username')
-    discord_user_id = member_data.get('user', {}).get('id')
-
-    print(f"Utilisateur identifié : {username}")
-    print(f"Rôles reçus : {user_roles}")
+    discord_user_id = str(member_data.get('user', {}).get('id'))
 
     # 3. Vérification du rôle VIP
     has_role = str(REQUIRED_ROLE_ID) in [str(r) for r in user_roles]
-    print(f"Résultat vérification rôle : {has_role}")
 
     if has_role:
-        # --- INITIALISATION DE LA SESSION (Navigateur) ---
+        # --- SAUVEGARDE PERMANENTE DANS LA DB (Table 'users') ---
+        if current_user.is_authenticated:
+            try:
+                cur = g.db.cursor()
+                # Correction ICI : "user" devient "users"
+                cur.execute('UPDATE "users" SET discord_id = %s WHERE id = %s', (discord_user_id, current_user.id))
+                g.db.commit()
+                cur.close()
+                print(f"✅ ID Discord {discord_user_id} lié au compte {current_user.id} en DB")
+            except Exception as e:
+                print(f"❌ Erreur SQL lors du lien Discord : {e}")
+
+        # --- INITIALISATION DE LA SESSION ---
         session.clear()
         session['discord_auth'] = True
         session['discord_user'] = username
@@ -2265,25 +2291,18 @@ def callback():
         session.modified = True
 
         # --- GÉNÉRATION DU TOKEN DE SYNCHRONISATION PWA ---
-        # On crée un jeton unique pour "passer" la connexion du navigateur vers la PWA
         sync_token = str(uuid.uuid4())
         pwa_sync_tokens[sync_token] = {
             'user_id': discord_user_id,
             'username': username,
-            'expires': time.time() + 300  # Expire dans 5 minutes
+            'expires': time.time() + 300
         }
 
-        print(f"✅ Session validée pour {username}")
-        print(f"🚀 Pont PWA créé. Token : {sync_token}")
-
-        # On redirige vers la page intermédiaire qui va "aspirer" la session dans la PWA
         return redirect(url_for('sync_pwa', token=sync_token))
 
     else:
-        print("❌ Accès refusé : Rôle requis manquant.")
         flash("Accès refusé : Vous n'avez pas le rôle VIP sur Discord.", "danger")
         return redirect(url_for('login'))
-
 
 @app.route('/sync-pwa')
 def sync_pwa():
@@ -2490,63 +2509,69 @@ def security_check():
     if request.endpoint in allowed or not request.endpoint:
         return
 
-    # 2. Si l'utilisateur est connecté via Flask-Login
-    if current_user.is_authenticated and session.get('discord_auth'):
+    # 2. Vérification de l'utilisateur Flask-Login
+    if current_user.is_authenticated:
+
+        # Récupération de l'ID (Priorité Session, puis DB)
+        discord_user_id = session.get('discord_user_id')
+        source = "SESSION"
+
+        if not discord_user_id and hasattr(current_user, 'discord_id'):
+            discord_user_id = current_user.discord_id
+            source = "DATABASE"
+
+        if not discord_user_id:
+            print(f"--- [SECURITY] ❌ Aucun ID Discord trouvé pour {current_user.username} (Redirection Auth)")
+            return redirect(url_for('login_discord'))
+
+        # 3. Vérification du délai (on peut le mettre à 0 pour tester à chaque requête)
         last_check = session.get('last_discord_check', 0)
 
-        # 3. Si le délai de 5 minutes est dépassé
+        # ASTUCE TEST : Change 300 par 0 pour voir le log à CHAQUE clic
         if time.time() - last_check > 300:
-            discord_user_id = session.get('discord_user_id')
+            print(
+                f"--- [SECURITY] 🔍 Interrogation API Discord via BOT pour l'user: {current_user.username} (ID: {discord_user_id}, Source: {source}) ---")
 
-            # --- VÉRIFICATION SILENCIEUSE VIA LE BOT ---
             url = f"https://discord.com/api/v10/guilds/{GUILD_ID}/members/{discord_user_id}"
-            headers = {"Authorization": f"Bot {BOT_TOKEN}"}  # Utilise bien le TOKEN du BOT
+            headers = {"Authorization": f"Bot {BOT_TOKEN}"}
 
             try:
                 r = requests.get(url, headers=headers, timeout=5)
 
                 if r.status_code == 200:
                     member_data = r.json()
-                    user_roles = member_data.get('roles', [])
+                    user_roles = [str(role) for role in member_data.get('roles', [])]
 
-                    if str(REQUIRED_ROLE_ID) in [str(r) for r in user_roles]:
-                        # ✅ TOUT EST OK : On met juste à jour l'heure, pas de redirection !
+                    if str(REQUIRED_ROLE_ID) in user_roles:
+                        print(f"--- [SECURITY] ✅ Rôle VIP confirmé par le BOT pour {current_user.username}")
                         session['last_discord_check'] = time.time()
+                        session['discord_auth'] = True
+                        session['discord_user_id'] = discord_user_id  # On rafraîchit la session
                         session.modified = True
-                        return  # L'utilisateur accède à sa page normalement
+                        return
                     else:
-                        # ❌ RÔLE PERDU : On déconnecte
+                        print(f"--- [SECURITY] ❌ Rôle VIP MANQUANT pour {current_user.username}")
                         session.clear()
-                        flash("Accès révoqué : Rôle VIP manquant.", "danger")
+                        flash("Accès révoqué : Rôle VIP manquant sur Discord.", "danger")
                         return redirect(url_for('login'))
-                else:
-                    # Utilisateur parti du serveur ou erreur API
+
+                elif r.status_code == 404:
+                    print(f"--- [SECURITY] ❌ L'utilisateur {current_user.username} n'est plus sur le serveur Discord")
                     session.clear()
                     return redirect(url_for('login'))
+                else:
+                    print(f"--- [SECURITY] ⚠️ Erreur API Discord (Code: {r.status_code})")
 
             except Exception as e:
-                # En cas de micro-coupure API, on laisse passer pour ne pas bloquer le site
-                print(f"Erreur API Discord : {e}")
+                print(f"--- [SECURITY] 🚨 Erreur critique lors de l'appel Bot : {e}")
+                # En cas d'erreur réseau, on laisse passer pour éviter de bloquer le site
                 pass
-
-@app.before_request
-def debug_security_check():
-    # On ignore le check pour les pages de login/callback et le statique
-    allowed = ['login', 'login_discord', 'callback', 'static']
-    if request.endpoint in allowed or not request.endpoint:
-        return
-
-    # Si on arrive ici, on est sur une page protégée (ex: dashboard)
-    print(f"\n--- [DEBUG] CHECK SÉCURITÉ sur : {request.endpoint} ---")
-    print(f"Utilisateur Flask identifié : {current_user.is_authenticated}")
-    print(f"Session Discord Auth : {session.get('discord_auth')}")
-
-    if current_user.is_authenticated:
-        if not session.get('discord_auth'):
-            print("⚠️ Pas de session Discord -> REDIRECTION VERS AUTH")
-            return redirect(url_for('login_discord'))
         else:
-            print("🟢 Accès autorisé (Session OK)")
+            # Optionnel : loguer que le check est trop récent
+            # print(f"--- [SECURITY] ⏳ Check récent pour {current_user.username} (Skipped) ---")
+            pass
+    else:
+        return redirect(url_for('login'))
 @app.route('/logout-debug')
 def logout_debug():
     session.clear() # Efface TOUTE la session
