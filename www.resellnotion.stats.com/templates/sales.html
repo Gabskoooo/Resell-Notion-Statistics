@@ -403,6 +403,32 @@
             updateDisplay();
         }
 
+        // --- LOGIQUE DE CHANGEMENT DE STATUT (Correction) ---
+        async function updateStatusInDB(status) {
+            if (!currentSaleId) return;
+
+            try {
+                const response = await fetch(`/sales/${currentSaleId}/update_status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: status })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    location.reload(); // On recharge pour mettre à jour le cashflow et les badges
+                } else {
+                    alert("Erreur lors de la mise à jour du statut.");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Erreur réseau.");
+            }
+        }
+
+        setReceivedBtn.addEventListener('click', () => updateStatusInDB('reçu'));
+        setPendingBtn.addEventListener('click', () => updateStatusInDB('en_attente'));
+
         // Event listeners pagination
         document.getElementById('prevPage').addEventListener('click', () => {
             if (currentPage > 1) { currentPage--; updateDisplay(); window.scrollTo(0, 0); }

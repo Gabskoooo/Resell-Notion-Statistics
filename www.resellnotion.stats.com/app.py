@@ -1601,14 +1601,14 @@ def add_sale():
                 # 4. ENVOI DU WEBHOOK DISCORD
                 discord_data = {
                     "embeds": [{
-                        "title": "👟 Nouvelle Vente !",
+                        "title": "👟 New sale !",
                         "color": 3066993,
                         "fields": [
-                            {"name": "Modèle", "value": f"**{product['name']}**", "inline": False},
+                            {"name": "Product", "value": f"**{product['name']}**", "inline": False},
                             {"name": "SKU", "value": f"`{product['sku']}`", "inline": True},
-                            {"name": "Taille", "value": f"{product['size']}", "inline": True},
-                            {"name": "Prix de Vente", "value": f"**{sale_price}€**", "inline": True},
-                            {"name": "Plateforme", "value": f"{platform}", "inline": True}
+                            {"name": "Size", "value": f"{product['size']}", "inline": True},
+                            {"name": "Sale Price", "value": f"**{sale_price}€**", "inline": True},
+                            {"name": "Platform", "value": f"{platform}", "inline": True}
                         ],
                         "thumbnail": {"url": product['image_url'] if product['image_url'] else ""}
                     }]
