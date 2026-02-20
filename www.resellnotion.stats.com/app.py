@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import base64
 import pandas as pd
 import json
+
 import os
 import requests
 from flask import session, redirect, request, url_for, flash
@@ -31,6 +32,7 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 import requests
+from flask_apscheduler import APScheduler
 import datetime as dt
 import uuid
 import smtplib
@@ -91,8 +93,107 @@ cloudinary.config(
 )
 mail = Mail(app)
 
+scheduler = APScheduler()
+
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+
+
+# --- LOGIQUE QUANTUM EXTRAITE (Identique à ta route) ---
+def execute_quantum_logic(db_conn, user_id, item_id, item_type, num):
+    config = {'product': {'table': 'products'}, 'sale': {'table': 'sales'}}
+    max_retries = 3
+    attempt = 0
+
+    while attempt < max_retries:
+        attempt += 1
+        session = requests.Session()
+        proxy_url = get_quantum_proxy()  # Ta fonction existante
+
+        if proxy_url:
+            session.proxies = {"http": proxy_url, "https": proxy_url}
+
+        headers = {
+            'authority': 'api.ordertracker.com',
+            'accept': 'application/json, text/plain, */*',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
+            'referer': 'https://www.ordertracker.com/',
+            'origin': 'https://www.ordertracker.com',
+            'accept-language': 'fr-FR,fr;q=0.9',
+            'content-type': 'application/json'
+        }
+
+        try:
+            # ÉTAPE 1 : Init
+            url_html = f"https://www.ordertracker.com/fr/track/{num}"
+            session.get(url_html, headers=headers, timeout=15)
+            time.sleep(1)
+
+            # ÉTAPE 2 : Links
+            url_links = f"https://api.ordertracker.com/public/trackinglinks?trackingstring={num}"
+            headers['referer'] = url_html
+            session.get(url_links, headers=headers, timeout=15)
+
+            # ÉTAPE 3 : Final
+            url_final = f"https://api.ordertracker.com/public/track/{num}?lang=FR"
+            response = session.get(url_final, headers=headers, timeout=15)
+
+            if response.status_code == 200:
+                res_data = response.json()
+                status_label = res_data.get('statusLabel', 'En transit')
+
+                table_name = config[item_type]['table']
+                cur = db_conn.cursor()
+                query = f"UPDATE {table_name} SET shipping_status=%s, tracking_data=%s, last_tracking_update=%s WHERE id=%s AND user_id=%s"
+                cur.execute(query, (status_label, json.dumps(res_data), datetime.now(), item_id, user_id))
+                db_conn.commit()
+                cur.close()
+                return True
+        except:
+            continue
+    return False
+
+def auto_update_all_transit():
+    # On crée une connexion dédiée pour ce thread (APScheduler tourne à part)
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    print(f"[{datetime.now()}] > Lancement du cycle d'actualisation automatique (5h)...")
+
+    try:
+        # On récupère tous les colis dont le statut est "En transit"
+        # On utilise deux fois %s pour les deux parties de l'UNION (id utilisateur si besoin)
+        # Si tu veux scanner TOUS les utilisateurs du site :
+        cur.execute("""
+            SELECT id, user_id, tracking_number, 'product' as type FROM products 
+            WHERE tracking_number IS NOT NULL AND shipping_status = 'En transit'
+            UNION ALL
+            SELECT id, user_id, tracking_number, 'sale' as type FROM sales 
+            WHERE tracking_number IS NOT NULL AND shipping_status = 'En transit'
+        """)
+
+        items = cur.fetchall()
+        print(f"> {len(items)} colis trouvés en transit.")
+
+        for item in items:
+            print(f"> Traitement automatique : {item['tracking_number']} (User ID: {item['user_id']})")
+
+            # On appelle ta logique Quantum existante
+            # On passe 'conn' pour que la fonction puisse faire le UPDATE
+            execute_quantum_logic(conn, item['user_id'], item['id'], item['type'], item['tracking_number'])
+
+            # Petit délai de courtoisie pour l'API/Proxy
+            time.sleep(2)
+
+    except Exception as e:
+        print(f" ERROR dans l'automate : {str(e)}")
+
+    finally:
+        cur.close()
+        conn.close()
+        print(f"[{datetime.now()}] > Fin du cycle automatique.")
+
+
 
 
 def send_gmail_stats(recipient_email, subject, html_body):
@@ -1228,79 +1329,128 @@ def track_live_universal():
     num = data.get('tracking_number')
     item_id = data.get('item_id')
     item_type = data.get('item_type')
-    save_to_db = data.get('save', False)
 
+    # On appelle la fonction de logique commune
+    success = execute_quantum_logic(g.db, current_user.id, item_id, item_type, num)
+
+    if success:
+        return jsonify({"success": True})
+    else:
+        return jsonify({"success": False, "message": "Échec du tracking après tentatives"}), 500
+
+
+@app.route('/api/track-all', methods=['POST'])
+@login_required
+def track_all_transit():
+    conn = g.db
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    # Requête corrigée : 2 paramètres %s donc on passe (id, id)
+    query = """
+        SELECT id, tracking_number, 'product' as type FROM products 
+        WHERE user_id = %s AND tracking_number IS NOT NULL AND tracking_number != '' 
+        AND (shipping_status IS NULL OR (shipping_status != 'Livré' AND shipping_status != 'delivered' AND shipping_status != 'Delivered'))
+        UNION ALL
+        SELECT id, tracking_number, 'sale' as type FROM sales 
+        WHERE user_id = %s AND tracking_number IS NOT NULL AND tracking_number != ''
+        AND (shipping_status IS NULL OR (shipping_status != 'Livré' AND shipping_status != 'delivered' AND shipping_status != 'Delivered'))
+    """
+
+    try:
+        cur.execute(query, (current_user.id, current_user.id))
+        items = cur.fetchall()
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Erreur DB : {str(e)}"}), 500
+    finally:
+        cur.close()
+
+    results = {"total": len(items), "updated": 0, "errors": 0}
     config = {'product': {'table': 'products'}, 'sale': {'table': 'sales'}}
-    if item_type not in config:
-        return jsonify({"success": False, "message": "Type invalide"}), 400
 
-    max_retries = 3  # Nombre de tentatives avec des proxys différents
-    attempt = 0
-    last_error = ""
+    for item in items:
+        num = item['tracking_number']
+        item_id = item['id']
+        item_type = item['type']
 
-    while attempt < max_retries:
-        attempt += 1
-        session = requests.Session()
-        proxy_url = get_quantum_proxy()  # On récupère un nouveau nœud à chaque essai
+        attempt = 0
+        max_retries = 3
+        success_for_this_item = False
 
-        if proxy_url:
-            session.proxies = {"http": proxy_url, "https": proxy_url}
+        while attempt < max_retries:
+            attempt += 1
+            session = requests.Session()
+            proxy_url = get_quantum_proxy()
+            if proxy_url:
+                session.proxies = {"http": proxy_url, "https": proxy_url}
 
-        headers = {
-            'authority': 'api.ordertracker.com',
-            'accept': 'application/json, text/plain, */*',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
-            'referer': 'https://www.ordertracker.com/',
-            'origin': 'https://www.ordertracker.com',
-            'accept-language': 'fr-FR,fr;q=0.9',
-            'content-type': 'application/json'
-        }
+            headers = {
+                'authority': 'api.ordertracker.com',
+                'accept': 'application/json, text/plain, */*',
+                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
+                'referer': 'https://www.ordertracker.com/',
+                'origin': 'https://www.ordertracker.com',
+                'accept-language': 'fr-FR,fr;q=0.9',
+                'content-type': 'application/json'
+            }
 
-        try:
-            # ÉTAPE 1 : Init
-            url_html = f"https://www.ordertracker.com/fr/track/{num}"
-            session.get(url_html, headers=headers, timeout=15)
-            time.sleep(1)
+            try:
+                # ÉTAPE 1 : Init
+                url_html = f"https://www.ordertracker.com/fr/track/{num}"
+                session.get(url_html, headers=headers, timeout=10)
+                time.sleep(0.5)
 
-            # ÉTAPE 2 : Links
-            url_links = f"https://api.ordertracker.com/public/trackinglinks?trackingstring={num}"
-            headers['referer'] = url_html
-            session.get(url_links, headers=headers, timeout=15)
+                # ÉTAPE 2 : Links
+                url_links = f"https://api.ordertracker.com/public/trackinglinks?trackingstring={num}"
+                headers['referer'] = url_html
+                session.get(url_links, headers=headers, timeout=10)
 
-            # ÉTAPE 3 : Final
-            url_final = f"https://api.ordertracker.com/public/track/{num}?lang=FR"
-            response = session.get(url_final, headers=headers, timeout=15)
+                # ÉTAPE 3 : Final
+                url_final = f"https://api.ordertracker.com/public/track/{num}?lang=FR"
+                response = session.get(url_final, headers=headers, timeout=10)
 
-            if response.status_code == 200:
-                res_data = response.json()
-                status_label = res_data.get('statusLabel', 'En transit')
+                if response.status_code == 200:
+                    res_data = response.json()
+                    status_label = res_data.get('statusLabel', 'En transit')
 
-                if save_to_db and item_id:
                     table_name = config[item_type]['table']
-                    cur = g.db.cursor()
-                    query = f"UPDATE {table_name} SET tracking_number=%s, shipping_status=%s, tracking_data=%s, last_tracking_update=%s WHERE id=%s AND user_id=%s"
-                    cur.execute(query,
-                                (num, status_label, json.dumps(res_data), datetime.now(), item_id, current_user.id))
+                    cur_update = g.db.cursor()
+                    update_query = f"UPDATE {table_name} SET shipping_status=%s, tracking_data=%s, last_tracking_update=%s WHERE id=%s AND user_id=%s"
+                    cur_update.execute(update_query,
+                                       (status_label, json.dumps(res_data), datetime.now(), item_id, current_user.id))
                     g.db.commit()
-                    cur.close()
+                    cur_update.close()
 
-                return jsonify({"success": True, "status": status_label, "full_data": res_data})
+                    results["updated"] += 1
+                    success_for_this_item = True
+                    break
+            except Exception:
+                time.sleep(0.5)
+                continue
 
-            # Si le serveur répond mais avec une erreur (ex: 403), on retente
-            last_error = f"Erreur Serveur {response.status_code}"
+        if not success_for_this_item:
+            results["errors"] += 1
 
-        except (requests.exceptions.ProxyError, requests.exceptions.ConnectionError) as e:
-            # C'est ici qu'on attrape ton erreur 503
-            last_error = "Proxy saturé (503). Nouvelle tentative..."
-            time.sleep(1)  # Petit délai avant de changer de nœud
-            continue
+    return jsonify({"success": True, "results": results})
 
-        except Exception as e:
-            last_error = str(e)
-            break  # Erreur critique, on arrête
+@app.route('/api/get-transit-list', methods=['GET'])
+@login_required
+def get_transit_list():
+    conn = g.db
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    query = """
+        SELECT id, tracking_number, name, 'product' as type FROM products 
+        WHERE user_id = %s AND tracking_number IS NOT NULL AND tracking_number != '' 
+        AND (shipping_status IS NULL OR (shipping_status != 'Livré' AND shipping_status != 'delivered' AND shipping_status != 'Delivered'))
+        UNION ALL
+        SELECT id, tracking_number, item_name as name, 'sale' as type FROM sales 
+        WHERE user_id = %s AND tracking_number IS NOT NULL AND tracking_number != ''
+        AND (shipping_status IS NULL OR (shipping_status != 'Livré' AND shipping_status != 'delivered' AND shipping_status != 'Delivered'))
+    """
+    cur.execute(query, (current_user.id, current_user.id))
+    items = cur.fetchall()
+    cur.close()
+    return jsonify({"success": True, "items": items})
 
-    return jsonify(
-        {"success": False, "message": f"Échec après {max_retries} tentatives. Dernière erreur : {last_error}"}), 500
 # SALES
 
 @app.route('/import-excel', methods=['GET', 'POST'])
@@ -1773,7 +1923,7 @@ def delete_sale(id):
 
 # STATISTICS
 
-@app.route('/statistics', methods=['GET', 'POST'])  # Ajout de POST
+@app.route('/statistics', methods=['GET', 'POST'])
 @login_required
 def statistics():
     conn = g.db
@@ -1784,7 +1934,6 @@ def statistics():
         new_cash = request.form.get('cash_flow', 0)
         cur.execute("UPDATE users SET cash_flow = %s WHERE id = %s", (new_cash, current_user.id))
         conn.commit()
-        # On reste sur la page avec les mêmes paramètres de filtrage
 
     # --- RÉCUPÉRATION DU CASH ENREGISTRÉ ---
     cur.execute("SELECT cash_flow FROM users WHERE id = %s", (current_user.id,))
@@ -1859,7 +2008,7 @@ def statistics():
     valeur_achat_stock = float(stock_info['total_val'] or 0)
     stock_qty = stock_info['total_qty'] or 0
 
-    # 4. TRÉSORERIE ENTIÈRE (Utilise le cash de la DB)
+    # 4. TRÉSORERIE ENTIÈRE
     total_base_cash = current_cash + valeur_achat_stock + pending_payments
 
     # 5. PROJECTIONS ET FLUX
@@ -2635,8 +2784,21 @@ def init_db():
         conn.commit()
         cur.close()
 
+
+# --- TON NOUVEAU MAIN ---
 if __name__ == '__main__':
     with app.app_context():
         print("Initialisation/Vérification du schéma PostgreSQL...")
         init_db()
+
+    # Initialisation du Scheduler avec l'app Flask
+    scheduler.init_app(app)
+
+    scheduler.add_job(id='quantum_sync_job', func=auto_update_all_transit, trigger='interval', hours=5,
+                      replace_existing=True)
+
+    # Démarrage du scheduler
+    scheduler.start()
+
+    # Lancement de l'app (debug=False est conseillé pour APScheduler)
     app.run(debug=False, port=8000)

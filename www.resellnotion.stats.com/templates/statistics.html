@@ -76,7 +76,7 @@
     .table-premium tr { background: var(--glass-bg); }
     .table-premium td, .table-premium th { border: none !important; padding: 16px !important; color: #f8f9fa; }
 
-    .expert-text { font-size: 1.15rem; line-height: 1.7; font-weight: 400; }
+    .expert-text { font-size: 1.1rem; line-height: 1.6; font-weight: 400; }
     .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(10px); z-index: 10000; align-items: center; justify-content: center; }
     .overlay-content { background: #161a2b; padding: 35px; border-radius: 24px; max-width: 600px; width: 90%; border: 1px solid var(--glass-border); position: relative; max-height: 90vh; overflow-y: auto; }
 
@@ -192,7 +192,7 @@
         </div>
         <div class="row g-4">
             <div class="col-lg-8"><div class="premium-card"><h6 class="stat-label mb-4">Évolution des Flux</h6><div style="height: 350px;"><canvas id="evolutionChart"></canvas></div></div></div>
-            <div class="col-lg-4"><div class="premium-card" style="background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), transparent); border-left: 4px solid var(--primary-glow);"><h5 class="text-white fw-bold mb-3 text-uppercase small"><i class="bi bi-robot me-2" style="color: var(--primary-glow)"></i>AVIS DE L'EXPERT</h5><p id="dashboard-expert-advice" class="expert-text text-white-50">Diagnostic stratégique en cours...</p></div></div>
+            <div class="col-lg-4"><div class="premium-card" style="background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), transparent); border-left: 4px solid var(--primary-glow);"><h5 class="text-white fw-bold mb-3 text-uppercase small"><i class="bi bi-robot me-2" style="color: var(--primary-glow)"></i>STRATÉGIE EXPERTE</h5><p id="dashboard-expert-advice" class="expert-text text-white-50">Analyse structurelle en cours...</p></div></div>
         </div>
     </div>
 
@@ -231,7 +231,7 @@
             <div class="col-12 col-md-4"><div class="premium-card border-warning border-opacity-25"><span class="stat-label text-warning">Projection 1 An</span><div class="stat-numb text-white text-truncate" id="proj-roi-1y">--€</div></div></div>
         </div>
 
-        <div class="premium-card mb-5" style="background: rgba(138, 43, 226, 0.05); border-left: 4px solid var(--primary-glow);"><h5 class="text-white fw-bold mb-3 text-uppercase small"><i class="bi bi-robot text-primary me-2"></i>AVIS DE L'EXPERT</h5><p id="finance-expert-advice" class="expert-text text-white-50 mb-0">Analyse de la solvabilité...</p></div>
+        <div class="premium-card mb-5" style="background: rgba(138, 43, 226, 0.05); border-left: 4px solid var(--primary-glow);"><h5 class="text-white fw-bold mb-3 text-uppercase small"><i class="bi bi-robot text-primary me-2"></i>NOTE DE TRESORERIE</h5><p id="finance-expert-advice" class="expert-text text-white-50 mb-0">Audit de solvabilité...</p></div>
     </div>
 
     <div id="tab-goals" class="tab-pane">
@@ -263,7 +263,7 @@
                     <button class="btn-focus-trigger" onclick="openHelp('stock-focus')"><i class="bi bi-eye-fill"></i> VOIR LES ACTIFS CRITIQUES</button>
                 </div>
             </div>
-            <div class="col-md-8"><div class="premium-card" style="background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), transparent); border-left: 4px solid var(--primary-glow);"><h5 class="text-white fw-bold mb-3 text-uppercase small"><i class="bi bi-robot me-2 text-primary"></i>AVIS DE L'EXPERT</h5><p id="stock-expert-advice" class="expert-text text-white-50 mb-0">Audit du catalogue...</p></div></div>
+            <div class="col-md-8"><div class="premium-card" style="background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), transparent); border-left: 4px solid var(--primary-glow);"><h5 class="text-white fw-bold mb-3 text-uppercase small"><i class="bi bi-robot me-2 text-primary"></i>AUDIT D'INVENTAIRE</h5><p id="stock-expert-advice" class="expert-text text-white-50 mb-0">Évaluation des actifs...</p></div></div>
         </div>
     </div>
 
@@ -278,7 +278,7 @@
             <div class="col-lg-8"><div class="premium-card"><h6 class="stat-label mb-4" id="analytique-chart-title">Répartition par Jour</h6><div style="height: 380px;"><canvas id="analytiqueChart"></canvas></div></div></div>
             <div class="col-lg-4">
                 <div class="premium-card" style="background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), transparent); border-left: 4px solid var(--primary-glow);">
-                    <h5 class="text-white fw-bold mb-3 text-uppercase small"><i class="bi bi-robot me-2 text-primary"></i>ANALYSE SECTORIELLE</h5>
+                    <h5 class="text-white fw-bold mb-3 text-uppercase small"><i class="bi bi-robot me-2 text-primary"></i>LOGIQUE DE MARCHE</h5>
                     <p id="analytique-expert-advice" class="expert-text text-white-50">Sélectionnez un segment pour analyse...</p>
                 </div>
             </div>
@@ -355,11 +355,15 @@
 
     function updateDashboardAdvice() {
         let adv = "";
-        if (hScore >= 9 && roiAvg >= 30) adv = `OPTIMISATION DE LA RENTABILITÉ : Performance exceptionnelle avec un ROI moyen de ${roiAvg}% et un Health Score de ${hScore}/10. Recommandation : Visez une augmentation du volume de 20% pour décupler vos profits sans sacrifier la marge.`;
-        else if (hScore >= 7 && vol < 3) adv = `ANALYSE DU VOLUME : Bien que qualitatif (Health Score ${hScore}/10), votre volume (${vol} ventes) limite votre croissance. Diversifiez votre inventaire avec des modèles à rotation plus rapide.`;
-        else if (hScore >= 5 && roiAvg < 15) adv = `RESTRUCTURATION DES MARGES : Volume soutenu mais ROI de ${roiAvg}% inférieur aux standards. Allouez une part plus importante de votre budget à des actifs à plus forte valeur ajoutée (ROI > 20%).`;
-        else if (hScore < 4) adv = `AUDIT DE VIABILITÉ : Alerte : Health Score de ${hScore}/10 indique une fragilité structurelle. Suspendez toute nouvelle acquisition et liquidez les actifs les moins performants.`;
-        else adv = `STABILITÉ STRATÉGIQUE : Activité saine et équilibrée. Avec un ROI de ${roiAvg}% et une gestion cohérente, votre structure est prête pour explorer de nouveaux segments de marché.`;
+        if (hScore >= 8.5) {
+            adv = `DOMINATION DU MARCHÉ : Votre efficience opérationnelle est excellente (${hScore}/10). Recommandation : Votre ROI de ${roiAvg.toFixed(1)}% est supérieur à la moyenne. C'est le moment d'augmenter votre levier financier en réinvestissant 90% de vos profits dans du stock à haute vélocité.`;
+        } else if (hScore >= 6) {
+            adv = `CROISSANCE ÉQUILIBRÉE : Structure saine. Pour franchir un palier, analysez vos ${vol} ventes : si 20% de vos modèles génèrent 80% du profit, spécialisez votre inventaire sur ces niches spécifiques pour optimiser votre temps de gestion.`;
+        } else if (hScore >= 4) {
+            adv = `OPTIMISATION NÉCESSAIRE : Attention, votre ratio volume/rentabilité est sous-optimal. Stratégie : Réduisez vos frais d'acquisition ou ciblez des plateformes avec moins de commissions pour protéger votre marge nette.`;
+        } else {
+            adv = `ALERTE DE VIABILITÉ : Votre Health Score (${hScore}/10) indique un risque structurel. Conseil : Liquidez immédiatement le stock dormant (plus de 45j) même avec une marge réduite pour récupérer du cash et assainir votre trésorerie.`;
+        }
         const adviceBox = document.getElementById('dashboard-expert-advice');
         if(adviceBox) adviceBox.innerText = adv;
     }
@@ -384,14 +388,25 @@
         if(el1y) el1y.innerText = Math.round(proj1y).toLocaleString() + "€";
 
         const financeAdvice = document.getElementById('finance-expert-advice');
-        if(financeAdvice) financeAdvice.innerText = `CONTRÔLE DE TRÉSORERIE : Votre capital total s'élève à ${total.toFixed(2)}€. Vos projections prévoient une capitalisation de ${(total + (dailyProf * 30)).toFixed(2)}€ d'ici 30 jours, basée sur l'ajout linéaire de votre profit journalier moyen.`;
+        if(financeAdvice) {
+            let ratioStock = (staticStock / total) * 100;
+            let msg = `SOLVABILITÉ : Votre capital est immobilisé à ${ratioStock.toFixed(0)}% dans le stock. `;
+            if(ratioStock > 70) msg += "Attention à la sur-exposition : conservez au moins 25% de cash pour saisir les opportunités 'quick-buy' du marché.";
+            else msg += "Excellent équilibre cash/stock. Vous disposez d'une force de frappe suffisante pour des acquisitions stratégiques sans risquer l'asphyxie financière.";
+            financeAdvice.innerText = msg;
+        }
     }
 
     function updateStockAdvice() {
         const age = {{ stock_avg_age|tojson }};
         const pLat = {{ profit_latent|tojson }};
         const stockAdvice = document.getElementById('stock-expert-advice');
-        if(stockAdvice) stockAdvice.innerText = `AUDIT D'INVENTAIRE : Rotation moyenne de ${age} jours avec un profit latent de +${pLat.toFixed(2)}€. Votre structure est cohérente avec les standards. Un suivi des unités approchant les 45 jours est conseillé.`;
+        if(stockAdvice) {
+            let msg = "";
+            if(age > 40) msg = `VÉLOCITÉ CRITIQUE : Votre rotation moyenne (${age} jours) ralentit votre Cash-to-Cash cycle. Recommandation : Initiez une campagne de promotion sur les articles de +30 jours pour libérer du capital.`;
+            else msg = `FLUX OPTIMAL : Rotation à ${age} jours avec un profit latent de ${pLat.toFixed(2)}€. Votre catalogue est frais et attractif. Continuez sur ce rythme d'acquisition.`;
+            stockAdvice.innerText = msg;
+        }
     }
 
     let analytiqueChart = null;
@@ -417,17 +432,17 @@
             title = "Répartition par Jour"; labels = dayNames;
             for(let i=0; i<7; i++) { profits.push(daysData[i].profit); counts.push(daysData[i].count); }
             const bestDay = labels[profits.indexOf(Math.max(...profits))];
-            advice = `ANALYSE DE SAISONNALITÉ : Votre pic de rentabilité est observé le ${bestDay}. Stratégie : Concentrez vos publications d'annonces 24h avant ce pic pour maximiser la visibilité lors de la phase d'achat critique.`;
+            advice = `LOGIQUE TEMPORELLE : Le ${bestDay} est votre pic de conversion. Stratégie : Programmez vos bumps et mises en avant le soir précédent pour capturer l'audience au moment où elle est la plus disposée à dépenser.`;
         } else if (type === 'sizes') {
             title = "Répartition par Taille"; labels = Object.keys(sizesData);
             labels.forEach(k => { profits.push(sizesData[k].profit); counts.push(sizesData[k].count); });
             const bestSize = labels[profits.indexOf(Math.max(...profits))];
-            advice = `OPTIMISATION DU CATALOGUE : La taille ${bestSize} génère votre plus fort profit net. Recommandation : Allouez 40% de votre capital sur ce segment pour sécuriser une rotation à haute vélocité.`;
+            advice = `CONCENTRATION DE DEMANDE : La taille ${bestSize} est votre 'best-seller' en profit. Ne sous-estimez pas la profondeur de stock sur ce segment : un euro investi ici tourne plus vite que sur n'importe quel autre segment.`;
         } else {
             title = "Répartition par Plateforme"; labels = Object.keys(platformsData);
             labels.forEach(k => { profits.push(platformsData[k].profit); counts.push(platformsData[k].count); });
             const bestPlat = labels[profits.indexOf(Math.max(...profits))];
-            advice = `EFFICIENCE DES CANAUX : ${bestPlat} s'impose comme votre canal dominant. Analyse : Ce canal offre le meilleur ratio visibilité/frais. Priorisez-y vos actifs 'Haute Valeur' pour optimiser votre marge nette.`;
+            advice = `DOMINATION CANAL : ${bestPlat} génère votre meilleure marge. Si les autres canaux sont à la traîne, n'hésitez pas à y augmenter vos prix de 5% pour tester l'élasticité de la demande avant de diversifier.`;
         }
         const chartTitle = document.getElementById('analytique-chart-title');
         if(chartTitle) chartTitle.innerText = title;

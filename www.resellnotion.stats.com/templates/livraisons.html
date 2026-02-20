@@ -4,7 +4,7 @@
 
 {% block content %}
 <style>
-    /* --- STYLES SYSTÈME CONSERVÉS & OPTIMISÉS --- */
+    /* --- STYLES SYSTÈME CONSERVÉS --- */
     body {
         background-color: #0b0e14;
         color: #f8f9fa;
@@ -80,11 +80,10 @@
 
     .log-console {
         background: #000; color: #00ff41; font-family: 'Courier New', monospace;
-        padding: 15px; border-radius: 12px; font-size: 0.8rem; height: 180px;
+        padding: 15px; border-radius: 12px; font-size: 0.8rem; height: 250px;
         overflow-y: auto; border: 1px solid #333; text-align: left;
     }
 
-    /* PANNEAU D'ACTION LATÉRAL */
     #actionPanelLogistique {
         position: fixed; top: 0; right: -100%; width: 400px; max-width: 100%; height: 100vh;
         background: rgba(11, 14, 20, 0.98); backdrop-filter: blur(20px);
@@ -97,23 +96,19 @@
         .container { padding-top: 20px; }
         .stat-numb { font-size: 1.5rem; }
         .delivery-card { padding: 15px; }
-        .log-console { height: 150px; }
-    }
-
-    @media (max-width: 576px) {
-        .row.g-4 { --bs-gutter-y: 1rem; }
-        .col-6 { padding-left: 5px; padding-right: 5px; }
-        .delivery-card .fw-bold { font-size: 0.9rem; }
-        .stat-numb { font-size: 1.3rem; }
-        .info-box .small { font-size: 0.6rem; }
-        .info-box .fw-bold { font-size: 0.8rem; }
+        .log-console { height: 200px; }
     }
 </style>
 
 <div class="container py-4">
-    <div class="mb-4 mb-md-5 text-center text-md-start">
-        <h1 class="text-white fw-bold">📦 Gestion Logistique</h1>
-        <p class="text-muted">Suivi des flux de marchandises en temps réel.</p>
+    <div class="mb-4 mb-md-5 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div class="text-center text-md-start">
+            <h1 class="text-white fw-bold m-0">📦 Gestion Logistique</h1>
+            <p class="text-muted m-0">Suivi des flux de marchandises en temps réel.</p>
+        </div>
+        <button id="btnUpdateAll" onclick="updateAllTracking()" class="btn btn-primary rounded-pill px-4 fw-bold shadow">
+            <i class="bi bi-arrow-repeat me-2"></i>Actualiser tout le transit
+        </button>
     </div>
 
     <div class="row g-3 g-md-4 mb-4 mb-md-5">
@@ -133,44 +128,30 @@
 
     <div class="row g-4 mb-5">
         <div class="col-lg-6">
-            <h5 class="fw-bold mb-3 mb-md-4 d-flex align-items-center"><i class="bi bi-box-seam me-2 text-primary"></i>Entrants <span class="d-none d-sm-inline ms-1">(En transit)</span></h5>
+            <h5 class="fw-bold mb-3 mb-md-4 d-flex align-items-center"><i class="bi bi-box-seam me-2 text-primary"></i>Entrants</h5>
             {% for item in incoming %}
-            <div class="delivery-card"
-                 onclick="handleTrackerClick(this)"
-                 data-id="{{ item.id }}"
-                 data-type="product"
-                 data-name="{{ item.name }}"
-                 data-num="{{ item.tracking_number }}"
-                 data-tracking='{{ item.tracking_data | tojson | safe if item.tracking_data else "" }}'>
+            <div class="delivery-card" onclick="handleTrackerClick(this)" data-id="{{ item.id }}" data-type="product" data-name="{{ item.name }}" data-num="{{ item.tracking_number }}" data-status="{{ item.shipping_status }}" data-tracking='{{ item.tracking_data | tojson | safe if item.tracking_data else "" }}'>
                 <div class="d-flex align-items-center gap-3">
                     <img src="{{ item.image_url or '' }}" class="rounded-3" style="width: 50px; height: 50px; min-width: 50px; object-fit: contain; background: #1a1a2e; padding: 5px;" onerror="this.src='https://placehold.co/50x50/1a1a2e/white?text=Box'">
                     <div class="flex-grow-1 min-width-0">
                         <div class="fw-bold text-truncate mb-1">{{ item.name }}</div>
-                        <span class="badge bg-dark border border-secondary text-primary" style="font-size: 0.6rem;">{{ "%.2f"|format(item.price) }} €</span>
+                        <span class="badge bg-dark border border-secondary text-primary">{{ "%.2f"|format(item.price) }} €</span>
                     </div>
-                    <div class="text-end ps-2"><i class="bi bi-three-dots-vertical opacity-50"></i></div>
                 </div>
             </div>
             {% endfor %}
         </div>
 
         <div class="col-lg-6">
-            <h5 class="fw-bold mb-3 mb-md-4 d-flex align-items-center"><i class="bi bi-send me-2 text-success"></i>Sortants <span class="d-none d-sm-inline ms-1">(En transit)</span></h5>
+            <h5 class="fw-bold mb-3 mb-md-4 d-flex align-items-center"><i class="bi bi-send me-2 text-success"></i>Sortants</h5>
             {% for item in outgoing %}
-            <div class="delivery-card"
-                 onclick="handleTrackerClick(this)"
-                 data-id="{{ item.id }}"
-                 data-type="sale"
-                 data-name="{{ item.name }}"
-                 data-num="{{ item.tracking_number }}"
-                 data-tracking='{{ item.tracking_data | tojson | safe if item.tracking_data else "" }}'>
+            <div class="delivery-card" onclick="handleTrackerClick(this)" data-id="{{ item.id }}" data-type="sale" data-name="{{ item.name }}" data-num="{{ item.tracking_number }}" data-status="{{ item.shipping_status }}" data-tracking='{{ item.tracking_data | tojson | safe if item.tracking_data else "" }}'>
                 <div class="d-flex align-items-center gap-3">
                     <div class="rounded-3 d-flex align-items-center justify-content-center bg-dark" style="width: 50px; height: 50px; min-width: 50px;"><i class="bi bi-tag text-success fs-5"></i></div>
                     <div class="flex-grow-1 min-width-0">
                         <div class="fw-bold text-truncate mb-1">{{ item.name }}</div>
-                        <span class="badge bg-dark border border-secondary text-success" style="font-size: 0.6rem;">{{ "%.2f"|format(item.price) }} €</span>
+                        <span class="badge bg-dark border border-secondary text-success">{{ "%.2f"|format(item.price) }} €</span>
                     </div>
-                    <div class="text-end ps-2"><i class="bi bi-three-dots-vertical opacity-50"></i></div>
                 </div>
             </div>
             {% endfor %}
@@ -182,26 +163,24 @@
         <div class="row g-2 g-md-3">
             {% for item in delivered %}
             <div class="col-6 col-md-4">
-                <div class="delivery-card delivered-card h-100 mb-0"
-                     onclick="handleTrackerClick(this)"
-                     data-id="{{ item.id }}"
-                     data-type="{{ item.type }}"
-                     data-name="{{ item.name }}"
-                     data-num="{{ item.tracking_number }}"
-                     data-tracking='{{ item.tracking_data | tojson | safe if item.tracking_data else "" }}'>
+                <div class="delivery-card delivered-card h-100 mb-0" onclick="handleTrackerClick(this)" data-id="{{ item.id }}" data-type="{{ item.type }}" data-name="{{ item.name }}" data-num="{{ item.tracking_number }}" data-status="{{ item.shipping_status }}" data-tracking='{{ item.tracking_data | tojson | safe if item.tracking_data else "" }}'>
                     <div class="d-flex align-items-center gap-2">
-                        {% if item.type == 'product' %}
-                            <img src="{{ item.image_url or '' }}" class="rounded-2 d-none d-sm-block" style="width: 30px; height: 30px; object-fit: contain; background: #1a1a2e; padding: 2px;" onerror="this.src='https://placehold.co/30x30/1a1a2e/white?text=B'">
-                        {% else %}
-                            <i class="bi bi-tag text-success d-none d-sm-block"></i>
-                        {% endif %}
                         <div class="flex-grow-1 text-truncate small fw-bold">{{ item.name }}</div>
-                        <div class="small opacity-50"><i class="bi bi-three-dots-vertical"></i></div>
                     </div>
                 </div>
             </div>
             {% endfor %}
         </div>
+    </div>
+</div>
+
+<div id="globalMonitorModal" class="cashback-modal-overlay">
+    <div class="cashback-modal-content">
+        <h4 class="fw-bold mb-3"><i class="bi bi-terminal me-2 text-primary"></i>Quantum Monitor</h4>
+        <div class="log-console mb-3" id="globalLogBox"></div>
+        <p id="globalStatusText" class="text-center text-muted small mb-3">En attente...</p>
+        <div id="globalSpinner" class="text-center mb-3"><div class="spinner-border text-primary spinner-border-sm"></div></div>
+        <button id="btnFinishGlobal" class="btn btn-primary w-100 fw-bold d-none" onclick="location.reload()">RECHARGER LA PAGE</button>
     </div>
 </div>
 
@@ -211,54 +190,27 @@
         <button onclick="closeActionPanel()" class="btn btn-link text-muted p-0"><i class="bi bi-x-lg fs-5"></i></button>
     </div>
     <div class="premium-card mb-4" style="height: auto;">
-        <h5 id="panelItemName" class="text-primary fw-bold mb-1" style="word-break: break-word;"></h5>
+        <h5 id="panelItemName" class="text-primary fw-bold mb-1"></h5>
         <p id="panelTrackingNum" class="text-muted small mb-3"></p>
-        <button onclick="openTrackerFromPanel()" class="btn btn-outline-info w-100 btn-sm fw-bold mb-2">
-            <i class="bi bi-eye me-2"></i>Voir le suivi détaillé
-        </button>
+        <button onclick="openTrackerFromPanel()" class="btn btn-outline-info w-100 btn-sm fw-bold">Voir le suivi détaillé</button>
     </div>
-    <div class="d-grid gap-2 mb-4">
-        <button onclick="updateLogisticStatus('delivered')" class="btn btn-success py-3 fw-bold">
-            <i class="bi bi-check-circle me-2"></i>Marquer comme Livré
-        </button>
-    </div>
-    <div class="d-grid gap-2">
-        <button onclick="updateLogisticStatus('remove')" class="btn btn-outline-danger py-2">
-            <i class="bi bi-trash me-2"></i>Retirer de la logistique
-        </button>
-    </div>
+    <button onclick="updateLogisticStatus('delivered')" class="btn btn-success w-100 py-3 fw-bold mb-2">Marquer comme Livré</button>
+    <button onclick="updateLogisticStatus('remove')" class="btn btn-outline-danger w-100 py-2">Retirer</button>
 </div>
 
 <div id="trackerModal" class="cashback-modal-overlay">
     <div class="cashback-modal-content">
         <button class="cashback-modal-close" onclick="closeTracker()">&times;</button>
-
         <div id="scanSection" style="display: none;">
             <h4 class="fw-bold mb-3"><i class="bi bi-search me-2"></i>Analyse Logistique</h4>
             <div class="log-console mb-3" id="logBox"></div>
             <div class="text-center"><div class="spinner-border text-primary spinner-border-sm"></div></div>
         </div>
-
         <div id="uiSection" style="display: none;">
-            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-                <h4 class="fw-bold m-0" id="resStatus">Statut</h4>
-                <button onclick="startFreshScan()" class="btn btn-dark btn-sm rounded-pill border-secondary px-3">
-                    <i class="bi bi-arrow-clockwise me-1"></i><span class="d-none d-sm-inline">Actualiser</span>
-                </button>
-            </div>
-
-            <p class="text-white-50 small mb-1" id="resDetail">Dernière mise à jour...</p>
+            <h4 class="fw-bold m-0" id="resStatus">Statut</h4>
             <div class="progress-track"><div class="progress-bar-neon" id="resBar" style="width: 0%"></div></div>
-
-            <div class="row g-2 mb-4">
-                <div class="col-6"><div class="info-box"><div class="small opacity-50">Transit</div><div class="fw-bold" id="resDays">--</div></div></div>
-                <div class="col-6"><div class="info-box"><div class="small opacity-50">Transporteur</div><div class="fw-bold text-truncate" id="resCourier">--</div></div></div>
-            </div>
-
-            <h6 class="text-uppercase small fw-bold mb-3" style="letter-spacing: 1px; color: #8a2be2;">Chronologie</h6>
-            <div id="resTimeline" style="max-height: 200px; overflow-y: auto; padding-right: 10px;"></div>
-
-            <button class="btn btn-primary w-100 fw-bold mt-4 py-2" onclick="location.reload()">TERMINER</button>
+            <div id="resTimeline" style="max-height: 200px; overflow-y: auto;"></div>
+            <button class="btn btn-primary w-100 fw-bold mt-4" onclick="location.reload()">TERMINER</button>
         </div>
     </div>
 </div>
@@ -267,71 +219,27 @@
     let activeId, activeType, activeNum, activeData;
 
     function handleTrackerClick(element) {
-        activeId = element.dataset.id;
-        activeType = element.dataset.type;
-        activeNum = element.dataset.num;
-        activeData = element.dataset.tracking;
-
+        activeId = element.dataset.id; activeType = element.dataset.type; activeNum = element.dataset.num; activeData = element.dataset.tracking;
         document.getElementById('panelItemName').innerText = element.dataset.name;
         document.getElementById('panelTrackingNum').innerText = activeNum;
         document.getElementById('actionPanelLogistique').classList.add('show');
     }
 
-    function closeActionPanel() {
-        document.getElementById('actionPanelLogistique').classList.remove('show');
-    }
+    function closeActionPanel() { document.getElementById('actionPanelLogistique').classList.remove('show'); }
 
     function openTrackerFromPanel() {
         closeActionPanel();
         document.getElementById('trackerModal').style.display = 'flex';
-
         if (activeData && activeData.trim() !== "") {
-            try {
-                const data = JSON.parse(activeData);
-                renderPremiumUI(data);
-            } catch (e) {
-                startFreshScan();
-            }
-        } else {
-            startFreshScan();
-        }
-    }
-
-    async function updateLogisticStatus(action) {
-        if (!confirm("Confirmer cette action ?")) return;
-
-        try {
-            const res = await fetch('/api/logistic-update', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    item_id: activeId,
-                    item_type: activeType,
-                    action: action
-                })
-            });
-            const result = await res.json();
-            if (result.success) location.reload();
-            else alert("Erreur: " + result.message);
-        } catch (e) {
-            alert("Erreur réseau");
-        }
-    }
-
-    function closeTracker() {
-        document.getElementById('trackerModal').style.display = 'none';
+            try { renderPremiumUI(JSON.parse(activeData)); } catch (e) { startFreshScan(); }
+        } else { startFreshScan(); }
     }
 
     function renderPremiumUI(data) {
         document.getElementById('scanSection').style.display = 'none';
         document.getElementById('uiSection').style.display = 'block';
-
-        document.getElementById('resStatus').innerText = data.statusPlaceholder || "Suivi";
-        document.getElementById('resDetail').innerText = data.statusLabel || "En transit";
-        document.getElementById('resCourier').innerText = data.couriers?.[0]?.name || "Inconnu";
+        document.getElementById('resStatus').innerText = data.statusLabel || "En transit";
         document.getElementById('resBar').style.width = (data.statusProgressPercentage || 0) + "%";
-        document.getElementById('resDays').innerText = (data.daysInTransit || 0) + " Jours";
-
         const timeline = document.getElementById('resTimeline');
         timeline.innerHTML = '';
         (data.steps || []).forEach(step => {
@@ -347,7 +255,6 @@
         document.getElementById('scanSection').style.display = 'block';
         const box = document.getElementById('logBox');
         box.innerHTML = `> Connexion Tunnel Quantum [${activeType}]...`;
-
         try {
             const res = await fetch('/api/track-live', {
                 method: 'POST',
@@ -355,14 +262,91 @@
                 body: JSON.stringify({tracking_number: activeNum, save: true, item_id: activeId, item_type: activeType})
             });
             const result = await res.json();
-            if (result.success) {
-                renderPremiumUI(result.full_data);
-            } else {
-                box.innerHTML += `<br>> ERREUR : ${result.message}`;
+            if (result.success) renderPremiumUI(result.full_data);
+            else box.innerHTML += `<br>> ERREUR : ${result.message}`;
+        } catch (e) { box.innerHTML += `<br>> ERREUR RÉSEAU.`; }
+    }
+
+    async function updateAllTracking() {
+        const modal = document.getElementById('globalMonitorModal');
+        const logBox = document.getElementById('globalLogBox');
+        const statusText = document.getElementById('globalStatusText');
+        const spinner = document.getElementById('globalSpinner');
+        const btnFinish = document.getElementById('btnFinishGlobal');
+
+        if (!confirm("Actualiser les colis 'En transit' ?")) return;
+
+        modal.style.display = 'flex';
+        logBox.innerHTML = `> Scan initial de la base de données...`;
+
+        try {
+            const listRes = await fetch('/api/get-transit-list');
+            const listData = await listRes.json();
+
+            // FILTRE : Uniquement "En transit" ou Statut Vide (cas d'un nouveau colis)
+            const items = listData.items.filter(i =>
+                i.shipping_status === 'En transit' ||
+                !i.shipping_status ||
+                i.shipping_status === ''
+            );
+
+            logBox.innerHTML += `<br>> ${items.length} colis éligibles identifiés.`;
+
+            if (items.length === 0) {
+                logBox.innerHTML += `<br>> Aucun colis actif à mettre à jour.`;
+                statusText.innerText = "Fin de séquence.";
+                btnFinish.classList.remove('d-none');
+                spinner.style.display = 'none';
+                return;
             }
+
+            let completed = 0;
+            const chunkSize = 5;
+
+            for (let i = 0; i < items.length; i += chunkSize) {
+                const chunk = items.slice(i, i + chunkSize);
+                const promises = chunk.map(async (item) => {
+                    logBox.innerHTML += `<br>> [SYNC] ${item.name}...`;
+                    logBox.scrollTop = logBox.scrollHeight;
+                    try {
+                        const res = await fetch('/api/track-live', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({tracking_number: item.tracking_number, save: true, item_id: item.id, item_type: item.type})
+                        });
+                        const data = await res.json();
+                        completed++;
+                        logBox.innerHTML += `<br> <span style="color:#00ffa3;">> MAJ: ${item.name} (${data.status})</span>`;
+                    } catch (e) {
+                        completed++;
+                        logBox.innerHTML += `<br> <span style="color:#ff4d4d;">> ERR: ${item.name}</span>`;
+                    }
+                    statusText.innerText = `Progression : ${completed}/${items.length}`;
+                    logBox.scrollTop = logBox.scrollHeight;
+                });
+                await Promise.all(promises);
+            }
+
+            logBox.innerHTML += `<br><br>> --- SYNCHRONISATION TERMINÉE ---`;
+            btnFinish.classList.remove('d-none');
+
         } catch (e) {
-            box.innerHTML += `<br>> ERREUR RÉSEAU.`;
+            logBox.innerHTML += `<br>> ERREUR CRITIQUE.`;
+            btnFinish.classList.remove('d-none');
+        } finally {
+            spinner.style.display = 'none';
         }
+    }
+
+    function closeTracker() { document.getElementById('trackerModal').style.display = 'none'; }
+    async function updateLogisticStatus(action) {
+        if (!confirm("Confirmer ?")) return;
+        const res = await fetch('/api/logistic-update', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({item_id: activeId, item_type: activeType, action: action})
+        });
+        if ((await res.json()).success) location.reload();
     }
 </script>
 {% endblock %}
