@@ -159,6 +159,9 @@
         .stat-header i { font-size: 1.2rem; color: var(--primary-glow); }
         .stat-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; color: #8e9297; }
         .stat-value { font-size: 1.4rem; font-weight: 800; color: #fff; margin-bottom: 4px; display: block; }
+        .stat-header i { font-size: 1.2rem; color: var(--primary-glow); }
+        .stat-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; color: #8e9297; }
+        .stat-value { font-size: 1.4rem; font-weight: 800; color: #fff; margin-bottom: 4px; display: block; }
         .stat-message { font-size: 0.75rem; color: #f8f9fa; opacity: 0.75; line-height: 1.4; margin: 0; }
         #overlay-content-box { transition: opacity 0.4s; }
 
@@ -212,6 +215,7 @@
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('statistics') }}"><i class="bi bi-graph-up"></i> Stats</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('storage') }}"><i class="bi bi-cloud"></i> Storage</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('livraisons') }}"><i class="bi bi-truck"></i> Livraisons</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('community') }}"><i class="bi bi-people"></i> Community</a></li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Inventaire</a>
                             <ul class="dropdown-menu">
@@ -272,6 +276,7 @@
                 <a href="{{ url_for('statistics') }}" class="mobile-nav-link"><i class="bi bi-activity"></i> Statistiques</a>
                 <a href="{{ url_for('storage') }}" class="mobile-nav-link"><i class="bi bi-cloud"></i> Storage</a>
                 <a href="{{ url_for('livraisons') }}" class="mobile-nav-link"><i class="bi bi-truck"></i> Livraisons</a>
+                <a href="{{ url_for('community') }}" class="mobile-nav-link"><i class="bi bi-people"></i> Community</a>
             </div>
             <div class="mobile-nav-group">
                 <span class="mobile-nav-label">Inventaire</span>

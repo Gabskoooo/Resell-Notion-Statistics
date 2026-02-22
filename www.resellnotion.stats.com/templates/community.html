@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}Trouver un produit | ResellNotion{% endblock %}
+
+{% block content %}
+<style>
+    /* --- DESIGN SYSTEM CYBER PREMIUM --- */
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --primary-glow: #8a2be2;
+        --success-glow: #00ffa3;
+    }
+
+    /* --- LAYOUT & TITRES --- */
+    .header-section { margin-bottom: 40px; }
+    h2 { font-size: clamp(1.8rem, 5vw, 2.8rem); font-weight: 800; color: #fff; letter-spacing: -1px; }
+    .subtitle { color: #8e9297; font-weight: 500; font-size: 1rem; }
+
+    /* --- FILTRES PREMIUM --- */
+    .filter-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        padding: 20px;
+        backdrop-filter: blur(10px);
+        margin-bottom: 40px;
+    }
+    .filter-input {
+        background: rgba(255, 255, 255, 0.02) !important;
+        border: 1px solid var(--glass-border) !important;
+        color: #fff !important;
+        border-radius: 12px !important;
+        padding: 12px 18px;
+        transition: 0.3s;
+    }
+    .filter-input:focus {
+        border-color: var(--primary-glow) !important;
+        box-shadow: 0 0 15px rgba(138, 43, 226, 0.2);
+    }
+
+    /* --- PRODUCT CARDS (CYBER STYLE) --- */
+    .product-card {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 22px;
+        padding: 15px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        height: 100%;
+        backdrop-filter: blur(10px);
+        position: relative;
+        overflow: hidden;
+    }
+    .product-card:hover {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: var(--primary-glow);
+        transform: translateY(-8px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    .card-img-container {
+        aspect-ratio: 1 / 1;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        background: #000;
+        border-radius: 16px;
+        margin-bottom: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.03);
+    }
+    .card-img-top { object-fit: contain; max-height: 100%; width: 100%; transition: 0.5s; }
+    .product-card:hover .card-img-top { transform: scale(1.08); }
+
+    .sku-label { font-size: 0.7rem; font-weight: 800; color: var(--primary-glow); text-transform: uppercase; letter-spacing: 1px; }
+    .product-name { font-size: 0.9rem; font-weight: 700; color: #fff; line-height: 1.3; margin: 4px 0 12px 0; }
+
+    .badge-premium {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        color: #8e9297;
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 5px 10px;
+        border-radius: 8px;
+    }
+
+    /* --- OVERLAYS --- */
+    .card-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.9); backdrop-filter: blur(15px);
+        display: none; align-items: center; justify-content: center;
+        z-index: 2100; opacity: 0; transition: 0.3s;
+    }
+    .card-overlay.show { display: flex; opacity: 1; }
+    .card-overlay-content {
+        background: #0b0e14;
+        border: 1px solid var(--glass-border);
+        padding: 40px;
+        border-radius: 30px;
+        width: 90%;
+        max-width: 480px;
+        text-align: center;
+        position: relative;
+        box-shadow: 0 0 50px rgba(0,0,0,0.8);
+    }
+
+    /* --- CONSENT SPECIFIC --- */
+    #consentOverlay { z-index: 2500; }
+    .consent-icon { font-size: 3.5rem; color: var(--primary-glow); margin-bottom: 20px; text-shadow: 0 0 30px rgba(138, 43, 226, 0.4); }
+    .btn-outline-danger { border: 1px solid #ff4d4d; color: #ff4d4d; background: transparent; }
+    .btn-outline-danger:hover { background: #ff4d4d; color: #fff; }
+
+    .btn-submit {
+        background: linear-gradient(135deg, #00ffa3, #00d4ff);
+        color: #000;
+        border: none;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        transition: 0.3s;
+        box-shadow: 0 0 20px rgba(0, 255, 163, 0.2);
+    }
+    .btn-submit:hover:not(:disabled) { transform: scale(1.02); box-shadow: 0 0 30px rgba(0, 255, 163, 0.4); }
+    .btn-submit:disabled { opacity: 0.6; }
+
+    /* Animations */
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-in { animation: fadeInUp 0.6s ease-out forwards; }
+</style>
+
+<div id="consentOverlay" class="card-overlay {% if not user_consent %}show{% endif %}">
+    <div class="card-overlay-content animate-in">
+        <div class="consent-icon"><i class="bi bi-people-fill"></i></div>
+        <h3 class="text-white fw-bold mb-3">Accès au Réseau</h3>
+        <p class="subtitle mb-4">
+            Pour accéder à la marketplace et contacter d'autres revendeurs, vous devez accepter de partager votre inventaire (SKU, Tailles) et votre contact Discord avec la communauté.
+        </p>
+        <div class="d-grid gap-3">
+            <button class="btn btn-submit py-3 rounded-4" onclick="updateUserConsent(true)">
+                J'ACCEPTE LE PARTAGE
+            </button>
+            <button class="btn btn-outline-danger py-3 rounded-4 fw-bold" onclick="window.location.href='/dashboard'">
+                NON, RETOUR AU TABLEAU DE BORD
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="header-section animate-in d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h2 class="fw-bold mb-1">Place de Marché Community 🤝</h2>
+            <p class="subtitle mb-0">Collaborez avec le réseau ResellNotion et négociez vos stocks en direct.</p>
+        </div>
+        <a href="/create-request" class="btn btn-submit px-4 py-2 rounded-4 d-flex align-items-center gap-2 text-decoration-none">
+            <i class="bi bi-plus-circle-fill fs-5"></i>
+            CRÉER MA DEMANDE
+        </a>
+    </div>
+
+    <div class="filter-card animate-in" style="animation-delay: 0.1s;">
+        <div class="row g-3">
+            <div class="col-md-8">
+                <label class="stat-label mb-2 d-block">Référence Produit</label>
+                <input type="text" id="searchSku" class="form-control filter-input" placeholder="Filtrer par SKU (ex: BQ6472-110)...">
+            </div>
+            <div class="col-md-4">
+                <label class="stat-label mb-2 d-block">Pointure / Taille</label>
+                <input type="text" id="searchSize" class="form-control filter-input" placeholder="Taille...">
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-4" id="productGrid">
+        </div>
+
+    <div id="loading" class="text-center py-5" style="display:none;">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div class="mt-3 stat-label">Analyse des opportunités...</div>
+    </div>
+
+    <div class="text-center mt-5">
+        <button id="loadMoreBtn" class="btn btn-outline-primary px-5 py-3 rounded-pill fw-bold" style="display:none; border-width: 2px;">
+            CHARGER PLUS D'ARTICLES
+        </button>
+    </div>
+</div>
+
+<div id="offerOverlay" class="card-overlay" onclick="if(event.target == this) closeOfferOverlay()">
+    <div class="card-overlay-content">
+        <div class="stat-label mb-2">PROPOSITION COMMERCIALE</div>
+        <h4 id="offTitle" class="text-white fw-bold mb-1">Faire une offre</h4>
+        <p id="offDetails" class="subtitle small mb-4"></p>
+
+        <div class="mt-4">
+            <label class="stat-label mb-3 d-block">Votre prix d'achat proposé (€)</label>
+            <input type="number" id="offerPriceInput" class="form-control filter-input text-center fs-3 py-3 mb-4" placeholder="0.00" style="border-radius: 16px !important;">
+
+            <button class="btn btn-submit w-100 py-3 rounded-4" onclick="submitOffer()">
+                TRANSMETTRE LA PROPOSITION
+            </button>
+
+            <button class="btn btn-link text-muted mt-3 w-100 text-decoration-none small fw-bold" onclick="closeOfferOverlay()">
+                ANNULER LA NÉGOCIATION
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentPage = 1;
+let currentProduct = {};
+let searchTimeout;
+
+// 0. GESTION DU CONSENTEMENT
+async function updateUserConsent(agree) {
+    try {
+        const response = await fetch('/api/update-consent', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ agree: agree })
+        });
+
+        if (response.ok) {
+            document.getElementById('consentOverlay').classList.remove('show');
+            loadProducts(false);
+        }
+    } catch (e) {
+        alert("Erreur lors de la mise à jour de vos préférences.");
+    }
+}
+
+// 1. CHARGEMENT DES PRODUITS
+async function loadProducts(append = false) {
+    // On bloque le chargement si l'utilisateur n'a pas consenti
+    if (document.getElementById('consentOverlay').classList.contains('show')) return;
+
+    if (!append) {
+        currentPage = 1;
+        document.getElementById('productGrid').innerHTML = '';
+    }
+
+    const sku = document.getElementById('searchSku').value;
+    const size = document.getElementById('searchSize').value;
+    document.getElementById('loading').style.display = 'block';
+
+    try {
+        const response = await fetch(`/api/products?page=${currentPage}&sku=${sku}&size=${size}`);
+        const data = await response.json();
+
+        document.getElementById('loading').style.display = 'none';
+        renderProducts(data.products, append);
+
+        const loadMoreBtn = document.getElementById('loadMoreBtn');
+        loadMoreBtn.style.display = data.has_more ? 'inline-block' : 'none';
+    } catch (e) {
+        console.error("Erreur de chargement:", e);
+    }
+}
+
+// 2. AFFICHAGE DES CARTES
+function renderProducts(products, append) {
+    const grid = document.getElementById('productGrid');
+    let html = '';
+
+    products.forEach((p, index) => {
+        const safeName = p.name.replace(/'/g, "\\'");
+        const delay = (index % 10) * 0.05;
+
+        html += `
+            <div class="col animate-in" style="animation-delay: ${delay}s;">
+                <div class="product-card"
+                     onclick="openOfferOverlay('${safeName}', '${p.sku}', '${p.size}', '${p.purchase_price}', '${p.owner_discord_id}')">
+                    <div class="card-img-container p-3">
+                        <img src="${p.image_url}" class="card-img-top" onerror="this.src='https://placehold.co/400x400/0b0e14/ffffff?text=ResellNotion'">
+                    </div>
+                    <div class="px-1">
+                        <div class="sku-label">${p.sku}</div>
+                        <h6 class="product-name text-truncate" title="${p.name}">${p.name}</h6>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <span class="badge-premium">Taille: ${p.size}</span>
+                            <span class="stat-label" style="font-size:0.6rem">Stock: ${p.quantity}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    if (append) grid.innerHTML += html;
+    else grid.innerHTML = html || '<div class="col-12 text-center text-muted py-5">Aucune opportunité ne correspond à vos filtres.</div>';
+}
+
+// 3. GESTION DE L'OVERLAY
+function openOfferOverlay(name, sku, size, purchasePrice, ownerId) {
+    currentProduct = { name, sku, size, purchase_price: purchasePrice, owner_discord_id: ownerId };
+
+    document.getElementById('offTitle').innerText = name;
+    document.getElementById('offDetails').innerText = `${sku} • Taille ${size}`;
+    document.getElementById('offerPriceInput').value = "";
+    document.getElementById('offerOverlay').classList.add('show');
+}
+
+function closeOfferOverlay() {
+    document.getElementById('offerOverlay').classList.remove('show');
+}
+
+// 4. ENVOI DE L'OFFRE
+async function submitOffer() {
+    const price = document.getElementById('offerPriceInput').value;
+    if(!price || price <= 0) return alert("Veuillez entrer une proposition d'achat valide.");
+
+    const btn = event.target;
+    const originalText = btn.innerText;
+    btn.disabled = true;
+    btn.innerText = "TRANSMISSION...";
+
+    try {
+        const response = await fetch('/send-offer', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                price: price,
+                product_name: currentProduct.name,
+                purchase_price: currentProduct.purchase_price,
+                owner_discord_id: currentProduct.owner_discord_id
+            })
+        });
+
+        if(response.ok) {
+            alert("✅ Succès ! Votre offre a été transmise au vendeur via Discord.");
+            closeOfferOverlay();
+        } else {
+            alert("❌ Échec de la transmission. Veuillez réessayer.");
+        }
+    } catch (e) {
+        alert("❌ Erreur de connexion au serveur.");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = originalText;
+    }
+}
+
+// 5. EVENT LISTENERS
+[document.getElementById('searchSku'), document.getElementById('searchSize')].forEach(el => {
+    el.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => loadProducts(false), 400);
+    });
+});
+
+document.getElementById('loadMoreBtn').addEventListener('click', () => {
+    currentPage++;
+    loadProducts(true);
+});
+
+// Chargement initial uniquement si l'utilisateur a déjà consenti
+if (!document.getElementById('consentOverlay').classList.contains('show')) {
+    loadProducts();
+}
+</script>
+{% endblock %}

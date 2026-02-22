@@ -26,8 +26,9 @@ import requests
 from flask import session, redirect, request, url_for, flash
 from flask import Response, stream_with_context, jsonify, request, g, flash, redirect, url_for
 from flask_mail import Mail, Message
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 import io
+import datetime
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
@@ -221,10 +222,11 @@ def send_gmail_stats(recipient_email, subject, html_body):
         return False
 
 class UserSession:
-    def __init__(self, user_id, username, discord_id=None):
+    def __init__(self, user_id, username, discord_id=None, community_consent=False):
         self.id = user_id
         self.username = username  # <-- C'est cette ligne qui manque !
         self.discord_id = discord_id
+        self.community_consent = community_consent
 
     def get_id(self): return str(self.id)
     def is_active(self): return True
@@ -480,6 +482,129 @@ def get_db():
     return g.db
 
 
+def get_user_language(user_id):
+    """Vérifie les rôles de l'utilisateur sur le serveur pour déterminer la langue."""
+    url = f"https://discord.com/api/v10/guilds/{GUILD_ID}/members/{user_id}"
+    headers = {"Authorization": f"Bot {BOT_TOKEN}"}
+
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            member_data = response.json()
+            roles = member_data.get('roles', [])
+
+            if ROLE_EN in roles:
+                return "EN"
+            # Par défaut ou si rôle FR présent
+            return "FR"
+    except Exception as e:
+        print(f"Erreur vérification rôles: {e}")
+    return "FR"  # Fallback en Français
+
+
+def send_wtb_embed_notification(seller_id, buyer_id, sku, size, price, nego):
+    token = os.getenv("BOT_TOKEN")
+    headers = {
+        "Authorization": f"Bot {token}",
+        "Content-Type": "application/json"
+    }
+
+    # Structure de l'Embed (Design Cyber Purple)
+    embed = {
+        "title": "🎯 New Purchase Offer Detected!",
+        "description": "A member is looking for a product you have in stock. Here are the details:",
+        "color": 9055202,  # Violet / Primary Glow
+        "fields": [
+            {"name": "Product / SKU", "value": f"`{sku}`", "inline": True},
+            {"name": "Size", "value": f"`{size}`", "inline": True},
+            {"name": "Offer Price", "value": f"**{price}€**", "inline": True},
+            {"name": "Negotiable", "value": "✅ Yes" if nego else "❌ No", "inline": True}
+        ],
+        "footer": {"text": "ResellNotion Ecosystem • Community WTB"},
+        "timestamp": datetime.datetime.utcnow().isoformat()
+    }
+
+    # Lien de redirection Discord vers l'acheteur
+    contact_url = f"https://discord.com/channels/@me/{buyer_id}"
+    message_body = f"👋 Hello! You have a potential buyer. [**Click here to message the buyer**]({contact_url})"
+
+    try:
+        # Création du canal privé avec le vendeur
+        channel_res = requests.post(
+            "https://discord.com/api/v10/users/@me/channels",
+            headers=headers,
+            json={"recipient_id": seller_id}
+        )
+        channel_id = channel_res.json().get('id')
+
+        if channel_id:
+            # Envoi de l'Embed
+            requests.post(
+                f"https://discord.com/api/v10/channels/{channel_id}/messages",
+                headers=headers,
+                json={"content": message_body, "embeds": [embed]}
+            )
+    except Exception as e:
+        print(f"Discord Notify Error: {e}")
+
+def send_discord_offer_embed(owner_discord_id, buyer_discord_id, product_name, offer_price, profit):
+    """Construit et envoie un Embed pro et carré."""
+    lang = get_user_language(owner_discord_id)
+
+    # Dictionnaire de traduction
+    strings = {
+        "FR": {
+            "title": "💰 Nouvelle offre reçue !",
+            "product": "Produit",
+            "price": "Prix offert",
+            "profit": "Bénéfice potentiel",
+            "buyer": "Acheteur",
+            "footer": "Réponds à l'acheteur en cliquant sur le lien ci-dessous.",
+            "link_text": "👉 [Clique ici pour discuter](https://discord.com/channels/@me/{id})"
+        },
+        "EN": {
+            "title": "💰 New offer received!",
+            "product": "Product",
+            "price": "Offered Price",
+            "profit": "Potential Profit",
+            "buyer": "Buyer",
+            "footer": "Reply to the buyer by clicking the link below.",
+            "link_text": "👉 [Click here to chat](https://discord.com/channels/@me/{id})"
+        }
+    }
+
+    s = strings[lang]
+
+    # Construction de l'Embed
+    embed = {
+        "title": s["title"],
+        "color": 5814783,  # Couleur bleue/violette pro
+        "fields": [
+            {"name": s["product"], "value": f"`{product_name}`", "inline": False},
+            {"name": s["price"], "value": f"**{offer_price}€**", "inline": True},
+            {"name": s["profit"], "value": f"**+{profit:.2f}€** 📈", "inline": True},
+            {"name": s["buyer"], "value": f"<@{buyer_discord_id}>", "inline": False}
+        ],
+        "description": s["link_text"].format(id=buyer_discord_id),
+        "footer": {"text": s["footer"]},
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    # Envoi via l'API Discord (Création du DM)
+    # 1. Créer le canal DM
+    dm_channel_url = "https://discord.com/api/v10/users/@me/channels"
+    headers = {"Authorization": f"Bot {BOT_TOKEN}", "Content-Type": "application/json"}
+    dm_res = requests.post(dm_channel_url, headers=headers, json={"recipient_id": owner_discord_id})
+
+    if dm_res.status_code == 200:
+        channel_id = dm_res.json()['id']
+        # 2. Envoyer le message avec l'Embed
+        msg_url = f"https://discord.com/api/v10/channels/{channel_id}/messages"
+        res = requests.post(msg_url, headers=headers, json={"embeds": [embed]})
+        return res.status_code == 200
+
+    return False
+
 # Nouvelle fonction pour obtenir une connexion à la DB (retourne un objet connexion psycopg2)
 def get_db_connection():
     result = urlparse(DATABASE_URL)
@@ -536,28 +661,29 @@ def admin_required(f):
 
 @login_manager.user_loader
 def load_user(user_id):
-    conn = g.db
+    # Utilisez get_db() au lieu de g.db pour être sûr d'avoir une connexion active
+    db = get_db()
     cur = None
     try:
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        # On récupère bien id, username et discord_id sur la table "users"
-        cur.execute('SELECT id, username, discord_id FROM "users" WHERE id = %s', (user_id,))
+        cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        # On récupère les 4 colonnes nécessaires
+        cur.execute('SELECT id, username, discord_id, community_consent FROM "users" WHERE id = %s', (user_id,))
         user_data = cur.fetchone()
 
         if user_data:
-            # On passe les 3 arguments : id, username, et discord_id
             return UserSession(
                 user_id=user_data['id'],
                 username=user_data['username'],
-                discord_id=user_data['discord_id']
+                discord_id=user_data.get('discord_id'),
+                community_consent=user_data.get('community_consent', False)
             )
         return None
     except Exception as e:
-        print(f"Erreur load_user: {e}")
+        # Si vous voyez ce message dans votre console, c'est la cause de la boucle
+        print(f"!!! ERREUR CRITIQUE LOAD_USER: {e}")
         return None
     finally:
         if cur: cur.close()
-
 SKU_DATA = []
 SKU_FILE_PATH = os.path.join(ASSETS_DIR, 'sku_img_with_name.json')
 try:
@@ -1028,40 +1154,35 @@ def leaderboard():
 @login_required
 def get_sku_suggestions():
     query = request.args.get('query', '').strip()
-    suggestions = []
     if not query:
-        return jsonify(suggestions)
-    conn = None
+        return jsonify([])
+
+    db = get_db()
+    cur = None
     try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({"error": "Impossible de se connecter à la base de données."}), 500
-        cur = conn.cursor()
+        # On utilise RealDictCursor pour transformer directement les lignes SQL en dictionnaires
+        cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
         search_pattern = f"%{query}%"
-        sql_query = f"""
+
+        # Requête optimisée sur votre table sku_database
+        sql = """
             SELECT sku, image_url, product_name
-            FROM {TABLE_NAME}
+            FROM sku_database
             WHERE sku ILIKE %s OR product_name ILIKE %s
             LIMIT 10;
         """
-        cur.execute(sql_query, (search_pattern, search_pattern))
-        results = cur.fetchall()
-        for row in results:
-            suggestions.append({
-                'sku': row[0],
-                'image_url': row[1],
-                'product_name': row[2]
-            })
-        cur.close()
-        conn.close()
-        return jsonify(suggestions)
-    except Exception as e:
-        print(f"Erreur lors de la récupération des suggestions de SKU : {e}")
-        return jsonify({"error": f"Une erreur est survenue lors de la recherche de SKU: {e}"}), 500
-    finally:
-        if conn:
-            conn.close()
 
+        cur.execute(sql, (search_pattern, search_pattern))
+        suggestions = cur.fetchall()
+
+        return jsonify(suggestions)
+
+    except Exception as e:
+        print(f"Erreur suggestions SKU: {e}")
+        return jsonify({"error": "Erreur lors de la recherche"}), 500
+    finally:
+        if cur: cur.close()
 @app.route('/products/add', methods=('GET', 'POST'))
 @login_required
 def add_product():
@@ -1634,6 +1755,193 @@ def add_sale():
     products = cur.fetchall()
     cur.close()
     return render_template('add_sale.html', products=products, today=date.today())
+
+
+@app.route('/create-request')
+@login_required
+def create_request_page():
+    # On passe le statut de consentement car il faut participer au réseau pour poster
+    return render_template('create_request.html', user_consent=current_user.community_consent)
+
+
+@app.route('/api/save-wtb-requests', methods=['POST'])
+@login_required
+def save_wtb_requests():
+    data = request.json
+    items = data.get('items', [])
+
+    if not items:
+        return jsonify({"success": False, "error": "Aucun article"}), 400
+
+    db = get_db()
+    cur = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    try:
+        for item in items:
+            # 1. Enregistrement de la demande
+            cur.execute("""
+                INSERT INTO wtb_requests (user_id, sku, size, price_requested, is_negotiable)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (current_user.id, item['sku'], item['size'], item['price'], item['negotiable']))
+
+            # 2. Recherche de correspondances chez les utilisateurs CONSENTANTS
+            cur.execute("""
+                SELECT DISTINCT u.discord_id 
+                FROM products p 
+                JOIN users u ON p.user_id = u.id 
+                WHERE p.sku = %s 
+                AND p.size = %s 
+                AND u.community_consent = TRUE 
+                AND u.id != %s
+                AND p.quantity > 0
+            """, (item['sku'], item['size'], current_user.id))
+
+            potential_sellers = cur.fetchall()
+
+            # 3. Envoi des notifications pour chaque match
+            if potential_sellers:
+                for seller in potential_sellers:
+                    send_wtb_embed_notification(
+                        seller_id=seller['discord_id'],
+                        buyer_id=current_user.discord_id,
+                        sku=item['sku'],
+                        size=item['size'],
+                        price=item['price'],
+                        nego=item['negotiable']
+                    )
+
+        db.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        db.rollback()
+        print(f"Erreur WTB Match: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        cur.close()
+
+@app.route('/api/products')
+@login_required
+def api_products():
+    page = int(request.args.get('page', 1))
+    per_page = 20
+    offset = (page - 1) * per_page
+
+    search_sku = request.args.get('sku', '').strip()
+    search_size = request.args.get('size', '').strip()
+
+    # Base de la requête avec les filtres de sécurité et le CONSENTEMENT
+    query = """
+        FROM products p 
+        JOIN users u ON p.user_id = u.id 
+        WHERE u.id != %s 
+        AND u.community_consent = TRUE 
+        AND p.quantity > 0
+        AND p.sku IS NOT NULL AND p.sku != ''
+        AND p.name IS NOT NULL AND p.name != ''
+        AND p.size IS NOT NULL AND p.size != ''
+        AND p.image_url IS NOT NULL AND p.image_url != ''
+    """
+    params = [current_user.id]
+
+    if search_sku:
+        query += " AND p.sku ILIKE %s"
+        params.append(f"%{search_sku}%")
+    if search_size:
+        query += " AND p.size = %s"
+        params.append(search_size)
+
+    # 1. Compter le total pour savoir s'il reste des pages
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT COUNT(*) " + query, params)
+    total_count = cur.fetchone()[0]
+
+    # 2. Récupérer les données paginées
+    data_query = "SELECT p.*, u.discord_id as owner_discord_id " + query + " ORDER BY p.id DESC LIMIT %s OFFSET %s"
+    data_params = params + [per_page, offset]
+
+    cur = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur.execute(data_query, data_params)
+    products = [dict(row) for row in cur.fetchall()]
+    cur.close()
+
+    return jsonify({
+        "products": products,
+        "has_more": (offset + per_page) < total_count
+    })
+@app.route('/find-product')
+@login_required
+def community():
+    # On récupère le statut de consentement de l'utilisateur actuel
+    # (Adapte selon ta méthode de récupération d'utilisateur)
+    consent = current_user.community_consent
+    return render_template('community.html', user_consent=consent)
+
+
+@app.route('/api/update-consent', methods=['POST'])
+@login_required
+def update_consent():
+    data = request.json
+    agree = data.get('agree', False)
+
+    db = get_db()
+    cur = None
+    try:
+        cur = db.cursor()
+        # On met à jour la base de données
+        cur.execute('UPDATE "users" SET community_consent = %s WHERE id = %s', (agree, current_user.id))
+        db.commit()
+
+        # TRÈS IMPORTANT : On met à jour l'objet de la session actuelle
+        # pour que le HTML sache tout de suite que c'est OK
+        current_user.community_consent = agree
+
+        return jsonify({"success": True})
+    except Exception as e:
+        print(f"Erreur update_consent: {e}")
+        return jsonify({"success": False}), 500
+    finally:
+        if cur: cur.close()
+@app.route('/send-offer', methods=['POST'])
+@login_required
+def send_offer():
+    data = request.json
+    try:
+        offer_price = float(data.get('price'))
+        product_name = data.get('product_name')
+        purchase_price = float(data.get('purchase_price'))
+        owner_discord_id = data.get('owner_discord_id')
+        buyer_discord_id = current_user.discord_id
+
+        profit = offer_price - purchase_price
+
+        # Appel de la fonction avec gestion d'Embed
+        if send_discord_offer_embed(owner_discord_id, buyer_discord_id, product_name, offer_price, profit):
+            return jsonify({"success": True})
+
+        return jsonify({"success": False, "error": "Contact bot failed"}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+def send_discord_dm(user_id, message):
+    headers = {"Authorization": f"Bot {BOT_TOKEN}", "Content-Type": "application/json"}
+
+    # 1. Créer le canal de DM avec l'utilisateur
+    response = requests.post(
+        "https://discord.com/api/v10/users/@me/channels",
+        headers=headers,
+        json={"recipient_id": user_id}
+    )
+
+    if response.status_code == 200:
+        channel_id = response.json()['id']
+        # 2. Envoyer le message
+        send_res = requests.post(
+            f"https://discord.com/api/v10/channels/{channel_id}/messages",
+            headers=headers,
+            json={"content": message}
+        )
+        return send_res.status_code == 200
+    return False
 
 @app.route('/sale_success/<int:sale_id>')
 @login_required
@@ -2651,10 +2959,10 @@ def offline_page():
     return render_template('offline.html')
 
 
-@app.before_request
+#@app.before_request
 def security_check():
     # 1. On ignore les pages publiques
-    allowed = ['login', 'login_discord', 'callback', 'static', 'sync_pwa', 'login_token']
+    allowed = ['login', 'login_discord', 'callback', 'static', 'sync_pwa', 'login_token', 'find_product']
     if request.endpoint in allowed or not request.endpoint:
         return
 
