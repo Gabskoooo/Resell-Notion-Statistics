@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 import base64
 import pandas as pd
 import json
-
+from datetime import datetime
 import os
 import requests
 from flask import session, redirect, request, url_for, flash
@@ -1183,6 +1183,11 @@ def get_sku_suggestions():
         return jsonify({"error": "Erreur lors de la recherche"}), 500
     finally:
         if cur: cur.close()
+
+
+from datetime import datetime  # Assure-toi que cet import est présent en haut du fichier
+
+
 @app.route('/products/add', methods=('GET', 'POST'))
 @login_required
 def add_product():
@@ -1191,48 +1196,56 @@ def add_product():
         name = request.form.get('name', '')
         image_url = request.form.get('image_url', '')
         description = request.form.get('description', '')
-        sizes = request.form.getlist('sizes[]')
-        prices_str = request.form.getlist('prices[]')
+
+        # On récupère les listes (avec ou sans [])
+        sizes = request.form.getlist('sizes[]') or request.form.getlist('sizes')
+        prices_str = request.form.getlist('prices[]') or request.form.getlist('prices')
+
+        # Contrainte de format : On force le .png pour le fond
+        if image_url and image_url.lower().endswith('.jpg'):
+            image_url = image_url.rsplit('.', 1)[0] + '.png'
+
         if not sku or not name:
             flash('La référence SKU et le nom sont requis.', 'danger')
             return redirect(url_for('add_product'))
-        if not sizes or not prices_str:
-            flash('Veuillez ajouter au moins une taille et un prix.', 'danger')
-            return redirect(url_for('add_product'))
-        if len(sizes) != len(prices_str):
-            flash('Erreur de formulaire: le nombre de tailles et de prix ne correspond pas.', 'danger')
-            return redirect(url_for('add_product'))
+
         conn = g.db
         cur = conn.cursor()
         try:
-            current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            # Correction de l'erreur datetime
+            current_date = datetime.now()
+
             for size, price_str in zip(sizes, prices_str):
+                if not size or not price_str:
+                    continue
+
                 try:
-                    purchase_price = float(price_str)
+                    purchase_price = float(price_str.replace(',', '.'))
                     quantity = 1
                 except ValueError:
-                    flash(f'Erreur de format pour le prix "{price_str}". Veuillez entrer un nombre valide.', 'danger')
-                    conn.rollback()
-                    return redirect(url_for('add_product'))
+                    continue
+
                 cur.execute(
-                    'INSERT INTO products (user_id, sku, name, size, purchase_price, quantity, price, description, image_url, date_added) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
-                    (current_user.id, sku, name, size, purchase_price, quantity, purchase_price, description, image_url,
-                     current_date)
+                    '''INSERT INTO products 
+                    (user_id, sku, name, size, purchase_price, quantity, price, description, image_url, date_added) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+                    (current_user.id, sku, name, size, purchase_price, quantity,
+                     purchase_price, description, image_url, current_date)
                 )
+
             conn.commit()
-            flash(f'{len(sizes)} produit(s) ajouté(s) avec succès !', 'success')
+            flash('Produit(s) ajouté(s) avec succès !', 'success')
             return redirect(url_for('products'))
+
         except Exception as e:
             conn.rollback()
-            flash(f'Une erreur est survenue lors de l\'ajout des produits : {e}', 'danger')
+            print(f"Erreur DB: {e}")
+            flash(f'Une erreur est survenue : {e}', 'danger')
             return redirect(url_for('add_product'))
         finally:
             cur.close()
-    return render_template('add_product.html',
-                           sku='',
-                           name='',
-                           image_url='',
-                           description='')
+
+    return render_template('add_product.html', sku='', name='', image_url='', description='')
 
 def get_product_name_suggestions():
     query = request.args.get('query', '').strip()  # .strip() pour enlever les espaces inutiles
