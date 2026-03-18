@@ -78,6 +78,7 @@ TABLE_NAME = "sku_database"
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 ASSETS_DIR = os.path.join(PROJECT_ROOT, '..', 'www.resellnotion.stats.com', 'assets')
 
+CATEGORY_DEALS_ID = "1483847492083777627" # Remplace par l'ID réel
 UPLOAD_FOLDER = 'static/uploads/storage'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -481,6 +482,7 @@ def get_db():
         g.db = psycopg2.connect(DATABASE_URL)
     return g.db
 
+ROLE_EN = 1474103517798076659
 
 def get_user_language(user_id):
     """Vérifie les rôles de l'utilisateur sur le serveur pour déterminer la langue."""
@@ -547,64 +549,106 @@ def send_wtb_embed_notification(seller_id, buyer_id, sku, size, price, nego):
     except Exception as e:
         print(f"Discord Notify Error: {e}")
 
-def send_discord_offer_embed(owner_discord_id, buyer_discord_id, product_name, offer_price, profit):
-    """Construit et envoie un Embed pro et carré."""
-    lang = get_user_language(owner_discord_id)
 
-    # Dictionnaire de traduction
+def send_discord_offer_embed(owner_id, buyer_id, product_name, offer_price, profit):
+    """Crée un ticket sans bénéfice et envoie un DM privé au vendeur AVEC le bénéfice."""
+    lang = get_user_language(owner_id)
+    headers = {"Authorization": f"Bot {BOT_TOKEN}", "Content-Type": "application/json"}
+
+    # --- DICTIONNAIRE MULTILINGUE ---
     strings = {
         "FR": {
-            "title": "💰 Nouvelle offre reçue !",
+            "channel_name": f"deal-{product_name[:12]}-{offer_price}€",
+            "dm_intro": "💰 **Nouvelle offre reçue !**",
+            "ticket_title": "🤝 Négociation Ouverte",
             "product": "Produit",
-            "price": "Prix offert",
-            "profit": "Bénéfice potentiel",
-            "buyer": "Acheteur",
-            "footer": "Réponds à l'acheteur en cliquant sur le lien ci-dessous.",
-            "link_text": "👉 [Clique ici pour discuter](https://discord.com/channels/@me/{id})"
+            "price": "Prix proposé",
+            "profit": "Ton bénéfice",
+            "welcome": f"Bonjour <@{owner_id}> et <@{buyer_id}> ! Utilisez ce salon pour finaliser votre transaction.",
+            "ticket_link_text": f"👉 [Accéder au Ticket](https://discord.com/channels/{GUILD_ID}/{{channel_id}})",
+            "footer": "ResellNotion Community • Système de Ticket"
         },
         "EN": {
-            "title": "💰 New offer received!",
+            "channel_name": f"deal-{product_name[:12]}-{offer_price}€",
+            "dm_intro": "💰 **New offer received!**",
+            "ticket_title": "🤝 Negotiation Opened",
             "product": "Product",
             "price": "Offered Price",
-            "profit": "Potential Profit",
-            "buyer": "Buyer",
-            "footer": "Reply to the buyer by clicking the link below.",
-            "link_text": "👉 [Click here to chat](https://discord.com/channels/@me/{id})"
+            "profit": "Your profit",
+            "welcome": f"Hello <@{owner_id}> and <@{buyer_id}>! Use this channel to finalize your transaction.",
+            "ticket_link_text": f"👉 [Go to Ticket](https://discord.com/channels/{GUILD_ID}/{{channel_id}})",
+            "footer": "ResellNotion Community • Ticket System"
         }
     }
-
     s = strings[lang]
 
-    # Construction de l'Embed
-    embed = {
-        "title": s["title"],
-        "color": 5814783,  # Couleur bleue/violette pro
+    # --- 1. CRÉATION DU SALON PRIVÉ ---
+    create_url = f"https://discord.com/api/v10/guilds/{GUILD_ID}/channels"
+    overwrites = [
+        {"id": GUILD_ID, "type": 0, "deny": "1024"},  # @everyone : voit rien
+        {"id": owner_id, "type": 1, "allow": "3072"},  # Seller : voit + écrit
+        {"id": buyer_id, "type": 1, "allow": "3072"}  # Buyer : voit + écrit
+    ]
+
+    channel_payload = {
+        "name": s["channel_name"],
+        "type": 0,
+        "parent_id": CATEGORY_DEALS_ID,
+        "permission_overwrites": overwrites,
+        "topic": f"Deal: {product_name}"
+    }
+
+    res_channel = requests.post(create_url, headers=headers, json=channel_payload)
+    if res_channel.status_code != 201:
+        return False
+
+    channel_id = res_channel.json()['id']
+
+    # --- 2. EMBED DU TICKET (SANS BÉNÉFICE) ---
+    ticket_embed = {
+        "title": s["ticket_title"],
+        "color": 5814783,
         "fields": [
             {"name": s["product"], "value": f"`{product_name}`", "inline": False},
             {"name": s["price"], "value": f"**{offer_price}€**", "inline": True},
-            {"name": s["profit"], "value": f"**+{profit:.2f}€** 📈", "inline": True},
-            {"name": s["buyer"], "value": f"<@{buyer_discord_id}>", "inline": False}
+            {"name": "Acheteur", "value": f"<@{buyer_id}>", "inline": True}
         ],
-        "description": s["link_text"].format(id=buyer_discord_id),
         "footer": {"text": s["footer"]},
         "timestamp": datetime.utcnow().isoformat()
     }
 
-    # Envoi via l'API Discord (Création du DM)
-    # 1. Créer le canal DM
-    dm_channel_url = "https://discord.com/api/v10/users/@me/channels"
-    headers = {"Authorization": f"Bot {BOT_TOKEN}", "Content-Type": "application/json"}
-    dm_res = requests.post(dm_channel_url, headers=headers, json={"recipient_id": owner_discord_id})
+    # Envoi dans le ticket
+    requests.post(f"https://discord.com/api/v10/channels/{channel_id}/messages", headers=headers, json={
+        "content": s["welcome"],
+        "embeds": [ticket_embed]
+    })
 
-    if dm_res.status_code == 200:
-        channel_id = dm_res.json()['id']
-        # 2. Envoyer le message avec l'Embed
-        msg_url = f"https://discord.com/api/v10/channels/{channel_id}/messages"
-        res = requests.post(msg_url, headers=headers, json={"embeds": [embed]})
-        return res.status_code == 200
+    # --- 3. EMBED DU DM (AVEC BÉNÉFICE) ---
+    seller_dm_embed = {
+        "title": s["ticket_title"],
+        "description": s["ticket_link_text"].format(channel_id=channel_id),
+        "color": 5814783,
+        "fields": [
+            {"name": s["product"], "value": f"`{product_name}`", "inline": False},
+            {"name": s["price"], "value": f"**{offer_price}€**", "inline": True},
+            {"name": s["profit"], "value": f"**+{profit:.2f}€** 📈", "inline": True}
+        ],
+        "footer": {"text": s["footer"]},
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
-    return False
+    # Notification DM au Vendeur
+    dm_chan_res = requests.post("https://discord.com/api/v10/users/@me/channels",
+                                headers=headers, json={"recipient_id": owner_id})
+    if dm_chan_res.status_code == 200:
+        dm_id = dm_chan_res.json()['id']
+        requests.post(f"https://discord.com/api/v10/channels/{dm_id}/messages",
+                      headers=headers, json={
+                "content": s["dm_intro"],
+                "embeds": [seller_dm_embed]
+            })
 
+    return True
 # Nouvelle fonction pour obtenir une connexion à la DB (retourne un objet connexion psycopg2)
 def get_db_connection():
     result = urlparse(DATABASE_URL)
@@ -1881,13 +1925,21 @@ def api_products():
         "products": products,
         "has_more": (offset + per_page) < total_count
     })
+
+
 @app.route('/find-product')
 @login_required
 def community():
-    # On récupère le statut de consentement de l'utilisateur actuel
-    # (Adapte selon ta méthode de récupération d'utilisateur)
+    # On récupère le statut de consentement et l'ID Discord
     consent = current_user.community_consent
-    return render_template('community.html', user_consent=consent)
+    # On s'assure de renvoyer une chaîne vide si c'est None pour le JS
+    discord_id = current_user.discord_id if current_user.discord_id else ""
+
+    return render_template(
+        'community.html',
+        user_consent=consent,
+        user_discord_id=discord_id
+    )
 
 
 @app.route('/api/update-consent', methods=['POST'])
@@ -1914,26 +1966,49 @@ def update_consent():
         return jsonify({"success": False}), 500
     finally:
         if cur: cur.close()
+
+
 @app.route('/send-offer', methods=['POST'])
 @login_required
 def send_offer():
     data = request.json
+    # Log 1 : Vérifier ce que le frontend envoie réellement
+    print(f"--- DEBUG OFFRE ---")
+    print(f"Data reçue du JS : {data}")
+
     try:
-        offer_price = float(data.get('price'))
+        offer_price = float(data.get('price', 0))
         product_name = data.get('product_name')
-        purchase_price = float(data.get('purchase_price'))
+        purchase_price = float(data.get('purchase_price', 0))
         owner_discord_id = data.get('owner_discord_id')
+
+        # Log 2 : Vérifier l'utilisateur qui tente d'envoyer
         buyer_discord_id = current_user.discord_id
+        print(f"Acheteur (current_user) : ID={current_user.id}, Discord_ID={buyer_discord_id}")
+
+        if not buyer_discord_id:
+            print("ERREUR : L'ID Discord de l'acheteur (current_user.discord_id) est VIDE en base de données.")
+            return jsonify({"success": False, "error": "Ton ID Discord n'est pas configuré dans ton profil."}), 400
+
+        if not owner_discord_id:
+            print("ERREUR : L'ID Discord du vendeur (owner_discord_id) est manquant dans la requête.")
+            return jsonify({"success": False, "error": "ID du vendeur manquant."}), 400
 
         profit = offer_price - purchase_price
+        print(f"Calcul : Offre({offer_price}) - Achat({purchase_price}) = Profit({profit})")
 
         # Appel de la fonction avec gestion d'Embed
         if send_discord_offer_embed(owner_discord_id, buyer_discord_id, product_name, offer_price, profit):
+            print("SUCCÈS : Embed envoyé via le bot.")
             return jsonify({"success": True})
 
+        print("ERREUR : La fonction send_discord_offer_embed a renvoyé False (problème API Discord).")
         return jsonify({"success": False, "error": "Contact bot failed"}), 500
+
     except Exception as e:
+        print(f"EXCEPTION CRITIQUE : {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 400
+
 
 def send_discord_dm(user_id, message):
     headers = {"Authorization": f"Bot {BOT_TOKEN}", "Content-Type": "application/json"}
@@ -2617,84 +2692,7 @@ def login_discord():
         f"https://discord.com/api/oauth2/authorize?client_id={CLIENT_ID}"
         f"&redirect_uri={REDIRECT_URI}&response_type=code&scope={scope}"
     )
-
-    return f'''
-    <!DOCTYPE html>
-    <html lang="fr">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-        <title>Vérification VIP</title>
-        <style>
-            /* Correction majeure pour iOS PWA */
-            html, body {{
-                height: 100vh;
-                height: -webkit-fill-available; 
-                background: #0b0e14;
-                margin: 0;
-                overflow: hidden;
-            }}
-
-            body {{
-                color: white;
-                font-family: -apple-system, system-ui, sans-serif;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding-bottom: env(safe-area-inset-bottom); /* Réserve l'espace du bas */
-            }}
-
-            .card {{
-                text-align: center;
-                padding: 30px;
-                width: 100%;
-                max-width: 350px;
-            }}
-
-            .btn-discord {{
-                background: #5865F2;
-                color: white;
-                text-decoration: none;
-                padding: 18px 30px;
-                border-radius: 16px;
-                font-weight: 800;
-                display: block;
-                font-size: 1.1rem;
-                box-shadow: 0 4px 20px rgba(88, 101, 242, 0.4);
-                margin-bottom: 40px; /* On remonte le bouton par rapport au bas */
-            }}
-
-            .pwa-tip {{
-                background: rgba(255, 255, 255, 0.05);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 12px;
-                padding: 15px;
-                font-size: 0.85rem;
-                color: #8e9297;
-                line-height: 1.4;
-            }}
-
-            b {{ color: #00ffa3; }}
-        </style>
-    </head>
-    <body>
-        <div class="card">
-            <h2 style="margin-top:0">Connexion VIP</h2>
-            <p style="color: #8e9297; margin-bottom: 30px;">Cliquez pour valider vos droits sur Discord.</p>
-
-            <a href="{discord_auth_url}" target="_blank" rel="opener" class="btn-discord">
-                OUVRIR DISCORD
-            </a>
-
-            <div class="pwa-tip">
-                💡 <b>Problème d'affichage ?</b><br>
-                Si le bouton "Autoriser" est caché en bas, cliquez sur la <b>Boussole 🧭</b> en bas à droite pour finir dans Safari.
-            </div>
-        </div>
-    </body>
-    </html>
-    '''
-
+    return render_template('login_discord.html', discord_auth_url=discord_auth_url)
 
 @app.route('/callback')
 def callback():
@@ -2721,7 +2719,7 @@ def callback():
         print(f"!!! ERREUR TOKEN : {token_json}")
         return "Erreur Token", 400
 
-    # 2. Récupération des infos du membre sur ton serveur
+    # 2. Récupération des infos du membre
     member_headers = {'Authorization': f'Bearer {access_token}'}
     member_url = f"https://discord.com/api/v10/users/@me/guilds/{GUILD_ID}/member"
     member_response = requests.get(member_url, headers=member_headers)
@@ -2732,24 +2730,46 @@ def callback():
         return redirect(url_for('login'))
 
     user_roles = member_data.get('roles', [])
-    username = member_data.get('user', {}).get('username')
-    discord_user_id = str(member_data.get('user', {}).get('id'))
+    discord_user_data = member_data.get('user', {})
+    username = discord_user_data.get('username')
+    discord_user_id = str(discord_user_data.get('id'))
+    # On récupère aussi l'email si possible pour l'identification
+    discord_email = discord_user_data.get('email')
 
     # 3. Vérification du rôle VIP
     has_role = str(REQUIRED_ROLE_ID) in [str(r) for r in user_roles]
 
     if has_role:
-        # --- SAUVEGARDE PERMANENTE DANS LA DB (Table 'users') ---
-        if current_user.is_authenticated:
-            try:
-                cur = g.db.cursor()
-                # Correction ICI : "user" devient "users"
-                cur.execute('UPDATE "users" SET discord_id = %s WHERE id = %s', (discord_user_id, current_user.id))
-                g.db.commit()
-                cur.close()
-                print(f"✅ ID Discord {discord_user_id} lié au compte {current_user.id} en DB")
-            except Exception as e:
-                print(f"❌ Erreur SQL lors du lien Discord : {e}")
+        # --- SAUVEGARDE DANS LA DB (Table 'users') ---
+        db = get_db()  # Utilise ta fonction get_db() pour être sûr d'avoir la connexion
+        cur = db.cursor()
+
+        try:
+            # CAS 1 : L'utilisateur est déjà loggé sur le site, on lie son Discord
+            if current_user.is_authenticated:
+                user_target_id = current_user.id
+                print(f"Tentative de liaison pour l'user connecté ID: {user_target_id}")
+
+            # CAS 2 : L'utilisateur n'est pas loggé, on le cherche par son email ou username
+            else:
+                cur.execute('SELECT id FROM "users" WHERE email = %s OR username = %s', (discord_email, username))
+                result = cur.fetchone()
+                user_target_id = result[0] if result else None
+                print(f"Recherche user par identifiants Discord : ID trouvé = {user_target_id}")
+
+            if user_target_id:
+                # MISE À JOUR DE LA COLONNE discord_id
+                cur.execute('UPDATE "users" SET discord_id = %s WHERE id = %s', (discord_user_id, user_target_id))
+                db.commit()
+                print(f"✅ ID Discord {discord_user_id} enregistré avec succès pour l'user {user_target_id}")
+            else:
+                print("⚠️ Impossible de trouver l'utilisateur en base pour enregistrer l'ID Discord.")
+
+        except Exception as e:
+            db.rollback()
+            print(f"❌ Erreur SQL lors de l'enregistrement Discord : {e}")
+        finally:
+            cur.close()
 
         # --- INITIALISATION DE LA SESSION ---
         session.clear()
@@ -2758,9 +2778,8 @@ def callback():
         session['discord_user_id'] = discord_user_id
         session['last_discord_check'] = time.time()
         session.permanent = True
-        session.modified = True
 
-        # --- GÉNÉRATION DU TOKEN DE SYNCHRONISATION PWA ---
+        # --- GÉNÉRATION DU TOKEN PWA ---
         sync_token = str(uuid.uuid4())
         pwa_sync_tokens[sync_token] = {
             'user_id': discord_user_id,
@@ -2773,7 +2792,6 @@ def callback():
     else:
         flash("Accès refusé : Vous n'avez pas le rôle VIP sur Discord.", "danger")
         return redirect(url_for('login'))
-
 @app.route('/sync-pwa')
 def sync_pwa():
     token = request.args.get('token')
@@ -2972,10 +2990,10 @@ def offline_page():
     return render_template('offline.html')
 
 
-#@app.before_request
+@app.before_request
 def security_check():
     # 1. On ignore les pages publiques
-    allowed = ['login', 'login_discord', 'callback', 'static', 'sync_pwa', 'login_token', 'find_product']
+    allowed = ['login', 'login_discord', 'callback', 'static', 'sync_pwa', 'login_token', 'find_product', 'community']
     if request.endpoint in allowed or not request.endpoint:
         return
 
